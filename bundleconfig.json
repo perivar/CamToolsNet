@@ -1,0 +1,69 @@
+﻿[
+  {
+    "outputFileName": "wwwroot/css/site.min.css",
+    "inputFiles": [
+      "wwwroot/css/site.css"
+    ],
+    "minify": { "enabled": true }
+  },
+  {
+    "outputFileName": "wwwroot/js/site.min.js",
+    "inputFiles": [
+      "wwwroot/js/site.js"
+    ],    
+    "minify": {
+      "enabled": true,
+      "renameLocals": true
+    },
+    "sourceMap": false
+  },
+  {
+    "outputFileName": "wwwroot/css/vendor.min.css",
+    "inputFiles": [
+      "node_modules/bootstrap/dist/css/bootstrap.min.css"      
+    ],
+    "minify": {
+      "enabled": true,
+      "renameLocals": false,
+      "adjustRelativePaths": false
+    }
+  },
+  {
+    "outputFileName": "wwwroot/js/vendor.min.js",
+    "inputFiles": [
+      "node_modules/jquery/dist/jquery.min.js",
+      "node_modules/popper.js/dist/umd/popper.min.js",
+      "node_modules/bootstrap/dist/js/bootstrap.min.js"
+    ],
+    "minify": {
+      "enabled": true,
+      "renameLocals": false,
+      "adjustRelativePaths": false
+    }
+  },  
+  {
+    "outputFileName": "wwwroot/js/vendor-validation.min.js",
+    "inputFiles": [
+      "node_modules/jquery-validation/dist/jquery.validate.min.js",
+      "node_modules/jquery-validation/dist/additional-methods.min.js",
+      "node_modules/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js",
+      "node_modules/jquery-ajax-unobtrusive/dist/jquery.unobtrusive-ajax.min.js"
+    ],
+    "minify": {
+      "enabled": true,
+      "renameLocals": true
+    },
+    "sourceMap": false
+  },
+  {
+    "outputFileName": "wwwroot/js/signalr.min.js",
+    "inputFiles": [
+      "node_modules/@aspnet/signalr/dist/browser/signalr.min.js"
+    ],
+    "minify": {
+      "enabled": false,
+      "renameLocals": false,
+      "adjustRelativePaths": false
+    }
+  }
+]

@@ -1,0 +1,196 @@
+@using System.Globalization
+@model DxfDocumentModel
+
+@if (ViewData["Message"] != null)
+{
+    <div class="alert alert-success alert-dismissible" style="margin-top:20px">
+        @ViewData["Message"]
+    </div>
+}	
+
+    <div id="wrapper">
+        <canvas id="myCanvas" width="600" height="350">
+        </canvas>
+        <div id="buttonWrapper">
+            <input class="btn btn-primary btn-md" type="button" id="plus" value="+">
+            <input class="btn btn-primary btn-md" type="button" id="minus" value="-">
+        </div>
+    </div>
+
+@section Scripts {
+    <script>
+        function draw(scale, translatePos){
+            var canvas = document.getElementById("myCanvas");
+            var context = canvas.getContext("2d");
+
+            // clear canvas
+            context.clearRect(0, 0, canvas.width, canvas.height);
+
+            context.save();
+            context.translate(translatePos.x, translatePos.y);
+            context.scale(scale, scale);
+
+            @if (Model != null) {            
+                <text>       
+
+                // circles
+                context.beginPath(); // begin
+                @foreach (var c in Model.Circles)
+                {
+                    <text>
+                        var startAngle = 0;
+                        var endAngle = 2 * Math.PI;
+                        var x = @c.Center.X.ToString(CultureInfo.InvariantCulture);
+                        var y = @c.Center.Y.ToString(CultureInfo.InvariantCulture);
+                        var radius = @c.Radius.ToString(CultureInfo.InvariantCulture);
+                        
+                        context.moveTo(x + radius, y);
+                        context.arc(x, y, radius, startAngle, endAngle, false);
+                    </text>
+                }
+                context.closePath(); // end
+
+                context.lineWidth = 1;
+                context.strokeStyle = "#0000ff";
+                context.stroke();
+
+                // lines
+                context.beginPath(); // begin
+                @foreach (var l in Model.Lines)
+                {
+                    <text>
+                        var startX = @l.StartPoint.X.ToString(CultureInfo.InvariantCulture);
+                        var startY = @l.StartPoint.Y.ToString(CultureInfo.InvariantCulture);
+                        var endX = @l.EndPoint.X.ToString(CultureInfo.InvariantCulture);
+                        var endY = @l.EndPoint.Y.ToString(CultureInfo.InvariantCulture);
+                        
+                        context.moveTo(startX, startY);
+                        context.lineTo(endX, endY);
+                    </text>
+                }
+                context.closePath(); // end
+
+                context.lineWidth = 1;
+                context.strokeStyle = "#cc00ff";
+                context.stroke();
+
+                // arcs
+                context.beginPath(); // begin
+                @foreach (var a in Model.Arcs)
+                {
+                    <text>
+                        var centerX = @a.Center.X.ToString(CultureInfo.InvariantCulture);
+                        var centerY = @a.Center.Y.ToString(CultureInfo.InvariantCulture);
+                        var radius = @a.Radius.ToString(CultureInfo.InvariantCulture);
+                        var startAngle = @a.StartAngle.ToString(CultureInfo.InvariantCulture);
+                        var endAngle = @a.EndAngle.ToString(CultureInfo.InvariantCulture);
+
+                        var startX = (centerX + Math.cos(startAngle * Math.PI / 180) * radius);
+                        var startY = (centerY + Math.sin(startAngle * Math.PI / 180) * radius);
+                        var endX = (centerX + Math.cos(endAngle * Math.PI / 180) * radius);
+                        var endY = (centerY + Math.sin(endAngle * Math.PI / 180) * radius);
+
+                        var isCounterClockwise = false;
+                        var sweep = 0.0;
+                        if (endAngle < startAngle)
+                        {
+                            sweep = (360 + endAngle) - startAngle;
+                        }
+                        else
+                        {
+                            sweep = Math.abs(endAngle - startAngle);
+                        }
+                        var isLargeArc = sweep >= 180;
+
+                        context.moveTo(startX, startY);
+                        context.arc(centerX, centerY, radius, startAngle * Math.PI / 180, endAngle * Math.PI / 180, isCounterClockwise);
+                    </text>
+                }
+                context.closePath(); // end
+
+                context.lineWidth = 1;
+                context.strokeStyle = "#000000";
+                context.stroke();
+
+                </text>
+            }
+
+            context.restore();
+        }
+
+        window.onload = function(){
+            var canvas = document.getElementById("myCanvas");
+
+            var translatePos = {
+                x: canvas.width / 2,
+                y: canvas.height / 2
+            };
+
+            var scale = 1.0;
+            var scaleMultiplier = 0.8;
+            var startDragOffset = {};
+            var mouseDown = false;
+
+            // add button event listeners
+            document.getElementById("plus").addEventListener("click", function(){
+                scale /= scaleMultiplier;
+                draw(scale, translatePos);
+            }, false);
+
+            document.getElementById("minus").addEventListener("click", function(){
+                scale *= scaleMultiplier;
+                draw(scale, translatePos);
+            }, false);
+
+            // add event listeners to handle screen drag
+            canvas.addEventListener("mousedown", function(evt){
+                mouseDown = true;
+                startDragOffset.x = evt.clientX - translatePos.x;
+                startDragOffset.y = evt.clientY - translatePos.y;
+            });
+
+            canvas.addEventListener("mouseup", function(evt){
+                mouseDown = false;
+            });
+
+            canvas.addEventListener("mouseover", function(evt){
+                mouseDown = false;
+            });
+
+            canvas.addEventListener("mouseout", function(evt){
+                mouseDown = false;
+            });
+
+            canvas.addEventListener("mousemove", function(evt){
+                if (mouseDown) {
+                    translatePos.x = evt.clientX - startDragOffset.x;
+                    translatePos.y = evt.clientY - startDragOffset.y;
+                    draw(scale, translatePos);
+                }
+            });
+    
+            var handleScroll = function(evt){
+                var delta = evt.wheelDelta ? evt.wheelDelta/40 : evt.detail ? -evt.detail : 0;
+                if (delta) {
+                    if (delta < 0)
+                    {
+                        scale /= 0.99;
+                        if (scale < 0.2) scale = 0.2;
+                    }
+                    else
+                    {
+                        scale *= 0.99;
+                        if (scale > 10) scale = 10;
+                    }
+                    draw(scale, translatePos);
+                }
+                return evt.preventDefault() && false;
+            };
+
+            canvas.addEventListener('DOMMouseScroll',handleScroll,false);
+            canvas.addEventListener('mousewheel',handleScroll,false);
+
+            draw(scale, translatePos);
+        };
+    </script>
+}
