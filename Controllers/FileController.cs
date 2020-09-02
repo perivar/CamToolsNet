@@ -11,6 +11,8 @@ using CAMToolsNet.Models;
 using Microsoft.AspNetCore.Http;
 using System.IO;
 using netDxf;
+using netDxf.Entities;
+using System.Globalization;
 
 namespace CAMToolsNet.Controllers
 {
@@ -62,7 +64,7 @@ namespace CAMToolsNet.Controllers
                     var dxf = DxfDocument.Load(memoryStream);
                     // convert to a model that can be serialized
                     // I am unable to get the default dxfnet model to be serialized
-                    var dxfModel = DxfDocumentModel.FromDxfDocument(dxf);
+                    var dxfModel = DxfDocumentModel.FromDxfDocument(dxf, file.FileName);
                     HttpContext.Session.SetObjectAsJson("DxfDocument", dxfModel);
                 }
             }
@@ -76,8 +78,48 @@ namespace CAMToolsNet.Controllers
         public async Task<IActionResult> CirclesToLayers()
         {
             // traverse through all circles and set the layer whenever the radius is the same
-            
-            TempData["Message"] = "Conversion Successfull";
+            var dxfModel = HttpContext.Session.GetObjectFromJson<DxfDocumentModel>("DxfDocument");
+            if (dxfModel != null)
+            {
+                TempData["Message"] = "Conversion Successfull";
+                var dxf = DxfDocumentModel.ToDxfDocument(dxfModel);
+
+                // create a bucket for each radius
+                Dictionary<string, List<Circle>> radiusBuckets = dxf.Circles
+                .GroupBy(o => o.Radius.ToString("F2", CultureInfo.InvariantCulture))
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+                // move circle buckets to unique layers
+                foreach (var pair in radiusBuckets)
+                {
+                    var radiusString = pair.Key;
+                    var circles = pair.Value;
+
+                    double radius = 0;
+                    if (Double.TryParse(radiusString, NumberStyles.Any, CultureInfo.InvariantCulture, out radius))
+                    {
+                        double dia = radius * 2;
+                        string diaString = dia.ToString("F2", CultureInfo.InvariantCulture);
+
+                        foreach (var c in circles)
+                        {
+                            c.Layer = new netDxf.Tables.Layer("Diameter_" + diaString);
+                        }
+                    }
+                }
+
+                string fileName = dxfModel.FileName;
+                var basePath = Path.Combine(Directory.GetCurrentDirectory() + "\\Files\\");
+                bool basePathExists = System.IO.Directory.Exists(basePath);
+                if (!basePathExists) Directory.CreateDirectory(basePath);
+                var filePath = Path.Combine(basePath, fileName);
+                dxf.Save(filePath);
+            }
+            else
+            {
+                TempData["Message"] = "Conversion Unsuccessfull!";
+            }
+
             return RedirectToAction("Index");
         }
     }

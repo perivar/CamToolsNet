@@ -108,9 +108,9 @@
                 context.strokeStyle = "#000000";
                 context.stroke();
 
-                // polylines
+                 // polylines light weight
                 context.beginPath(); // begin
-                @foreach (var p in Model.Polylines)
+                @foreach (var p in Model.PolylinesLW)
                 {
                     for (int i = 0; i < p.Vertexes.Count; i++)
                     {
@@ -118,9 +118,9 @@
                         <text>                            
                             var pointX = @vertex.Position.X.ToString(CultureInfo.InvariantCulture);
                             var pointY = @vertex.Position.Y.ToString(CultureInfo.InvariantCulture);
+                            var bulge = @vertex.Bulge.ToString(CultureInfo.InvariantCulture);
                             var prePointX = 0;
                             var prePointY = 0;
-                            var bulge = 0;
 
                             @if (i == 0)
                             {   
@@ -147,6 +147,7 @@
                 context.lineWidth = 0.3;
                 context.strokeStyle = "#002266";
                 context.stroke();
+
 
 
                 </text>
