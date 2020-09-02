@@ -1,7 +1,7 @@
 version: "2"
 
 services:
-  api:
+  cam:
     container_name: camtools
     build:
       context: ./
@@ -14,4 +14,4 @@ services:
       - "7070"
     ports:
       - "7070:7070"
-  
+ 

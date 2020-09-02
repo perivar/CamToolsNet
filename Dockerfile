@@ -17,11 +17,11 @@ RUN apt-get update -yq \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
-COPY CamToolsNet/CAMToolsNet.csproj CamToolsNet/
+COPY CAMToolsNet.csproj CamToolsNet/
 RUN dotnet restore CamToolsNet/CAMToolsNet.csproj
 
 COPY  . .
-WORKDIR /src/CamToolsNet
+#WORKDIR /src/CamToolsNet
 
 # Install dependicies for node
 RUN npm install
