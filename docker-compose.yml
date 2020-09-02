@@ -1,0 +1,17 @@
+version: "2"
+
+services:
+  api:
+    container_name: camtools
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      ASPNETCORE_ENVIRONMENT: 'Production'      
+      ASPNETCORE_URLS: http://+:7070
+    expose:
+      - "7070"
+    ports:
+      - "7070:7070"
+  
