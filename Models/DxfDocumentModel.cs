@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using netDxf;
 using netDxf.Entities;
 
@@ -7,7 +8,26 @@ namespace CAMToolsNet.Models
 {
     public class DxfDocumentModel
     {
-        public class DxfCircle
+        public abstract class DxfElement
+        {
+            public string CodeName { get; set; }
+            public Color Color  { get; set; }
+            public bool IsVisible { get; set; }
+            public string LayerName { get; set; }
+
+            public DxfElement() {
+
+            }
+
+            public DxfElement(dynamic o) {
+                CodeName = o.CodeName;
+                Color = System.Drawing.Color.FromArgb(o.Color.R, o.Color.G, o.Color.B);
+                IsVisible = o.IsVisible;
+                LayerName = o.Layer.Name;
+            }
+        }
+
+        public class DxfCircle : DxfElement
         {
             public Vector3 Center { get; set; }
             public double Radius { get; set; }
@@ -16,7 +36,7 @@ namespace CAMToolsNet.Models
             // parameter-less constructor needed for de-serialization
             public DxfCircle() { }
 
-            public DxfCircle(Circle c)
+            public DxfCircle(Circle c) : base(c)
             {
                 Center = new Vector3(c.Center.X, c.Center.Y, c.Center.Z);
                 Radius = c.Radius;
@@ -24,7 +44,7 @@ namespace CAMToolsNet.Models
             }
         }
 
-        public class DxfLine
+        public class DxfLine : DxfElement
         {
             public Vector3 StartPoint { get; set; }
             public Vector3 EndPoint { get; set; }
@@ -33,14 +53,14 @@ namespace CAMToolsNet.Models
             // parameter-less constructor needed for de-serialization
             public DxfLine() { }
 
-            public DxfLine(Line l)
+            public DxfLine(Line l) : base(l)
             {
                 StartPoint = new Vector3(l.StartPoint.X, l.StartPoint.Y, l.StartPoint.Z);
                 EndPoint = new Vector3(l.EndPoint.X, l.EndPoint.Y, l.EndPoint.Z);
             }
         }
 
-        public class DxfArc
+        public class DxfArc : DxfElement
         {
             public Vector3 Center { get; set; }
             public double Radius { get; set; }
@@ -51,7 +71,7 @@ namespace CAMToolsNet.Models
             // parameter-less constructor needed for de-serialization
             public DxfArc() { }
 
-            public DxfArc(Arc a)
+            public DxfArc(Arc a) : base(a)
             {
                 Center = new Vector3(a.Center.X, a.Center.Y, a.Center.Z);
                 Radius = a.Radius;
@@ -61,14 +81,14 @@ namespace CAMToolsNet.Models
             }
         }
 
-        public class DxfPolyline
+        public class DxfPolyline : DxfElement
         {
             public List<PolylineVertex> Vertexes { get; set; }
 
             // parameter-less constructor needed for de-serialization
             public DxfPolyline() { }
 
-            public DxfPolyline(Polyline p)
+            public DxfPolyline(Polyline p) : base(p)
             {
                 bool IsClosed = p.IsClosed;
 

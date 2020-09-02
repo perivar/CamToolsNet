@@ -7,14 +7,17 @@
         @ViewData["Message"]
     </div>
 }	
+    <div class="container">
+        <div class="row pb-2">
+            <input type="button" class="btn btn-primary btn-sm" title="MoveEqual" value="Move Equal Circles To Unique Layers" onclick="location.href='@Url.Action("CirclesToLayers", "File")'" />
+        </div>
 
-    <canvas id="myCanvas" width="600" height="400">
-    </canvas>
-
-    <input  type="button"
-                         
-    <input type="button" class="btn btn-primary" title="Move" value="Move Same Circles To Unique Layers" onclick="location.href='@Url.Action("CirclesToLayers", "File")'" />
-
+        <div class="row">
+            <canvas id="myCanvas" width="800" height="400" class="border">
+            </canvas>
+        </div>
+    </div>
+                       
 @section Scripts {
     <script>
         function draw(scale, translatePos){
