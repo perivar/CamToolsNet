@@ -69,19 +69,26 @@ namespace CAMToolsNet.Controllers
                 }
             }
 
-            TempData["Message"] = "File successfully uploaded";
+            if (HttpContext.Session.Keys.Contains("DxfDocument"))
+            {
+                TempData["Message"] = "File successfully uploaded";
+            }
+            else
+            {
+                TempData["Message"] = "Files missing!";
+            }
+
             return RedirectToAction("Index");
         }
 
 
         [HttpGet]
-        public async Task<IActionResult> CirclesToLayers()
+        public IActionResult CirclesToLayers(bool doSave)
         {
             // traverse through all circles and set the layer whenever the radius is the same
             var dxfModel = HttpContext.Session.GetObjectFromJson<DxfDocumentModel>("DxfDocument");
             if (dxfModel != null)
             {
-                TempData["Message"] = "Conversion Successfull";
                 var dxf = DxfDocumentModel.ToDxfDocument(dxfModel);
 
                 // create a bucket for each radius
@@ -108,16 +115,38 @@ namespace CAMToolsNet.Controllers
                     }
                 }
 
+                // build new filename
                 string fileName = dxfModel.FileName;
-                var basePath = Path.Combine(Directory.GetCurrentDirectory() + "\\Files\\");
-                bool basePathExists = System.IO.Directory.Exists(basePath);
-                if (!basePathExists) Directory.CreateDirectory(basePath);
-                var filePath = Path.Combine(basePath, fileName);
-                dxf.Save(filePath);
+                var newFileName = Path.GetFileNameWithoutExtension(fileName);
+                var newFileExtension = Path.GetExtension(fileName);
+                var newFullFileName = newFileName + "_layered" + newFileExtension;
+
+                if (doSave)
+                {
+                    var basePath = Path.Combine(Directory.GetCurrentDirectory() + "\\Files\\");
+                    bool basePathExists = System.IO.Directory.Exists(basePath);
+                    if (!basePathExists) Directory.CreateDirectory(basePath);
+
+                    var filePath = Path.Combine(basePath, newFullFileName);
+                    dxf.Save(filePath);
+
+                    TempData["Message"] = "File saved successfully";
+                }
+                else
+                {
+                    // download converted file to user
+                    var memoryStream = new MemoryStream();
+                    dxf.Save(memoryStream);
+
+                    // At this point, the Offset is at the end of the MemoryStream
+                    // Either do this to seek to the beginning
+                    memoryStream.Position = 0;
+                    return File(memoryStream, "APPLICATION/octet-stream", newFullFileName);
+                }
             }
             else
             {
-                TempData["Message"] = "Conversion Unsuccessfull!";
+                TempData["Message"] = "Conversion unsuccessfull!";
             }
 
             return RedirectToAction("Index");
