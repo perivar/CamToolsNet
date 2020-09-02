@@ -8,14 +8,12 @@
     </div>
 }	
 
-    <div id="wrapper">
-        <canvas id="myCanvas" width="600" height="350">
-        </canvas>
-        <div id="buttonWrapper">
-            <input class="btn btn-primary btn-md" type="button" id="plus" value="+">
-            <input class="btn btn-primary btn-md" type="button" id="minus" value="-">
-        </div>
-    </div>
+    <canvas id="myCanvas" width="600" height="400">
+    </canvas>
+
+    <input  type="button"
+                         
+    <input type="button" class="btn btn-primary" title="Move" value="Move Same Circles To Unique Layers" onclick="location.href='@Url.Action("CirclesToLayers", "File")'" />
 
 @section Scripts {
     <script>
@@ -41,16 +39,19 @@
                         var startAngle = 0;
                         var endAngle = 2 * Math.PI;
                         var x = @c.Center.X.ToString(CultureInfo.InvariantCulture);
-                        var y = @c.Center.Y.ToString(CultureInfo.InvariantCulture);
-                        var radius = @c.Radius.ToString(CultureInfo.InvariantCulture);
+                        var y = canvas.height - @c.Center.Y.ToString(CultureInfo.InvariantCulture);
+                        var radius = @c.Radius.ToString("N", CultureInfo.InvariantCulture);
                         
                         context.moveTo(x + radius, y);
                         context.arc(x, y, radius, startAngle, endAngle, false);
+
+                        context.font = '5px sans-serif';
+                        context.fillText('' + radius*2, x+4, y+4);
                     </text>
                 }
                 context.closePath(); // end
 
-                context.lineWidth = 1;
+                context.lineWidth = 0.3;
                 context.strokeStyle = "#0000ff";
                 context.stroke();
 
@@ -60,9 +61,9 @@
                 {
                     <text>
                         var startX = @l.StartPoint.X.ToString(CultureInfo.InvariantCulture);
-                        var startY = @l.StartPoint.Y.ToString(CultureInfo.InvariantCulture);
+                        var startY = canvas.height - @l.StartPoint.Y.ToString(CultureInfo.InvariantCulture);
                         var endX = @l.EndPoint.X.ToString(CultureInfo.InvariantCulture);
-                        var endY = @l.EndPoint.Y.ToString(CultureInfo.InvariantCulture);
+                        var endY = canvas.height - @l.EndPoint.Y.ToString(CultureInfo.InvariantCulture);
                         
                         context.moveTo(startX, startY);
                         context.lineTo(endX, endY);
@@ -70,7 +71,7 @@
                 }
                 context.closePath(); // end
 
-                context.lineWidth = 1;
+                context.lineWidth = 0.3;
                 context.strokeStyle = "#cc00ff";
                 context.stroke();
 
@@ -90,27 +91,60 @@
                         var endX = (centerX + Math.cos(endAngle * Math.PI / 180) * radius);
                         var endY = (centerY + Math.sin(endAngle * Math.PI / 180) * radius);
 
-                        var isCounterClockwise = false;
-                        var sweep = 0.0;
-                        if (endAngle < startAngle)
-                        {
-                            sweep = (360 + endAngle) - startAngle;
-                        }
-                        else
-                        {
-                            sweep = Math.abs(endAngle - startAngle);
-                        }
-                        var isLargeArc = sweep >= 180;
+                        @* since we are offsetting the y axis due to a different origin coordinate system, we have to also change direction *@
+                        var isCounterClockwise = true;
 
-                        context.moveTo(startX, startY);
-                        context.arc(centerX, centerY, radius, startAngle * Math.PI / 180, endAngle * Math.PI / 180, isCounterClockwise);
+                        context.moveTo(startX, canvas.height - startY);
+                        context.arc(centerX, canvas.height - centerY, radius, startAngle * Math.PI / 180, endAngle * Math.PI / 180, isCounterClockwise);
+                        context.moveTo(endX, canvas.height - endY);
                     </text>
                 }
                 context.closePath(); // end
 
-                context.lineWidth = 1;
+                context.lineWidth = 0.3;
                 context.strokeStyle = "#000000";
                 context.stroke();
+
+                // polylines
+                context.beginPath(); // begin
+                @foreach (var p in Model.Polylines)
+                {
+                    for (int i = 0; i < p.Vertexes.Count; i++)
+                    {
+                        var vertex = p.Vertexes[i];
+                        <text>                            
+                            var pointX = @vertex.Position.X.ToString(CultureInfo.InvariantCulture);
+                            var pointY = @vertex.Position.Y.ToString(CultureInfo.InvariantCulture);
+                            var prePointX = 0;
+                            var prePointY = 0;
+                            var bulge = 0;
+
+                            @if (i == 0)
+                            {   
+                                <text>                               
+                                context.moveTo(pointX, pointY);
+                                </text>  
+                            }
+                            else {
+                                <text> 
+                                double angle = 4 * Math.atan(Math.abs(bulge)) / Math.PI * 180;
+                                double length = Math.sqrt((pointX - prePointX) * (pointX - prePointX) + (pointY - prePointY) * (pointY - prePointY));
+                                double radius = Math.abs(length / (2 * Math.sin(angle / 360 * Math.PI)));
+                                context.arc(pointX, pointY, radius, 0, angle * Math.PI / 180, false);
+
+                                prePointX = pointX;
+                                prePointY = pointY;
+                                </text>
+                            }
+                        </text>
+                    }                    
+                }
+                context.closePath(); // end
+
+                context.lineWidth = 0.3;
+                context.strokeStyle = "#002266";
+                context.stroke();
+
 
                 </text>
             }
@@ -130,17 +164,6 @@
             var scaleMultiplier = 0.8;
             var startDragOffset = {};
             var mouseDown = false;
-
-            // add button event listeners
-            document.getElementById("plus").addEventListener("click", function(){
-                scale /= scaleMultiplier;
-                draw(scale, translatePos);
-            }, false);
-
-            document.getElementById("minus").addEventListener("click", function(){
-                scale *= scaleMultiplier;
-                draw(scale, translatePos);
-            }, false);
 
             // add event listeners to handle screen drag
             canvas.addEventListener("mousedown", function(evt){
@@ -169,21 +192,29 @@
                 }
             });
     
-            var handleScroll = function(evt){
-                var delta = evt.wheelDelta ? evt.wheelDelta/40 : evt.detail ? -evt.detail : 0;
-                if (delta) {
-                    if (delta < 0)
-                    {
-                        scale /= 0.99;
-                        if (scale < 0.2) scale = 0.2;
-                    }
-                    else
-                    {
-                        scale *= 0.99;
-                        if (scale > 10) scale = 10;
-                    }
-                    draw(scale, translatePos);
-                }
+            var handleScroll = function(evt) {
+                 // e is the mouse wheel event
+                const x = evt.offsetX;
+                const y = evt.offsetY;
+                
+                const amount = evt.wheelDelta > 0 ?  1.1 : 1 / 1.1; 
+
+                scale *= amount;  // the new scale
+
+                @* if (scale > 5) {
+                    scale = 5;
+                    amount = scale/5;
+                } else if (scale < 0.5) {
+                    scale = 0.5;
+                    amount = scale*5;
+                } *@
+
+                // move the origin  
+                translatePos.x = x - (x - translatePos.x) * amount;
+                translatePos.y = y - (y - translatePos.y) * amount;
+                
+                draw(scale, translatePos);
+
                 return evt.preventDefault() && false;
             };
 

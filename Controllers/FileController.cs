@@ -35,6 +35,7 @@ namespace CAMToolsNet.Controllers
         {
             foreach (var file in files)
             {
+                // Read file fully and save to file system
                 // var basePath = Path.Combine(Directory.GetCurrentDirectory() + "\\Files\\");
                 // bool basePathExists = System.IO.Directory.Exists(basePath);
                 // if (!basePathExists) Directory.CreateDirectory(basePath);
@@ -59,12 +60,24 @@ namespace CAMToolsNet.Controllers
                     memoryStream.Seek(0, SeekOrigin.Begin);
 
                     var dxf = DxfDocument.Load(memoryStream);
+                    // convert to a model that can be serialized
+                    // I am unable to get the default dxfnet model to be serialized
                     var dxfModel = DxfDocumentModel.FromDxfDocument(dxf);
                     HttpContext.Session.SetObjectAsJson("DxfDocument", dxfModel);
                 }
             }
 
-            TempData["Message"] = "File successfully uploaded to File System.";            
+            TempData["Message"] = "File successfully uploaded";
+            return RedirectToAction("Index");
+        }
+
+
+        [HttpGet]
+        public async Task<IActionResult> CirclesToLayers()
+        {
+            // traverse through all circles and set the layer whenever the radius is the same
+            
+            TempData["Message"] = "Conversion Successfull";
             return RedirectToAction("Index");
         }
     }

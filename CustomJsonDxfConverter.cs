@@ -9,6 +9,9 @@ public class CustomJsonDxfConverter : JsonConverter<DxfDocument>
 {
     public override DxfDocument Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
+        // this does not work and seems like a very time consuming method
+        throw new NotImplementedException();
+
         var dxf = new DxfDocument();
 
         if (reader.TokenType != JsonTokenType.StartArray)
@@ -52,6 +55,9 @@ public class CustomJsonDxfConverter : JsonConverter<DxfDocument>
 
     public override void Write(Utf8JsonWriter writer, DxfDocument value, JsonSerializerOptions options)
     {
+        // this does not work and seems like a very time consuming method
+        throw new NotImplementedException();
+        
         writer.WriteStartArray();
 
         foreach (var c in value.Circles)

@@ -2,24 +2,15 @@
     ViewData["Title"] = "Home Page";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
-
-<div id="ts-example">
+@* <div id="ts-example">
     <br />
     <button type="button" class="btn btn-primary btn-md" onclick="TSButton()">
         Click Me
     </button>
-</div>
+</div> *@
 
-<div>
-   <p id="ts-example-2">jQuery version is:</p>
-</div>
-
-<h4>Start Uploading Files Here</h4>
+<h4>Upload DXF</h4>
 <form method="post" enctype="multipart/form-data">
     <input type="file" name="files" multiple />
-    <button type="submit" class="btn btn-primary" asp-controller="File" asp-action="UploadToFileSystem">Upload to File System</button>    
+    <button type="submit" class="btn btn-primary" asp-controller="File" asp-action="UploadToFileSystem">Upload</button>    
 </form>

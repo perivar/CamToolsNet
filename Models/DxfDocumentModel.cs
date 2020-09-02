@@ -52,7 +52,7 @@ namespace CAMToolsNet.Models
             public DxfArc() { }
 
             public DxfArc(Arc a)
-            {            
+            {
                 Center = new Vector3(a.Center.X, a.Center.Y, a.Center.Z);
                 Radius = a.Radius;
                 Thickness = a.Thickness;
@@ -61,11 +61,34 @@ namespace CAMToolsNet.Models
             }
         }
 
+        public class DxfPolyline
+        {
+            public List<PolylineVertex> Vertexes { get; set; }
+
+            // parameter-less constructor needed for de-serialization
+            public DxfPolyline() { }
+
+            public DxfPolyline(Polyline p)
+            {
+                bool IsClosed = p.IsClosed;
+
+                List<PolylineVertex> Vertexes = new List<PolylineVertex>();
+
+                for (int i = 0; i < p.Vertexes.Count; i++)
+                {
+                    var vertex = (PolylineVertex)p.Vertexes[i].Clone();
+                    var pos = vertex.Position;
+                    Vertexes.Add(vertex);
+                }
+            }
+        }
+
 
         // used by the serializer and de-serializer
         public List<DxfCircle> Circles { get; set; }
         public List<DxfLine> Lines { get; set; }
         public List<DxfArc> Arcs { get; set; }
+        public List<DxfPolyline> Polylines { get; set; }
 
         public static DxfDocumentModel FromDxfDocument(DxfDocument dxf)
         {
@@ -100,6 +123,14 @@ namespace CAMToolsNet.Models
                 {
                     Arcs.Add(new DxfArc(a));
                 }
+
+                // polylines
+                Polylines = new List<DxfPolyline>();
+                foreach (var p in dxf.Polylines)
+                {
+                    Polylines.Add(new DxfPolyline(p));
+                }
+
             }
         }
     }

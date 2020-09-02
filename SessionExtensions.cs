@@ -10,6 +10,7 @@ public static class SessionExtensions
             Converters = { new CustomJsonDxfConverter() }
         };
 
+        // disable the custom json converter and use a separete model instead
         //var stringValue = JsonSerializer.Serialize(value, serializerOptions);
         var stringValue = JsonSerializer.Serialize(value);
         session.SetString(key, stringValue);
@@ -23,6 +24,8 @@ public static class SessionExtensions
         };
 
         var stringValue = session.GetString(key);
+
+        // disable the custom json converter and use a separete model instead
         //return stringValue == null ? default(T) : JsonSerializer.Deserialize<T>(stringValue, serializerOptions);
         return stringValue == null ? default(T) : JsonSerializer.Deserialize<T>(stringValue);
     }
