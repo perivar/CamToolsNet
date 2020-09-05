@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - CAMToolsNet</title>
+    <title>@ViewData["Title"] - CAMTools</title>
 
     <environment include="Development">
         <link rel="stylesheet" href="~/css/site.css" asp-append-version="true"/>        
@@ -17,37 +17,49 @@
 </head>
 <body>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+        <nav class="navbar py-0 navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">CAMToolsNet</a>
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">CAMTools</a>
                 <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
+
                 <div class="navbar-collapse collapse d-sm-inline-flex flex-sm-row-reverse">
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                            <a class="nav-link text-dark py-0 pt-2" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="File" asp-action="Index">Editor</a>
+                            <a class="nav-link text-dark py-0 pt-2" asp-area="" asp-controller="File" asp-action="Index">Editor</a>
                         </li>
+                        <li class="nav-item">
+                            <div class="input-group input-group-sm py-0 pt-2">
+                                <div class="custom-file p-0">
+                                    <form method="post" enctype="multipart/form-data">
+                                        <input type="file" class="btn-sm" name="files" multiple />
+                                        <button type="submit" class="btn btn-outline-primary btn-sm" asp-controller="File" asp-action="UploadToFileSystem">Upload</button>    
+                                    </form>
+                                </div>
+                            </div>
+                        </li>   
                     </ul>
                 </div>
             </div>
         </nav>
     </header>
-    <div class="container">
-        <main role="main" class="pb-3">
+                        
+    <div class="container-fluid py-0">
+        <main role="main" class="py-0">
             @RenderBody()
         </main>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2020 - CAMToolsNet - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-        </div>
-    </footer>
+    <nav class="navbar fixed-bottom navbar-light border-top py-0">
+        <div class="container py-1">
+            &copy; 2020 - CAMToolsNet
+        </div>  
+    </nav>
 
     <environment include="Development">
     </environment>

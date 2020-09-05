@@ -13,6 +13,7 @@ using System.IO;
 using netDxf;
 using netDxf.Entities;
 using System.Globalization;
+using SVG;
 
 namespace CAMToolsNet.Controllers
 {
@@ -28,13 +29,14 @@ namespace CAMToolsNet.Controllers
         public IActionResult Index()
         {
             ViewData["Message"] = TempData["Message"];
-            var dxfModel = HttpContext.Session.GetObjectFromJson<DxfDocumentModel>("DxfDocument");
-            return View(dxfModel);
+            var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
+            return View(drawModel);
         }
 
         [HttpPost]
         public async Task<IActionResult> UploadToFileSystem(List<IFormFile> files, string description)
         {
+            DrawModel drawModel = null;
             foreach (var file in files)
             {
                 // Read file fully and save to file system
@@ -61,15 +63,40 @@ namespace CAMToolsNet.Controllers
                     // Either do this to seek to the beginning
                     memoryStream.Seek(0, SeekOrigin.Begin);
 
-                    var dxf = DxfDocument.Load(memoryStream);
-                    // convert to a model that can be serialized
-                    // I am unable to get the default dxfnet model to be serialized
-                    var dxfModel = DxfDocumentModel.FromDxfDocument(dxf, file.FileName);
-                    HttpContext.Session.SetObjectAsJson("DxfDocument", dxfModel);
+                    // try to parse as dxf
+                    try
+                    {
+                        var dxf = DxfDocument.Load(memoryStream);
+                        if (dxf != null)
+                        {
+                            // convert dxf to a model that can be serialized
+                            // since I am unable to get the default dxfnet model to be serialized
+                            drawModel = DrawModel.FromDxfDocument(dxf, file.FileName);
+                        }
+                    }
+                    catch (System.Exception)
+                    {
+                        // ignore
+                    }
+
+                    // try to parse as SVG
+                    try
+                    {
+                        var svg = SVGDocument.Load(memoryStream);
+                        if (svg != null) {
+                            drawModel = DrawModel.FromSVGDocument(svg, file.FileName);
+                        }
+                    }
+                    catch (System.Exception)
+                    {
+                        // ignore
+                    }
+
+                    if (drawModel != null) HttpContext.Session.SetObjectAsJson("DrawModel", drawModel);
                 }
             }
 
-            if (HttpContext.Session.Keys.Contains("DxfDocument"))
+            if (HttpContext.Session.Keys.Contains("DrawModel"))
             {
                 TempData["Message"] = "File successfully uploaded";
             }
@@ -86,10 +113,11 @@ namespace CAMToolsNet.Controllers
         public IActionResult CirclesToLayers(bool doSave)
         {
             // traverse through all circles and set the layer whenever the radius is the same
-            var dxfModel = HttpContext.Session.GetObjectFromJson<DxfDocumentModel>("DxfDocument");
-            if (dxfModel != null)
+            var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
+            if (drawModel != null)
             {
-                var dxf = DxfDocumentModel.ToDxfDocument(dxfModel);
+                // convert to a real dxf document
+                var dxf = DrawModel.ToDxfDocument(drawModel);
 
                 // create a bucket for each radius
                 Dictionary<string, List<Circle>> radiusBuckets = dxf.Circles
@@ -116,7 +144,7 @@ namespace CAMToolsNet.Controllers
                 }
 
                 // build new filename
-                string fileName = dxfModel.FileName;
+                string fileName = drawModel.FileName;
                 var newFileName = Path.GetFileNameWithoutExtension(fileName);
                 var newFileExtension = Path.GetExtension(fileName);
                 var newFullFileName = newFileName + "_layered" + newFileExtension;

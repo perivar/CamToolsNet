@@ -34,7 +34,11 @@ namespace CAMToolsNet
                 options.Cookie.IsEssential = true;
             });
 
-            services.AddControllersWithViews();
+            var mvcBuilder = services.AddControllersWithViews();
+            if (Env.IsDevelopment())
+            {
+                mvcBuilder.AddRazorRuntimeCompilation();
+            }
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

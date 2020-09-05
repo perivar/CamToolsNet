@@ -1,11 +1,11 @@
 @using System.Globalization
-@model DxfDocumentModel
+@model DrawModel
 
 @if (ViewData["Message"] != null)
 {
-    <div class="alert alert-success alert-dismissible" style="margin-top:20px">
+    @* <div class="alert alert-success alert-dismissible" style="margin-top:20px">
         @ViewData["Message"]
-    </div>
+    </div> *@
 }	
     <div class="container">
         <div class="row pb-2">
@@ -33,8 +33,7 @@
 
             @if (Model != null) {            
                 <text>       
-
-                // circles
+                @* drawing circles *@
                 context.beginPath(); // begin
                 @foreach (var c in Model.Circles)
                 {
@@ -42,7 +41,7 @@
                         var startAngle = 0;
                         var endAngle = 2 * Math.PI;
                         var x = @c.Center.X.ToString(CultureInfo.InvariantCulture);
-                        var y = canvas.height - @c.Center.Y.ToString(CultureInfo.InvariantCulture);
+                        var y = @c.Center.Y.ToString(CultureInfo.InvariantCulture);
                         var radius = @c.Radius.ToString("N", CultureInfo.InvariantCulture);
                         
                         context.moveTo(x + radius, y);
@@ -57,16 +56,17 @@
                 context.lineWidth = 0.3;
                 context.strokeStyle = "#0000ff";
                 context.stroke();
+                @* done drawing circles *@
 
-                // lines
+                @* drawing lines *@
                 context.beginPath(); // begin
                 @foreach (var l in Model.Lines)
                 {
                     <text>
                         var startX = @l.StartPoint.X.ToString(CultureInfo.InvariantCulture);
-                        var startY = canvas.height - @l.StartPoint.Y.ToString(CultureInfo.InvariantCulture);
+                        var startY = @l.StartPoint.Y.ToString(CultureInfo.InvariantCulture);
                         var endX = @l.EndPoint.X.ToString(CultureInfo.InvariantCulture);
-                        var endY = canvas.height - @l.EndPoint.Y.ToString(CultureInfo.InvariantCulture);
+                        var endY = @l.EndPoint.Y.ToString(CultureInfo.InvariantCulture);
                         
                         context.moveTo(startX, startY);
                         context.lineTo(endX, endY);
@@ -77,8 +77,9 @@
                 context.lineWidth = 0.3;
                 context.strokeStyle = "#cc00ff";
                 context.stroke();
+                @* done drawing lines *@
 
-                // arcs
+                @* drawing arcs *@
                 context.beginPath(); // begin
                 @foreach (var a in Model.Arcs)
                 {
@@ -97,9 +98,9 @@
                         @* since we are offsetting the y axis due to a different origin coordinate system, we have to also change direction *@
                         var isCounterClockwise = true;
 
-                        context.moveTo(startX, canvas.height - startY);
-                        context.arc(centerX, canvas.height - centerY, radius, startAngle * Math.PI / 180, endAngle * Math.PI / 180, isCounterClockwise);
-                        context.moveTo(endX, canvas.height - endY);
+                        context.moveTo(startX, startY);
+                        context.arc(centerX, centerY, radius, startAngle * Math.PI / 180, endAngle * Math.PI / 180, isCounterClockwise);
+                        context.moveTo(endX, endY);
                     </text>
                 }
                 context.closePath(); // end
@@ -107,8 +108,41 @@
                 context.lineWidth = 0.3;
                 context.strokeStyle = "#000000";
                 context.stroke();
+                @* done drawing lines *@
 
-                 // polylines light weight
+                @* drawing polylines  *@
+                context.beginPath(); // begin
+                @foreach (var p in Model.Polylines)
+                {
+                    for (int i = 0; i < p.Vertexes.Count; i++)
+                    {
+                        var vertex = p.Vertexes[i];
+                        <text>                            
+                            var pointX = @vertex.X.ToString(CultureInfo.InvariantCulture);
+                            var pointY = @vertex.Y.ToString(CultureInfo.InvariantCulture);
+
+                            @if (i == 0)
+                            {   
+                                <text>                               
+                                context.moveTo(pointX, pointY);
+                                </text>  
+                            }
+                            else {
+                                <text> 
+                                context.lineTo(pointX, pointY);                                
+                                </text>
+                            }
+                        </text>
+                    }                    
+                }
+                context.closePath(); // end
+
+                context.lineWidth = 0.3;
+                context.strokeStyle = "#ff00ff";
+                context.stroke();
+                @* done drawing polylines *@
+
+                @* drawing polylines light weight *@
                 context.beginPath(); // begin
                 @foreach (var p in Model.PolylinesLW)
                 {
@@ -147,7 +181,7 @@
                 context.lineWidth = 0.3;
                 context.strokeStyle = "#002266";
                 context.stroke();
-
+                @* done drawing polylines light weight *@
 
 
                 </text>
