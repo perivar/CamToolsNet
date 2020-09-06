@@ -146,7 +146,7 @@ namespace CoordinateUtils
 
         /// <summary>
         /// If the polygon is a circle, this method can be used to
-        /// return the center point and radiu
+        /// return the center point and radius
         /// </summary>
         /// <param name="points">list of points</param>
         /// <param name="center">out center point</param>

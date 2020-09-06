@@ -12,6 +12,7 @@ public class CustomJsonDxfConverter : JsonConverter<DxfDocument>
         // this does not work and seems like a very time consuming method
         throw new NotImplementedException();
 
+        /*
         var dxf = new DxfDocument();
 
         if (reader.TokenType != JsonTokenType.StartArray)
@@ -51,12 +52,15 @@ public class CustomJsonDxfConverter : JsonConverter<DxfDocument>
 
         // throw new FormatException();
         return dxf;
+        */
     }
 
     public override void Write(Utf8JsonWriter writer, DxfDocument value, JsonSerializerOptions options)
     {
         // this does not work and seems like a very time consuming method
         throw new NotImplementedException();
+
+        /*
         
         writer.WriteStartArray();
 
@@ -76,5 +80,6 @@ public class CustomJsonDxfConverter : JsonConverter<DxfDocument>
 
         writer.WriteEndArray();
         writer.Flush();
+        */
     }
 }

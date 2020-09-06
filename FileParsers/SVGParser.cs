@@ -897,8 +897,10 @@ namespace SVG
             // ---------------------------------------------------------------------------
             // Calculate the transition point for the BiArc 
             // V: Intersection point of tangent lines
-            var C1 = p1t;
-            var C2 = p2t;
+            // var C1 = p1t;
+            // var C2 = p2t;
+            var C1 = p1 == p1t ? p2t : p1t;
+            var C2 = p2 == p2t ? p1t : p2t;
 
             var T1 = new Line(p1, C1);
             var T2 = new Line(p2, C2);
@@ -1038,6 +1040,9 @@ namespace SVG
 
                 points.Add(newPoint);
             }
+
+            // draw arc
+            drawModel.AddArc(center, (float)radius, (float)(angleB * 180 / Math.PI), (float)(angleA * 180 / Math.PI));
         }
 
         public List<List<PointF>> GetContours()

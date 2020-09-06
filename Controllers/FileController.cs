@@ -31,8 +31,9 @@ namespace CAMToolsNet.Controllers
         public IActionResult Index()
         {
             ViewData["Message"] = TempData["Message"];
-            var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
-            return View(drawModel);
+            // var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
+            // return View(drawModel);
+            return View();
         }
 
         [HttpPost]
@@ -110,7 +111,6 @@ namespace CAMToolsNet.Controllers
 
             return RedirectToAction("Index");
         }
-
 
         [HttpGet]
         public IActionResult CirclesToLayers(bool doSave)
