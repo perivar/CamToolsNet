@@ -9,7 +9,12 @@
 }	
     <div class="container">
         <div class="row pb-2">
-            <input type="button" class="btn btn-primary btn-sm" title="MoveEqual" value="Move Equal Circles To Unique Layers" onclick="location.href='@Url.Action("CirclesToLayers", "File")?doSave=false'" />
+            <div class=column">
+                <input type="button" class="btn btn-outline-secondary btn-sm mx-1" title="ConvertToCircles" value="Convert Polyline to Circles" onclick="location.href='@Url.Action("PolylineToCircles", "File")'" />
+            </div>
+            <div class=column">
+                <input type="button" class="btn btn-outline-secondary btn-sm mx-1" title="MoveEqual" value="Move Equal Circles To Unique Layers" onclick="location.href='@Url.Action("CirclesToLayers", "File")?doSave=false'" />
+            </div>
         </div>
 
         <div class="row">
@@ -20,46 +25,67 @@
                        
 @section Scripts {
     <script>
+        var canvas = document.getElementById("myCanvas");   
+        var ctx = canvas.getContext("2d");
+        var canvasWidth = canvas.width;
+        var canvasHeight = canvas.height;
+        
         function draw(scale, translatePos){
-            var canvas = document.getElementById("myCanvas");
-            var context = canvas.getContext("2d");
+            @* off-screen canvas *@
+            @* https://stackoverflow.com/questions/48858220/javascript-put-image-data-on-top-of-canvas *@
+            var off_canv = document.createElement('canvas');
+            off_canv.width = canvasWidth;
+            off_canv.height = canvasHeight;
+            var off_ctx = off_canv.getContext('2d');
+            var imgData = off_ctx.createImageData(canvasWidth, canvasHeight);
 
-            // clear canvas
-            context.clearRect(0, 0, canvas.width, canvas.height);
+            @* https://stackoverflow.com/questions/7812514/drawing-a-dot-on-html5-canvas *@
+            function drawPixel (x, y, r, g, b, a) {
+                var index = (x + y * canvasWidth) * 4;
+                imgData.data[index + 0] = r;
+                imgData.data[index + 1] = g;
+                imgData.data[index + 2] = b;
+                imgData.data[index + 3] = a;
+            }
 
-            context.save();
-            context.translate(translatePos.x, translatePos.y);
-            context.scale(scale, scale);
+            // clear
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+            ctx.save();
+            ctx.translate(translatePos.x, translatePos.y);
+            ctx.scale(scale, scale);
 
             @if (Model != null) {            
                 <text>       
                 @* drawing circles *@
-                context.beginPath(); // begin
-                @foreach (var c in Model.Circles)
+                ctx.beginPath(); // begin
+                @foreach (var canvas in Model.Circles)
                 {
                     <text>
                         var startAngle = 0;
                         var endAngle = 2 * Math.PI;
-                        var x = @c.Center.X.ToString(CultureInfo.InvariantCulture);
-                        var y = @c.Center.Y.ToString(CultureInfo.InvariantCulture);
-                        var radius = @c.Radius.ToString("N", CultureInfo.InvariantCulture);
+                        var x = @canvas.Center.X.ToString(CultureInfo.InvariantCulture);
+                        var y = @canvas.Center.Y.ToString(CultureInfo.InvariantCulture);
+                        var radius = @canvas.Radius.ToString("N", CultureInfo.InvariantCulture);
                         
-                        context.moveTo(x + radius, y);
-                        context.arc(x, y, radius, startAngle, endAngle, false);
+                        ctx.moveTo(x + radius, y);
+                        ctx.arc(x, y, radius, startAngle, endAngle, false);
 
-                        context.font = '5px sans-serif';
-                        context.fillText('' + radius*2, x+4, y+4);
+                        drawPixel(x, y, 255, 0, 0, 255);
+
+                        ctx.font = '5px sans-serif';
+                        ctx.fillText('' + radius*2, x+4, y+4);
                     </text>
                 }
-                context.closePath(); // end
+                ctx.closePath(); // end
 
-                context.lineWidth = 0.3;
-                context.strokeStyle = "#0000ff";
-                context.stroke();
+                ctx.lineWidth = 0.3;
+                ctx.strokeStyle = "#0000ff";
+                ctx.stroke();
                 @* done drawing circles *@
 
                 @* drawing lines *@
-                context.beginPath(); // begin
+                ctx.beginPath(); // begin
                 @foreach (var l in Model.Lines)
                 {
                     <text>
@@ -68,19 +94,19 @@
                         var endX = @l.EndPoint.X.ToString(CultureInfo.InvariantCulture);
                         var endY = @l.EndPoint.Y.ToString(CultureInfo.InvariantCulture);
                         
-                        context.moveTo(startX, startY);
-                        context.lineTo(endX, endY);
+                        ctx.moveTo(startX, startY);
+                        ctx.lineTo(endX, endY);
                     </text>
                 }
-                context.closePath(); // end
+                ctx.closePath(); // end
 
-                context.lineWidth = 0.3;
-                context.strokeStyle = "#cc00ff";
-                context.stroke();
+                ctx.lineWidth = 0.3;
+                ctx.strokeStyle = "#44cc44";
+                ctx.stroke();
                 @* done drawing lines *@
 
                 @* drawing arcs *@
-                context.beginPath(); // begin
+                ctx.beginPath(); // begin
                 @foreach (var a in Model.Arcs)
                 {
                     <text>
@@ -98,20 +124,20 @@
                         @* since we are offsetting the y axis due to a different origin coordinate system, we have to also change direction *@
                         var isCounterClockwise = true;
 
-                        context.moveTo(startX, startY);
-                        context.arc(centerX, centerY, radius, startAngle * Math.PI / 180, endAngle * Math.PI / 180, isCounterClockwise);
-                        context.moveTo(endX, endY);
+                        ctx.moveTo(startX, startY);
+                        ctx.arc(centerX, centerY, radius, startAngle * Math.PI / 180, endAngle * Math.PI / 180, isCounterClockwise);
+                        ctx.moveTo(endX, endY);
                     </text>
                 }
-                context.closePath(); // end
+                ctx.closePath(); // end
 
-                context.lineWidth = 0.3;
-                context.strokeStyle = "#000000";
-                context.stroke();
+                ctx.lineWidth = 0.3;
+                ctx.strokeStyle = "#000000";
+                ctx.stroke();
                 @* done drawing lines *@
 
                 @* drawing polylines  *@
-                context.beginPath(); // begin
+                ctx.beginPath(); // begin
                 @foreach (var p in Model.Polylines)
                 {
                     for (int i = 0; i < p.Vertexes.Count; i++)
@@ -124,26 +150,26 @@
                             @if (i == 0)
                             {   
                                 <text>                               
-                                context.moveTo(pointX, pointY);
+                                ctx.moveTo(pointX, pointY);
                                 </text>  
                             }
                             else {
                                 <text> 
-                                context.lineTo(pointX, pointY);                                
+                                ctx.lineTo(pointX, pointY);                                
                                 </text>
                             }
                         </text>
                     }                    
                 }
-                context.closePath(); // end
+                ctx.closePath(); // end
 
-                context.lineWidth = 0.3;
-                context.strokeStyle = "#ff00ff";
-                context.stroke();
+                ctx.lineWidth = 0.3;
+                ctx.strokeStyle = "#ff00ff";
+                ctx.stroke();
                 @* done drawing polylines *@
 
                 @* drawing polylines light weight *@
-                context.beginPath(); // begin
+                ctx.beginPath(); // begin
                 @foreach (var p in Model.PolylinesLW)
                 {
                     for (int i = 0; i < p.Vertexes.Count; i++)
@@ -159,7 +185,7 @@
                             @if (i == 0)
                             {   
                                 <text>                               
-                                context.moveTo(pointX, pointY);
+                                ctx.moveTo(pointX, pointY);
                                 </text>  
                             }
                             else {
@@ -167,7 +193,7 @@
                                 double angle = 4 * Math.atan(Math.abs(bulge)) / Math.PI * 180;
                                 double length = Math.sqrt((pointX - prePointX) * (pointX - prePointX) + (pointY - prePointY) * (pointY - prePointY));
                                 double radius = Math.abs(length / (2 * Math.sin(angle / 360 * Math.PI)));
-                                context.arc(pointX, pointY, radius, 0, angle * Math.PI / 180, false);
+                                ctx.arc(pointX, pointY, radius, 0, angle * Math.PI / 180, false);
 
                                 prePointX = pointX;
                                 prePointY = pointY;
@@ -176,26 +202,26 @@
                         </text>
                     }                    
                 }
-                context.closePath(); // end
+                ctx.closePath(); // end
 
-                context.lineWidth = 0.3;
-                context.strokeStyle = "#002266";
-                context.stroke();
+                ctx.lineWidth = 0.3;
+                ctx.strokeStyle = "#002266";
+                ctx.stroke();
                 @* done drawing polylines light weight *@
-
 
                 </text>
             }
 
-            context.restore();
+            off_ctx.putImageData(imgData, 0,0);
+            ctx.drawImage(off_canv, 0, 0);
+
+            ctx.restore();
         }
 
         window.onload = function(){
-            var canvas = document.getElementById("myCanvas");
-
             var translatePos = {
-                x: canvas.width / 2,
-                y: canvas.height / 2
+                x: canvasWidth / 2,
+                y: canvasHeight / 2
             };
 
             var scale = 1.0;

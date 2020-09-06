@@ -166,7 +166,6 @@ namespace SVG
         /// <returns></returns>
         public static double CalculateSteps(double angle, double radius)
         {
-
             // calculate a couple useful things.
             double length = radius * angle;
 
@@ -789,7 +788,7 @@ namespace SVG
                         var p7 = new PointF(x, y + height - ry);
                         var p8 = new PointF(x, y + ry);
 
-                        Debug.WriteLine("p1: {0}, p2: {1}, p3: {2}, p4: {3}, p5: {4}, p6: {5}, p7: {6}, p8: {7}", p1, p2, p3, p4, p5, p6, p7, p8);
+                        // Debug.WriteLine("p1: {0}, p2: {1}, p3: {2}, p4: {3}, p5: {4}, p6: {5}, p7: {6}, p8: {7}", p1, p2, p3, p4, p5, p6, p7, p8);
 
                         if ((Math.Abs(rx - ry) < SVGUtils.SELF_ZERO))
                         {
@@ -799,14 +798,14 @@ namespace SVG
                             var c67 = new PointF(x + rx, y + height - ry);
                             var c81 = new PointF(x + rx, y + ry);
 
-                            StraightLineSegment(points, p1, p2);
-                            ArcSegment(points, p2, p3, c23, false);
-                            StraightLineSegment(points, p3, p4);
-                            ArcSegment(points, p4, p5, c45, false);
-                            StraightLineSegment(points, p5, p6);
-                            ArcSegment(points, p6, p7, c67, false);
-                            StraightLineSegment(points, p7, p8);
-                            ArcSegment(points, p8, p1, c81, false);
+                            AddStraightLineSegment(p1, p2);
+                            AddArcSegment(p2, p3, c23, false);
+                            AddStraightLineSegment(p3, p4);
+                            AddArcSegment(p4, p5, c45, false);
+                            AddStraightLineSegment(p5, p6);
+                            AddArcSegment(p6, p7, c67, false);
+                            AddStraightLineSegment(p7, p8);
+                            AddArcSegment(p8, p1, c81, false);
                         }
                         else
                         {
@@ -822,14 +821,14 @@ namespace SVG
 
                             Debug.WriteLine("p1t: {0}, p2t: {1}, p3t: {2}, p4t: {3}, p5t: {4}, p6t: {5}, p7t: {6}, p8t: {7}", p1t, p2t, p3t, p4t, p5t, p6t, p7t, p8t);
 
-                            StraightLineSegment(points, p1, p2);
-                            BiArcSegment(points, p2, p3, p2t, p3t);
-                            StraightLineSegment(points, p3, p4);
-                            BiArcSegment(points, p4, p5, p4t, p5t);
-                            StraightLineSegment(points, p5, p6);
-                            BiArcSegment(points, p6, p7, p6t, p7t);
-                            StraightLineSegment(points, p7, p8);
-                            BiArcSegment(points, p8, p1, p8t, p1t);
+                            AddStraightLineSegment(p1, p2);
+                            AddBiArcSegment(p2, p3, p2t, p3t);
+                            AddStraightLineSegment(p3, p4);
+                            AddBiArcSegment(p4, p5, p4t, p5t);
+                            AddStraightLineSegment(p5, p6);
+                            AddBiArcSegment(p6, p7, p6t, p7t);
+                            AddStraightLineSegment(p7, p8);
+                            AddBiArcSegment(p8, p1, p8t, p1t);
                         }
                     }
                     else
@@ -840,10 +839,10 @@ namespace SVG
                         var p3 = new PointF(x + width, y + height);
                         var p4 = new PointF(x, y + height);
 
-                        StraightLineSegment(points, p1, p2);
-                        StraightLineSegment(points, p2, p3);
-                        StraightLineSegment(points, p3, p4);
-                        StraightLineSegment(points, p4, p1);
+                        AddStraightLineSegment(p1, p2);
+                        AddStraightLineSegment(p2, p3);
+                        AddStraightLineSegment(p3, p4);
+                        AddStraightLineSegment(p4, p1);
                     }
                 }
             }
@@ -852,10 +851,10 @@ namespace SVG
 
             graphicsPath.AddPolygon(points.ToArray());
 
-            drawModel.AddPolyline(points);
+            // drawModel.AddPolyline(points);
         }
 
-        static void StraightLineSegment(List<PointF> points, PointF startpoint, PointF endpoint)
+        private void AddStraightLineSegment(PointF startpoint, PointF endpoint)
         {
             // avoid duplicates by checking that the new starting point isn't
             // the same as the previous one
@@ -874,19 +873,21 @@ namespace SVG
 
             // always add the second point
             points.Add(endpoint);
+
+            drawModel.AddLine(startpoint, endpoint);
         }
 
-        static PointF FromVector2(System.Numerics.Vector2 v)
+        private static PointF FromVector2(System.Numerics.Vector2 v)
         {
             return new PointF(v.X, v.Y);
         }
 
-        static System.Numerics.Vector2 ToVector2(PointF p)
+        private static System.Numerics.Vector2 ToVector2(PointF p)
         {
             return new System.Numerics.Vector2(p.X, p.Y);
         }
 
-        static void BiArcSegment(List<PointF> points, PointF startpoint, PointF endpoint, PointF point1turn, PointF point2turn)
+        private void AddBiArcSegment(PointF startpoint, PointF endpoint, PointF point1turn, PointF point2turn)
         {
             var p1 = ToVector2(startpoint);
             var p1t = ToVector2(point1turn);
@@ -914,58 +915,12 @@ namespace SVG
             // ---------------------------------------------------------------------------
             // Calculate the BiArc
             var biarc = new BiArcUtils.BiArc(p1, (p1 - C1), p2, (p2 - C2), G);
-            ArcSegment(points, FromVector2(biarc.A1.P1), FromVector2(biarc.A1.P2), FromVector2(biarc.A1.C), false);
-            ArcSegment(points, FromVector2(biarc.A2.P1), FromVector2(biarc.A2.P2), FromVector2(biarc.A2.C), false);
-            return;
-
-            // figure out our deltas
-            double aX = startpoint.X - point1turn.X;
-            double aY = startpoint.Y - point1turn.Y;
-            double bX = endpoint.X - point2turn.X;
-            double bY = endpoint.Y - point2turn.Y;
-
-            double angleA = Math.Atan2(aY, aX);
-            double angleB = Math.Atan2(bY, bX);
-
-            // Make sure angleB is always greater than angleA
-            // and if not add 2PI so that it is (this also takes
-            // care of the special case of angleA == angleB,
-            // ie we want a complete circle)
-            if (angleB <= angleA)
-            {
-                angleB += 2 * Math.PI;
-            }
-
-            // calculate angle in radians
-            double angle = angleB - angleA;
-
-            // calculate a couple useful things.
-            double radius = Math.Sqrt(aX * aX + aY * aY);
-            double length = radius * angle;
-
-            // Maximum of either 2.4 times the angle in radians
-            // or the length of the curve divided by the curve section constant
-            int steps = (int)Math.Ceiling(Math.Max(angle * 2.4, length / SVGUtils.CURVE_SECTION));
-
-            var point1Center = new PointF();
-            point1Center.X = (float)(point1turn.X + Math.Cos(angleA) * radius);
-            point1Center.Y = (float)(point1turn.Y + Math.Sin(angleA) * radius);
-
-            var point2Center = new PointF();
-            point2Center.X = (float)(point2turn.X + Math.Cos(angleB) * radius);
-            point2Center.Y = (float)(point2turn.Y + Math.Sin(angleB) * radius);
-
-            // Debug.WriteLine("p1: {0}, p1t: {1}, p2: {2}, p2t: {3}, c1: {4}, c2: {5}", startpoint, point1turn, point2turn, endpoint, point1Center, point2Center);
-
-            ArcSegment(points, startpoint, point1turn, point1Center, false);
-            ArcSegment(points, point2turn, endpoint, point2Center, false); // upper left right
+            AddArcSegment(FromVector2(biarc.A1.P1), FromVector2(biarc.A1.P2), FromVector2(biarc.A1.C), false);
+            AddArcSegment(FromVector2(biarc.A2.P1), FromVector2(biarc.A2.P2), FromVector2(biarc.A2.C), false);
         }
 
-        static void ArcSegment(List<PointF> points, PointF startpoint, PointF endpoint, PointF center, bool sweep)
+        private void AddArcSegment(PointF startpoint, PointF endpoint, PointF center, bool sweep)
         {
-            //ArcSegmentV2(points, startpoint, endpoint, center, sweep);
-            //return;
-
             // figure out our deltas
             double aX = startpoint.X - center.X;
             double aY = startpoint.Y - center.Y;
@@ -1003,9 +958,12 @@ namespace SVG
                 tmpPoints.RemoveAt(0);
                 points.AddRange(tmpPoints);
             }
+
+            // draw arc
+            drawModel.AddArc(center, (float)radius, (float)(angleB * 180 / Math.PI), (float)(angleA * 180 / Math.PI));
         }
 
-        static void ArcSegmentV2(List<PointF> points, PointF startpoint, PointF endpoint, PointF center, bool clockwise)
+        private void AddArcSegmentV2(PointF startpoint, PointF endpoint, PointF center, bool clockwise)
         {
             // copied arc code from SimpleGCodeParser
             // see also
@@ -1889,18 +1847,6 @@ namespace SVG
                     drawModel.AddPolyline(currentContour);
                 }
             }
-
-            /*
-			// check for circles
-			foreach (var contour in contours) {
-				if (SVGUtils.IsPolygonCircle(contour)) {
-					// get center point and radius
-					PointF center = PointF.Empty;
-					float radius = 0.0f;
-					SVGUtils.GetCenterAndRadiusForPolygonCircle(contour, ref center, out radius);
-				}
-			}
-			 */
         }
 
         public List<List<PointF>> GetContours()

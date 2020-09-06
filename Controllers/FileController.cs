@@ -14,6 +14,8 @@ using netDxf;
 using netDxf.Entities;
 using System.Globalization;
 using SVG;
+using CoordinateUtils;
+using System.Drawing;
 
 namespace CAMToolsNet.Controllers
 {
@@ -83,7 +85,8 @@ namespace CAMToolsNet.Controllers
                     try
                     {
                         var svg = SVGDocument.Load(memoryStream);
-                        if (svg != null) {
+                        if (svg != null)
+                        {
                             drawModel = DrawModel.FromSVGDocument(svg, file.FileName);
                         }
                     }
@@ -146,7 +149,9 @@ namespace CAMToolsNet.Controllers
                 // build new filename
                 string fileName = drawModel.FileName;
                 var newFileName = Path.GetFileNameWithoutExtension(fileName);
-                var newFileExtension = Path.GetExtension(fileName);
+                // var newFileExtension = Path.GetExtension(fileName);
+                // always use the dxf extension since thats what we are saving
+                var newFileExtension = ".dxf";
                 var newFullFileName = newFileName + "_layered" + newFileExtension;
 
                 if (doSave)
@@ -175,6 +180,40 @@ namespace CAMToolsNet.Controllers
             else
             {
                 TempData["Message"] = "Conversion unsuccessfull!";
+            }
+
+            return RedirectToAction("Index");
+        }
+
+        [HttpGet]
+        public IActionResult PolylineToCircles()
+        {
+            // traverse through all polylines and convert those that are circles to circles
+            var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
+            if (drawModel != null)
+            {
+                // Iterate the list in reverse with a for loop to be able to remove while iterating
+                for (int i = drawModel.Polylines.Count - 1; i >= 0; i--)
+                {
+                    var poly = drawModel.Polylines[i];
+                    var points = poly.Vertexes.Select(p => p.PointF);
+                    if (Transformation.IsPolygonCircle(points))
+                    {
+                        // get center point and radius
+                        PointF center = PointF.Empty;
+                        float radius = 0.0f;
+                        Transformation.GetCenterAndRadiusForPolygonCircle(points, ref center, out radius);
+
+                        // add circle
+                        drawModel.AddCircle(center, radius);
+
+                        // delete the now redundant polyline 
+                        drawModel.Polylines.RemoveAt(i);
+                    }
+                }
+
+                // update model
+                HttpContext.Session.SetObjectAsJson("DrawModel", drawModel);
             }
 
             return RedirectToAction("Index");

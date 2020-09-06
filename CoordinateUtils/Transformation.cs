@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Drawing;
 using System.Drawing.Drawing2D; // Matrix
-using CoordinateUtils;
 
 namespace CoordinateUtils
 {
@@ -69,7 +68,6 @@ namespace CoordinateUtils
         /// <returns>the euclidean distance between two points</returns>
         public static double Distance(float p1X, float p1Y, float p2X, float p2Y)
         {
-
             // From a Math point of view, the distance between two points in the same plane
             // is the square root of the sum from the power of two from each side in a triangle
             // distance = Math.sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
@@ -126,7 +124,6 @@ namespace CoordinateUtils
         /// <returns>true if circle has been detected</returns>
         public static bool IsPolygonCircle(IEnumerable<PointF> points)
         {
-
             // A circle:
             // 1. Has more than 6 vertices.
             // 2. Has diameter of the same size in each direction.
@@ -156,7 +153,6 @@ namespace CoordinateUtils
         /// <param name="radius">out radius</param>
         public static void GetCenterAndRadiusForPolygonCircle(IEnumerable<PointF> points, ref PointF center, out float radius)
         {
-
             center = new PointF
             {
                 X = (float)(points.Average(p => p.X)),
@@ -179,7 +175,6 @@ namespace CoordinateUtils
         /// <returns>area</returns>
         public static double PolygonArea(IEnumerable<PointF> points)
         {
-
             int i, j;
             double area = 0;
             for (i = 0; i < points.Count(); i++)
@@ -216,7 +211,6 @@ namespace CoordinateUtils
         /// <returns>new reflected point</returns>
         public static PointF ReflectMatrix(PointF point, PointF origin)
         {
-
             // Sources:
             // http://accounts.smccd.edu/hasson/hcoords.html
             // https://www.codeproject.com/Articles/8281/Matrix-Transformation-of-Images-using-NET-GDIplus
@@ -286,7 +280,6 @@ namespace CoordinateUtils
         /// <returns>rotated point</returns>
         public static PointF Rotate(float x, float y, float cx, float cy, float angle)
         {
-
             // If you want to rotate about arbitrary center (cx, cy)
             // then equations are:
             // x' = cx + (x-cx) * Cos(theta) - (y-cy) * Sin(theta)
@@ -359,7 +352,6 @@ namespace CoordinateUtils
         /// <returns>rotated point</returns>
         public static PointF Rotate(PointF point, float angle)
         {
-
             // Example of a 2D rotation through an angle w where the coordinates
             // x, y go into x', y'.
             // Note that rotation is about the origin (0, 0).
@@ -422,11 +414,10 @@ namespace CoordinateUtils
         /// positive above X.
         /// </summary>
         /// <param name="centerPoint">Point we are rotating around.</param>
-        /// <param name="targetPoint">Point we want to calcuate the angle to</param>
+        /// <param name="targetPoint">Point we want to calculate the angle to</param>
         /// <returns>angle in degrees</returns>
         public static double GetAngle(PointF centerPoint, PointF targetPoint)
         {
-
             // NOTE: Remember that most math has the Y axis as positive above the X.
             // However, for screens we have Y as positive below. For this reason,
             // the Y values can be inverted to get the expected results.
@@ -475,7 +466,6 @@ namespace CoordinateUtils
         /// <returns>the arc center point</returns>
         public static PointF GetArcCenter(PointF p1, PointF p2, float radius, bool clockwise = true)
         {
-
             // Source:
             // https://stackoverflow.com/questions/22472427/get-the-centerpoint-of-an-arc-g-code-conversion
 
@@ -691,7 +681,6 @@ namespace CoordinateUtils
         /// <seealso cref="http://www.mathopenref.com/coordrectangle.html"/>
         public static double AreaOfRectangle(IPoint2D A, IPoint2D B, IPoint2D C, IPoint2D D)
         {
-
             double side1 = Distance(A, B);
             double side2 = Distance(B, C);
             double area = side1 * side2;
@@ -711,7 +700,6 @@ namespace CoordinateUtils
         /// <seealso cref="https://martin-thoma.com/how-to-check-if-a-point-is-inside-a-rectangle/"/>
         public static double AreaOfRectangleFast(IPoint2D A, IPoint2D B, IPoint2D C, IPoint2D D)
         {
-
             // If you know the coordinates of the points, you can calculate the area of the rectangle like this:
             // A = 1/2 | ( Ay−Cy) * (Dx−Bx) + (By−Dy) * (Ax−Cx) |
             return Math.Abs(((A.Y - C.Y) * (D.X - B.X)) + ((B.Y - D.Y) * (A.X - C.X))) / 2;
@@ -731,7 +719,6 @@ namespace CoordinateUtils
         /// <seealso cref="https://math.stackexchange.com/questions/190111/how-to-check-if-a-point-is-inside-a-rectangle"/>
         public static bool RectangleContains(IPoint2D A, IPoint2D B, IPoint2D C, IPoint2D D, IPoint2D P)
         {
-
             double triangle1Area = AreaOfTriangleFast(A, B, P);
             double triangle2Area = AreaOfTriangleFast(B, C, P);
             double triangle3Area = AreaOfTriangleFast(C, D, P);
@@ -765,7 +752,6 @@ namespace CoordinateUtils
         /// <returns>true if point can be found within the rectangle</returns>
         public static bool RectangleContains(RectangleF rect, IPoint2D P)
         {
-
             var A = new Point3D(rect.X, rect.Y);
             var B = new Point3D(rect.X, rect.Y + rect.Height);
             var C = new Point3D(rect.X + rect.Width, rect.Y + rect.Height);
