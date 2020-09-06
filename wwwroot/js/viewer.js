@@ -72,6 +72,101 @@ function drawPixel(imgData, canvasWidth, x, y, r, g, b, a) {
     imgData.data[index + 2] = b;
     imgData.data[index + 3] = a;
 }
+function getBounds() {
+    var maxX = 0;
+    var maxY = 0;
+    var minX = 0;
+    var minY = 0;
+    var curX = 0;
+    var curY = 0;
+    drawModel.circles.forEach(function (circle) {
+        var x = circle.center.x;
+        var y = circle.center.y;
+        var radius = circle.radius;
+        curX = x + radius;
+        curY = y + radius;
+        maxX = curX > maxX ? curX : maxX;
+        minX = curX < minX ? curX : minX;
+        maxY = curY > maxY ? curY : maxY;
+        minY = curY < minY ? curY : minY;
+        curX = x - radius;
+        curY = y - radius;
+        maxX = curX > maxX ? curX : maxX;
+        minX = curX < minX ? curX : minX;
+        maxY = curY > maxY ? curY : maxY;
+        minY = curY < minY ? curY : minY;
+    });
+    drawModel.lines.forEach(function (line) {
+        var startX = line.startPoint.x;
+        var startY = line.startPoint.y;
+        var endX = line.endPoint.x;
+        var endY = line.endPoint.y;
+        curX = startX;
+        curY = startY;
+        maxX = curX > maxX ? curX : maxX;
+        minX = curX < minX ? curX : minX;
+        maxY = curY > maxY ? curY : maxY;
+        minY = curY < minY ? curY : minY;
+        curX = endX;
+        curY = endY;
+        maxX = curX > maxX ? curX : maxX;
+        minX = curX < minX ? curX : minX;
+        maxY = curY > maxY ? curY : maxY;
+        minY = curY < minY ? curY : minY;
+    });
+    drawModel.arcs.forEach(function (a) {
+        var centerX = a.center.x;
+        var centerY = a.center.y;
+        var radius = a.radius;
+        var startAngle = a.startAngle;
+        var endAngle = a.endAngle;
+        var startX = (centerX + Math.cos(startAngle * Math.PI / 180) * radius);
+        var startY = (centerY + Math.sin(startAngle * Math.PI / 180) * radius);
+        var endX = (centerX + Math.cos(endAngle * Math.PI / 180) * radius);
+        var endY = (centerY + Math.sin(endAngle * Math.PI / 180) * radius);
+        curX = startX;
+        curY = startY;
+        maxX = curX > maxX ? curX : maxX;
+        minX = curX < minX ? curX : minX;
+        maxY = curY > maxY ? curY : maxY;
+        minY = curY < minY ? curY : minY;
+        curX = endX;
+        curY = endY;
+        maxX = curX > maxX ? curX : maxX;
+        minX = curX < minX ? curX : minX;
+        maxY = curY > maxY ? curY : maxY;
+        minY = curY < minY ? curY : minY;
+    });
+    // drawing polylines
+    drawModel.polylines.forEach(function (p) {
+        for (var i = 0; i < p.vertexes.length; i++) {
+            var vertex = p.vertexes[i];
+            var pointX = vertex.x;
+            var pointY = vertex.y;
+            curX = pointX;
+            curY = pointY;
+            maxX = curX > maxX ? curX : maxX;
+            minX = curX < minX ? curX : minX;
+            maxY = curY > maxY ? curY : maxY;
+            minY = curY < minY ? curY : minY;
+        }
+    });
+    // drawing polylines light weight
+    drawModel.polylinesLW.forEach(function (p) {
+        for (var i = 0; i < p.vertexes.length; i++) {
+            var vertex = p.vertexes[i];
+            var pointX = vertex.position.x;
+            var pointY = vertex.Position.y;
+            curX = pointX;
+            curY = pointY;
+            maxX = curX > maxX ? curX : maxX;
+            minX = curX < minX ? curX : minX;
+            maxY = curY > maxY ? curY : maxY;
+            minY = curY < minY ? curY : minY;
+        }
+    });
+    return { minX: minX, maxX: maxX, minY: minY, maxY: maxY };
+}
 function draw(scale, translatePos) {
     // get on-screen canvas
     var canvas = document.getElementById('myCanvas');
@@ -84,6 +179,11 @@ function draw(scale, translatePos) {
     var imgData = off_ctx.createImageData(canvasWidth, canvasHeight);
     // clear
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+    // draw non zoomed and non panned
+    // debugging
+    ctx.font = '10px sans-serif';
+    ctx.fillText('scale: ' + round2TwoDecimal(scale), 10, 10);
+    ctx.fillText('panning: ' + round2TwoDecimal(translatePos.x) + ' x ' + round2TwoDecimal(translatePos.y), 10, 20);
     ctx.save();
     ctx.translate(translatePos.x, translatePos.y);
     ctx.scale(scale, scale);
@@ -200,6 +300,11 @@ function draw(scale, translatePos) {
     // copy offscreen to onscreen
     off_ctx.putImageData(imgData, 0, 0);
     ctx.drawImage(off_ctx.canvas, 0, 0);
+    // get bounds
+    var bounds = getBounds();
+    // mark area:
+    ctx.strokeStyle = "hsl(" + (360 * Math.random()) + ", 80%, 50%)";
+    ctx.strokeRect(bounds.minX, bounds.minY, bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
     ctx.restore();
 }
 function getDrawModel() {

@@ -97,6 +97,118 @@ function drawPixel(imgData, canvasWidth, x, y, r, g, b, a) {
     imgData.data[index + 3] = a;
 }
 
+function getBounds() {
+
+    let maxX = 0;
+    let maxY = 0;
+    let minX = 0;
+    let minY = 0;
+    let curX = 0;
+    let curY = 0;
+
+    drawModel.circles.forEach(circle => {
+        var x = circle.center.x;
+        var y = circle.center.y;
+        var radius = circle.radius;
+
+        curX = x + radius;
+        curY = y + radius;
+        maxX = curX > maxX ? curX : maxX;
+        minX = curX < minX ? curX : minX;
+        maxY = curY > maxY ? curY : maxY;
+        minY = curY < minY ? curY : minY;
+
+        curX = x - radius;
+        curY = y - radius;
+        maxX = curX > maxX ? curX : maxX;
+        minX = curX < minX ? curX : minX;
+        maxY = curY > maxY ? curY : maxY;
+        minY = curY < minY ? curY : minY;
+    });
+
+    drawModel.lines.forEach(line => {
+        var startX = line.startPoint.x;
+        var startY = line.startPoint.y;
+        var endX = line.endPoint.x;
+        var endY = line.endPoint.y;
+
+        curX = startX;
+        curY = startY;
+        maxX = curX > maxX ? curX : maxX;
+        minX = curX < minX ? curX : minX;
+        maxY = curY > maxY ? curY : maxY;
+        minY = curY < minY ? curY : minY;
+
+        curX = endX;
+        curY = endY;
+        maxX = curX > maxX ? curX : maxX;
+        minX = curX < minX ? curX : minX;
+        maxY = curY > maxY ? curY : maxY;
+        minY = curY < minY ? curY : minY;
+    });
+
+    drawModel.arcs.forEach(a => {
+        var centerX = a.center.x;
+        var centerY = a.center.y;
+        var radius = a.radius;
+        var startAngle = a.startAngle;
+        var endAngle = a.endAngle;
+        var startX = (centerX + Math.cos(startAngle * Math.PI / 180) * radius);
+        var startY = (centerY + Math.sin(startAngle * Math.PI / 180) * radius);
+        var endX = (centerX + Math.cos(endAngle * Math.PI / 180) * radius);
+        var endY = (centerY + Math.sin(endAngle * Math.PI / 180) * radius);
+
+        curX = startX;
+        curY = startY;
+        maxX = curX > maxX ? curX : maxX;
+        minX = curX < minX ? curX : minX;
+        maxY = curY > maxY ? curY : maxY;
+        minY = curY < minY ? curY : minY;
+
+        curX = endX;
+        curY = endY;
+        maxX = curX > maxX ? curX : maxX;
+        minX = curX < minX ? curX : minX;
+        maxY = curY > maxY ? curY : maxY;
+        minY = curY < minY ? curY : minY;
+    });
+
+    // drawing polylines
+    drawModel.polylines.forEach(p => {
+        for (let i = 0; i < p.vertexes.length; i++) {
+            var vertex = p.vertexes[i];
+            var pointX = vertex.x;
+            var pointY = vertex.y;
+
+            curX = pointX;
+            curY = pointY;
+            maxX = curX > maxX ? curX : maxX;
+            minX = curX < minX ? curX : minX;
+            maxY = curY > maxY ? curY : maxY;
+            minY = curY < minY ? curY : minY;
+        }
+    });
+
+    // drawing polylines light weight
+    drawModel.polylinesLW.forEach(p => {
+        for (let i = 0; i < p.vertexes.length; i++) {
+            var vertex = p.vertexes[i];
+            var pointX = vertex.position.x;
+            var pointY = vertex.Position.y;
+
+            curX = pointX;
+            curY = pointY;
+            maxX = curX > maxX ? curX : maxX;
+            minX = curX < minX ? curX : minX;
+            maxY = curY > maxY ? curY : maxY;
+            minY = curY < minY ? curY : minY;
+        }
+    });
+
+    return { minX: minX, maxX: maxX, minY: minY, maxY: maxY };
+}
+
+
 function draw(scale: number, translatePos: Point) {
 
     // get on-screen canvas
@@ -112,6 +224,12 @@ function draw(scale: number, translatePos: Point) {
 
     // clear
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+    // draw non zoomed and non panned
+    // debugging
+    ctx.font = '10px sans-serif';
+    ctx.fillText('scale: ' + round2TwoDecimal(scale), 10, 10);
+    ctx.fillText('panning: ' + round2TwoDecimal(translatePos.x) + ' x ' + round2TwoDecimal(translatePos.y), 10, 20);
 
     ctx.save();
     ctx.translate(translatePos.x, translatePos.y);
@@ -255,6 +373,12 @@ function draw(scale: number, translatePos: Point) {
     // copy offscreen to onscreen
     off_ctx.putImageData(imgData, 0, 0);
     ctx.drawImage(off_ctx.canvas, 0, 0);
+
+    // get bounds
+    let bounds = getBounds();
+    // mark area:
+    ctx.strokeStyle = "hsl(" + (360 * Math.random()) + ", 80%, 50%)";
+    ctx.strokeRect(bounds.minX, bounds.minY, bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
 
     ctx.restore();
 }
