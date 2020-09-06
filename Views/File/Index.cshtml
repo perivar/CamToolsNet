@@ -24,29 +24,44 @@
     </div>
                        
 @section Scripts {
-    <script>
-        var canvas = document.getElementById("myCanvas");   
-        var ctx = canvas.getContext("2d");
-        var canvasWidth = canvas.width;
-        var canvasHeight = canvas.height;
-        
-        function draw(scale, translatePos){
-            @* off-screen canvas *@
-            @* https://stackoverflow.com/questions/48858220/javascript-put-image-data-on-top-of-canvas *@
-            var off_canv = document.createElement('canvas');
-            off_canv.width = canvasWidth;
-            off_canv.height = canvasHeight;
-            var off_ctx = off_canv.getContext('2d');
-            var imgData = off_ctx.createImageData(canvasWidth, canvasHeight);
+    <script>       
+        function createOffscreenContext(width, height) {
+            var offScreenCanvas = document.createElement('canvas');
+            offScreenCanvas.width = width;
+            offScreenCanvas.height = height;
+            var off_ctx = offScreenCanvas.getContext("2d");
+            return off_ctx; // use off_ctx.canvas to get the the context's canvas
+        }
 
-            @* https://stackoverflow.com/questions/7812514/drawing-a-dot-on-html5-canvas *@
-            function drawPixel (x, y, r, g, b, a) {
-                var index = (x + y * canvasWidth) * 4;
-                imgData.data[index + 0] = r;
-                imgData.data[index + 1] = g;
-                imgData.data[index + 2] = b;
-                imgData.data[index + 3] = a;
-            }
+        function copyToOnScreen(offScreenCanvas) {
+            var onScreenCanvas = document.getElementById('myCanvas');
+            var onScreenContext = onScreenCanvas.getContext("2d");
+            var onScreenCanvasWidth = onScreenCanvas.width;
+            var onScreenCanvasHeight = onScreenCanvas.height;            
+            onScreenContext.drawImage(offScreenCanvas, 0, 0);
+        }        
+
+        @* https://stackoverflow.com/questions/7812514/drawing-a-dot-on-html5-canvas *@
+        function drawPixel(imgData, canvasWidth, x, y, r, g, b, a) {
+            var index = (x + y * canvasWidth) * 4;
+            imgData.data[index + 0] = r;
+            imgData.data[index + 1] = g;
+            imgData.data[index + 2] = b;
+            imgData.data[index + 3] = a;
+        }
+        
+        function draw(scale, translatePos) {
+
+            @* get on-screen canvas *@
+            var canvas = document.getElementById('myCanvas');
+            var ctx = canvas.getContext("2d");
+            var canvasWidth = canvas.width;
+            var canvasHeight = canvas.height;            
+
+            @* create off-screen canvas to draw pixels on *@
+            @* https://stackoverflow.com/questions/48858220/javascript-put-image-data-on-top-of-canvas *@
+            var off_ctx = createOffscreenContext(canvasWidth, canvasHeight);
+            var imgData = off_ctx.createImageData(canvasWidth, canvasHeight);     
 
             // clear
             ctx.clearRect(0, 0, canvasWidth, canvasHeight);
@@ -71,7 +86,7 @@
                         ctx.moveTo(x + radius, y);
                         ctx.arc(x, y, radius, startAngle, endAngle, false);
 
-                        drawPixel(x, y, 255, 0, 0, 255);
+                        drawPixel(imgData, canvasWidth, x, y, 255, 0, 0, 255);
 
                         ctx.font = '5px sans-serif';
                         ctx.fillText('' + radius*2, x+4, y+4);
@@ -212,13 +227,19 @@
                 </text>
             }
 
+            @* copy offscreen to onscreen *@
             off_ctx.putImageData(imgData, 0,0);
-            ctx.drawImage(off_canv, 0, 0);
+            ctx.drawImage(off_ctx.canvas, 0, 0);
 
             ctx.restore();
         }
 
-        window.onload = function(){
+        window.onload = function() {
+            @* get on-screen canvas *@
+            var canvas = document.getElementById('myCanvas');
+            var canvasWidth = canvas.width;
+            var canvasHeight = canvas.height;            
+
             var translatePos = {
                 x: canvasWidth / 2,
                 y: canvasHeight / 2
