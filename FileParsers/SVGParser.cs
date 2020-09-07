@@ -656,10 +656,32 @@ namespace SVG
         /// <returns></returns>
         public List<PointF> Transform(List<PointF> points)
         {
-            PointF[] pts = points.ToArray();
+            var pts = points.ToArray();
+
+            // add dpi scaling factor to the matrix
+            // so that it is included in the transform
+            // matrix.Scale(dpi, dpi);
 
             matrix.TransformPoints(pts);
             return new List<PointF>(pts);
+        }
+
+        /// <summary>
+        /// Transform a point as appropriate
+        /// </summary>
+        /// <param name="point"></param>
+        /// <returns></returns>
+        public PointF Transform(PointF point)
+        {
+            var pts = new List<PointF>();
+            pts.Add(point);
+
+            // add dpi scaling factor to the matrix
+            // so that it is included in the transform
+            // matrix.Scale(dpi, dpi);
+
+            matrix.TransformPoints(pts.ToArray());
+            return pts[0];
         }
     }
 
@@ -741,7 +763,7 @@ namespace SVG
 
             graphicsPath.AddPolygon(points.ToArray());
 
-            // ellipse is not supported as basic element, use lines instead
+            // ellipse is not supported as core drawing element, use polylines instead
             drawModel.AddPolyline(points);
         }
 
@@ -819,7 +841,7 @@ namespace SVG
                             var p8t = new PointF(x, y + ry / 2);
                             var p1t = new PointF(x + rx / 2, y);
 
-                            Debug.WriteLine("p1t: {0}, p2t: {1}, p3t: {2}, p4t: {3}, p5t: {4}, p6t: {5}, p7t: {6}, p8t: {7}", p1t, p2t, p3t, p4t, p5t, p6t, p7t, p8t);
+                            // Debug.WriteLine("p1t: {0}, p2t: {1}, p3t: {2}, p4t: {3}, p5t: {4}, p6t: {5}, p7t: {6}, p8t: {7}", p1t, p2t, p3t, p4t, p5t, p6t, p7t, p8t);
 
                             AddStraightLineSegment(p1, p2);
                             AddBiArcSegment(p2, p3, p2t, p3t);
@@ -847,11 +869,14 @@ namespace SVG
                 }
             }
 
+            // for drawModel we don't transform here, rather do it in the sub methods
+            // only used by the graphics path
             points = Transform(points);
-
             graphicsPath.AddPolygon(points.ToArray());
 
-            // drawModel.AddPolyline(points);
+            // don't add the polyline - use arcs and lines instead
+            // see AddStraightLineSegment, AddBiArcSegment etc.
+            drawModel.AddPolyline(points);
         }
 
         private void AddStraightLineSegment(PointF startpoint, PointF endpoint)
@@ -874,7 +899,10 @@ namespace SVG
             // always add the second point
             points.Add(endpoint);
 
-            drawModel.AddLine(startpoint, endpoint);
+            // for drawModel we need to transform here and not in the parent method
+            // var startpointT = Transform(startpoint);
+            // var endpointT = Transform(endpoint);
+            // drawModel.AddLine(startpointT, endpointT);
         }
 
         private static PointF FromVector2(System.Numerics.Vector2 v)
@@ -961,8 +989,11 @@ namespace SVG
                 points.AddRange(tmpPoints);
             }
 
-            // draw arc
-            drawModel.AddArc(center, (float)radius, (float)(angleB * 180 / Math.PI), (float)(angleA * 180 / Math.PI));
+            // for drawModel we need to transform here and not in the parent method
+            // var centerT = Transform(center);
+            // note - radius might have to be transformed as well?!
+            // drawModel.AddArc(centerT, (float)radius, (float)(angleB * 180 / Math.PI), (float)(angleA * 180 / Math.PI));
+            // drawModel.AddArc(centerT, (float)radius, (float)(angleA * 180 / Math.PI), (float)(angleB * 180 / Math.PI));
         }
 
         private void AddArcSegmentV2(PointF startpoint, PointF endpoint, PointF center, bool clockwise)
@@ -1040,9 +1071,6 @@ namespace SVG
 
                 points.Add(newPoint);
             }
-
-            // draw arc
-            drawModel.AddArc(center, (float)radius, (float)(angleB * 180 / Math.PI), (float)(angleA * 180 / Math.PI));
         }
 
         public List<List<PointF>> GetContours()
@@ -1143,7 +1171,9 @@ namespace SVG
 
             graphicsPath.AddPolygon(points.ToArray());
 
-            drawModel.AddCircle(new PointF(cx, cy), r);
+            // transform points for the benefit of the drawmodel (add circle)
+            var centerT = Transform(new PointF(cx, cy));
+            drawModel.AddCircle(centerT, r);
             // drawModel.AddPolyline(points);
         }
 
@@ -1960,9 +1990,14 @@ namespace SVG
 		○ Inkscape: 90
 		○ OpenSCAD: 25.4  // as 1 inch is 25.4 millimeters
 		 */
-        float SVG_IMPORT_RESOLUTION = 1.0f; // set mm to the default unit
-        float SVG_WIDTH; // SVG width in mm
-        float SVG_HEIGHT; // SVG height in mm
+        public float SvgImportResolution = 1.0f; // set to 1 mm to the default unit
+        public float SvgWidth; // SVG width in mm
+        public float SvgHeight; // SVG height in mm
+
+        public float MinX { get; set; }
+        public float MaxX { get; set; }
+        public float MinY { get; set; }
+        public float MaxY { get; set; }
 
         public List<ISVGElement> Shapes
         {
@@ -2109,7 +2144,7 @@ namespace SVG
             // path
             else if (tagName.Equals("path", StringComparison.InvariantCultureIgnoreCase))
             {
-                doc.AddShape(new SVGPath(element, styleDictionary, doc.SVG_IMPORT_RESOLUTION));
+                doc.AddShape(new SVGPath(element, styleDictionary, doc.SvgImportResolution));
             }
 
             // line
@@ -2271,9 +2306,8 @@ namespace SVG
         /// This fixes the issue where coordinates are negative
         /// </summary>
         /// <returns>a scaled contour list</returns>
-        public IEnumerable<IEnumerable<PointF>> GetScaledContours()
+        public IEnumerable<IEnumerable<PointF>> GetScaledContoursAndSetMinMax()
         {
-
             var contours = new List<List<PointF>>();
 
             // Calculate the extents for all contours
@@ -2282,13 +2316,12 @@ namespace SVG
             if (!points.Any())
                 return contours;
 
-            float minX = points.Min(point => point.X);
-            float maxX = points.Max(point => point.X);
-            float minY = points.Min(point => point.Y);
-            float maxY = points.Max(point => point.Y);
+            MinX = points.Min(point => point.X);
+            MaxX = points.Max(point => point.X);
+            MinY = points.Min(point => point.Y);
+            MaxY = points.Max(point => point.Y);
 
             bool DoScaleAndShift = false;
-
             if (DoScaleAndShift)
             {
                 // Scale by the DPI
@@ -2304,7 +2337,7 @@ namespace SVG
                             // (point.X - minX)/GLOBAL_DPI 	=> removes space on the left
                             // (point.Y - minY)/GLOBAL_DPI 	=> removes space on the bottom
                             // (maxY - point.Y)/GLOBAL_DPI 	=> flips up-side down and scales using DPI
-                            var scaledPoint = new PointF((point.X - minX) / SVG_IMPORT_RESOLUTION, (point.Y - minY) / SVG_IMPORT_RESOLUTION);
+                            var scaledPoint = new PointF((point.X - MinX) / SvgImportResolution, (point.Y - MinY) / SvgImportResolution);
                             scaledPoints.Add(scaledPoint);
                         }
                         contours.Add(scaledPoints);
@@ -2321,7 +2354,7 @@ namespace SVG
                         var scaledPoints = new List<PointF>();
                         foreach (PointF point in contour)
                         {
-                            var scaledPoint = new PointF(point.X / SVG_IMPORT_RESOLUTION, point.Y / SVG_IMPORT_RESOLUTION);
+                            var scaledPoint = point.ScaleByDPI(SvgImportResolution);
                             scaledPoints.Add(scaledPoint);
                         }
                         contours.Add(scaledPoints);
@@ -2334,7 +2367,6 @@ namespace SVG
 
         static void ParseNumberWithOptionalUnit(string stringWithOptionalUnit, out float number, out string unit)
         {
-
             // Read numbers with optional units like this:
             // width="8.5in"
             // height="11in"
@@ -2364,7 +2396,6 @@ namespace SVG
         /// <returns>a value in mm</returns>
         static float ScaleValueWithUnit(float value, string unit = "")
         {
-
             // Read the unit
             // default is mm
             switch (unit.ToLower())
@@ -2464,9 +2495,9 @@ namespace SVG
                 }
 
                 // set the global variables
-                SVG_IMPORT_RESOLUTION = svgImportResolution;
-                SVG_WIDTH = widthMM;
-                SVG_HEIGHT = heightMM;
+                SvgImportResolution = svgImportResolution;
+                SvgWidth = widthMM;
+                SvgHeight = heightMM;
             }
         }
 

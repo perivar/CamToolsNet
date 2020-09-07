@@ -1,3 +1,10 @@
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
 var uri = 'api/Editor';
 var drawModel = [];
 var bounds = { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } };
@@ -5,6 +12,7 @@ var bounds = { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } };
 var canvas = document.getElementById('myCanvas');
 var canvasWidth = canvas.width;
 var canvasHeight = canvas.height;
+var ctx = canvas.getContext('2d');
 var translatePos = {
     x: canvasWidth / 2,
     y: canvasHeight / 2
@@ -13,6 +21,30 @@ var scale = 1.0;
 var scaleMultiplier = 0.8;
 var startDragOffset = { x: 0, y: 0 };
 var mouseDown = false;
+var originTransform = new DOMMatrix();
+var inverseOriginTransform = new DOMMatrix();
+// https://stackoverflow.com/questions/45852075/getting-relative-mouse-position-on-canvas-after-scaling
+function setZoomAndOffsetTransform() {
+    originTransform = new DOMMatrix();
+    originTransform.translateSelf(translatePos.x, translatePos.y);
+    originTransform.scaleSelf(scale, scale);
+    inverseOriginTransform = originTransform.inverse();
+}
+function getElementRelativeMousePosition(e) {
+    return [e.offsetX, e.offsetY];
+}
+function getCanvasRelativeMousePosition(e) {
+    var pos = getElementRelativeMousePosition(e);
+    pos[0] = pos[0] * ctx.canvas.width / ctx.canvas.clientWidth;
+    pos[1] = pos[1] * ctx.canvas.height / ctx.canvas.clientHeight;
+    return pos;
+}
+function getTransformRelativeMousePosition(e) {
+    var pos = getCanvasRelativeMousePosition(e);
+    var p = new (DOMPoint.bind.apply(DOMPoint, __spreadArrays([void 0], pos)))();
+    var point = inverseOriginTransform.transformPoint(p);
+    return { x: point.x, y: point.y };
+}
 // add event listeners to handle screen drag
 canvas.addEventListener("mousedown", function (evt) {
     mouseDown = true;
@@ -29,15 +61,11 @@ canvas.addEventListener("mouseout", function (evt) {
     mouseDown = false;
 });
 canvas.addEventListener("mousemove", function (evt) {
-    // get on-screen canvas
-    var canvas = document.getElementById('myCanvas');
-    var ctx = canvas.getContext("2d");
+    var mousePos = getTransformRelativeMousePosition(evt);
     // clear small area where the mouse pos is plotted
     ctx.clearRect(10, 43, 100, 20);
-    // draw non zoomed and non panned
-    // debugging
     ctx.font = '10px sans-serif';
-    ctx.fillText('pos: ' + round2TwoDecimal(evt.clientX) + ' x ' + round2TwoDecimal(evt.clientY), 10, 50);
+    ctx.fillText('pos: ' + round2TwoDecimal(mousePos.x) + ' : ' + round2TwoDecimal(mousePos.y), 10, 50);
     if (mouseDown) {
         translatePos.x = evt.clientX - startDragOffset.x;
         translatePos.y = evt.clientY - startDragOffset.y;
@@ -51,9 +79,9 @@ var handleScroll = function (evt) {
     var amount = evt.wheelDelta > 0 ? 1.1 : 1 / 1.1;
     // set limits
     var tmpScale = scale * amount;
-    if (tmpScale > 40)
+    if (tmpScale > 30)
         return;
-    if (tmpScale < 0.2)
+    if (tmpScale < 0.3)
         return;
     scale *= amount; // the new scale
     // move the origin  
@@ -66,10 +94,6 @@ canvas.addEventListener('DOMMouseScroll', handleScroll, false);
 canvas.addEventListener('mousewheel', handleScroll, false);
 function zoomToFit() {
     // https://stackoverflow.com/questions/38354488/zoom-to-fit-canvas-javascript
-    // get on-screen canvas
-    var canvas = document.getElementById('myCanvas');
-    var canvasWidth = canvas.width;
-    var canvasHeight = canvas.height;
     var dataWidth = bounds.max.x - bounds.min.x;
     var dataHeight = bounds.max.y - bounds.min.y;
     var scaleY = canvasHeight / dataHeight;
@@ -77,7 +101,7 @@ function zoomToFit() {
     scale = Math.min(scaleX, scaleY);
     // move the origin  
     translatePos.x = (canvasWidth / 2) - ((dataWidth / 2) + bounds.min.x) * scale;
-    translatePos.y = (canvasHeight / 2) - ((dataHeight / 2) + bounds.min.y) * scale;
+    translatePos.y = ((canvasHeight / 2) - ((dataHeight / 2) + bounds.min.y) * scale);
 }
 function round2TwoDecimal(number) {
     return Math.round((number + Number.EPSILON) * 100) / 100;
@@ -195,6 +219,7 @@ function calculateBounds() {
             minY = curY < minY ? curY : minY;
         }
     });
+    // add canvasHeight to y axis to flip the y axis
     return { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } };
 }
 function drawGrid(gridCanvas, gridPixelSize, color, gap) {
@@ -236,11 +261,6 @@ function drawGrid(gridCanvas, gridPixelSize, color, gap) {
     }
 }
 function draw(scale, translatePos) {
-    // get on-screen canvas
-    var canvas = document.getElementById('myCanvas');
-    var ctx = canvas.getContext("2d");
-    var canvasWidth = canvas.width;
-    var canvasHeight = canvas.height;
     // create off-screen canvas to draw pixels on
     // https://stackoverflow.com/questions/48858220/javascript-put-image-data-on-top-of-canvas
     var off_ctx = createOffscreenContext(canvasWidth, canvasHeight);
@@ -250,13 +270,16 @@ function draw(scale, translatePos) {
     // debugging: draw non zoomed and non panned
     ctx.font = '10px sans-serif';
     ctx.fillText('scale: ' + round2TwoDecimal(scale), 10, 10);
-    ctx.fillText('panning: ' + round2TwoDecimal(translatePos.x) + ' x ' + round2TwoDecimal(translatePos.y), 10, 20);
+    ctx.fillText('panning: ' + round2TwoDecimal(translatePos.x) + ' : ' + round2TwoDecimal(translatePos.y), 10, 20);
     // get bounds
     ctx.fillText('x bounds: ' + round2TwoDecimal(bounds.min.x) + ' - ' + round2TwoDecimal(bounds.max.x), 10, 30);
     ctx.fillText('y bounds: ' + round2TwoDecimal(bounds.min.y) + ' - ' + round2TwoDecimal(bounds.max.y), 10, 40);
     ctx.save();
-    ctx.translate(translatePos.x, translatePos.y);
-    ctx.scale(scale, scale);
+    // ctx.translate(translatePos.x, translatePos.y);
+    // ctx.scale(scale, scale);
+    setZoomAndOffsetTransform();
+    ctx.setTransform(originTransform.a, originTransform.b, originTransform.c, originTransform.d, // flip y axis (-originTransform.d)
+    originTransform.e, originTransform.f); // (canvasHeight - originTransform.f) move by canvasHeight (due to flipping)
     // ---- start drawing the model ---
     // drawGrid(canvas, 40, 'gray', 10);
     // drawing circles
@@ -309,8 +332,7 @@ function draw(scale, translatePos) {
         var startY = (centerY + Math.sin(startAngle * Math.PI / 180) * radius);
         var endX = (centerX + Math.cos(endAngle * Math.PI / 180) * radius);
         var endY = (centerY + Math.sin(endAngle * Math.PI / 180) * radius);
-        // since we are offsetting the y axis due to a different origin coordinate system, we have to also change direction
-        var isCounterClockwise = true;
+        var isCounterClockwise = false;
         ctx.moveTo(startX, startY);
         ctx.arc(centerX, centerY, radius, startAngle * Math.PI / 180, endAngle * Math.PI / 180, isCounterClockwise);
         ctx.moveTo(endX, endY);
@@ -371,9 +393,9 @@ function draw(scale, translatePos) {
     // copy offscreen to onscreen
     off_ctx.putImageData(imgData, 0, 0);
     ctx.drawImage(off_ctx.canvas, 0, 0);
-    // mark bounds area:
+    // mark bounds area
     // ctx.strokeStyle = "hsl(" + (360 * Math.random()) + ", 80%, 50%)";
-    // ctx.strokeRect(bounds.minX, bounds.minY, bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
+    // ctx.strokeRect(bounds.min.x, bounds.min.y, bounds.max.x - bounds.min.x, bounds.max.y - bounds.min.y);
     ctx.restore();
 }
 function getDrawModel() {

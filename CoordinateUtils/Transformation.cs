@@ -759,5 +759,16 @@ namespace CoordinateUtils
 
             return RectangleContains(A, B, C, D, P);
         }
+
+        /// <summary>
+        /// Scale by DPI extension method
+        /// </summary>
+        /// <param name="point">point to scale</param>
+        /// <param name="dpiResolution">DPI resolution</param>
+        /// <returns></returns>
+        public static PointF ScaleByDPI(this PointF point, float dpiResolution)
+        {
+            return new PointF(point.X / dpiResolution, point.Y / dpiResolution);
+        }
     }
 }

@@ -354,44 +354,29 @@ namespace CAMToolsNet.Models
 
             if (svg != null)
             {
+                // var contours = svg.GetScaledContoursAndSetMinMax();
+                // var maxY = svg.MaxY;
+                // var minX = svg.MinX;
+
                 foreach (var shape in svg.Shapes)
                 {
                     var elem = shape.DrawModel;
+
+                    // Circles.AddRange(elem.Circles.Select(c => new DrawCircle(new PointF { X = c.Center.X - minX, Y = maxY - c.Center.Y }, c.Radius)).ToList());
+                    // Lines.AddRange(elem.Lines.Select(l => new DrawLine(new PointF { X = l.StartPoint.X - minX, Y = maxY - l.StartPoint.Y }, new PointF { X = l.EndPoint.X - minX, Y = maxY - l.EndPoint.Y })).ToList());
+                    // Arcs.AddRange(elem.Arcs.Select(a => new DrawArc(new PointF { X = a.Center.X - minX, Y = maxY - a.Center.Y }, a.Radius, a.StartAngle, a.EndAngle)).ToList());
+
+                    // // fix vertexes for polylines
+                    // var polylines = (elem.Polylines.Select(a => new DrawPolyline(a.Vertexes.Select(b => new PointF { X = b.X - minX, Y = maxY - b.Y }).ToList())));
+                    // Polylines.AddRange(polylines);
+
+                    // svg doesn't have polylines lw
+                    
                     Circles.AddRange(elem.Circles);
                     Lines.AddRange(elem.Lines);
                     Arcs.AddRange(elem.Arcs);
                     Polylines.AddRange(elem.Polylines);
-                    PolylinesLW.AddRange(elem.PolylinesLW);
                 }
-
-                // var contours = svg.GetScaledContours();
-
-                // // find min and max
-                // var points = GCode.GCodeUtils.GetPoints(contours);
-
-                // // Assuming these points come from a SVG
-                // // we need to shift the Y pos since
-                // // the SVG origin is upper left, while on
-                // // this GCode setup it is assumed to be lower left.
-                // float minX = points.Min(point => point.X);
-                // //float maxX = points.Max(point => point.X);
-                // //float minY = points.Min(point => point.Y);
-                // float maxY = points.Max(point => point.Y);
-
-                // // Enumerate each contour in the document
-                // var contourCounter = 0;
-                // foreach (var contour in contours)
-                // {
-                //     contourCounter++;
-                //     foreach (var line in contour.ConsecutivePairs())
-                //     {
-                //         var drawLine = new DrawLine();
-                //         drawLine.StartPoint = new Point3D((line.Item1.X - minX), (maxY - line.Item1.Y), 0);
-                //         drawLine.EndPoint = new Point3D((line.Item2.X - minX), (maxY - line.Item2.Y), 0);
-                //         Lines.Add(drawLine);
-                //     }
-                //     contourCounter++;
-                // }
             }
         }
 
