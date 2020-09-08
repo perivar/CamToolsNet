@@ -22,7 +22,16 @@ namespace CAMToolsNet.Controllers
         [HttpGet]
         public DrawModel Get()
         {
-            return HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
+            var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
+            if (drawModel == null)
+            {
+                _logger.LogError("Could not read drawmodel from session!");
+                return null;
+            }
+            else
+            {
+                return drawModel;
+            }
         }
     }
 }

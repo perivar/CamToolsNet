@@ -66,33 +66,44 @@ namespace CAMToolsNet.Controllers
                     // Either do this to seek to the beginning
                     memoryStream.Seek(0, SeekOrigin.Begin);
 
+                    _logger.LogInformation("Successfully uploaded file!");
+
                     // try to parse as dxf
                     try
                     {
+                        _logger.LogInformation("Trying to parse file as DXF...");
                         var dxf = DxfDocument.Load(memoryStream);
                         if (dxf != null)
                         {
+                            _logger.LogInformation("DXF read successfully!");
+
                             // convert dxf to a model that can be serialized
                             // since I am unable to get the default dxfnet model to be serialized
                             drawModel = DrawModel.FromDxfDocument(dxf, file.FileName);
+                            _logger.LogInformation("Successfully parsed DXF to draw model!");
                         }
                     }
-                    catch (System.Exception)
+                    catch (System.Exception e)
                     {
+                        _logger.LogError("Failed parsing as DXF: " + e.Message);
                         // ignore
                     }
 
                     // try to parse as SVG
                     try
                     {
+                        _logger.LogInformation("Trying to parse file as SVG...");
                         var svg = SVGDocument.Load(memoryStream);
                         if (svg != null)
                         {
+                            _logger.LogInformation("SVG read successfully!");
                             drawModel = DrawModel.FromSVGDocument(svg, file.FileName);
+                            _logger.LogInformation("Successfully parsed SVG to draw model!");
                         }
                     }
-                    catch (System.Exception)
+                    catch (System.Exception e)
                     {
+                        _logger.LogError("Failed parsing as SVG: " + e.Message);
                         // ignore
                     }
 
@@ -102,10 +113,12 @@ namespace CAMToolsNet.Controllers
 
             if (HttpContext.Session.Keys.Contains("DrawModel"))
             {
+                _logger.LogInformation("File successfully uploaded!");
                 TempData["Message"] = "File successfully uploaded";
             }
             else
             {
+                _logger.LogInformation("File upload failed!");
                 TempData["Message"] = "Files missing!";
             }
 
