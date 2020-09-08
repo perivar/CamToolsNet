@@ -58,6 +58,7 @@ namespace CAMToolsNet.Controllers
                 // }
 
                 // Read file fully into memory and act
+                var hasParsedSuccessfully = false;
                 using (var memoryStream = new MemoryStream())
                 {
                     await file.CopyToAsync(memoryStream);
@@ -69,42 +70,50 @@ namespace CAMToolsNet.Controllers
                     _logger.LogInformation("Successfully uploaded file!");
 
                     // try to parse as dxf
-                    try
+                    if (!hasParsedSuccessfully)
                     {
-                        _logger.LogInformation("Trying to parse file as DXF...");
-                        var dxf = DxfDocument.Load(memoryStream);
-                        if (dxf != null)
+                        try
                         {
-                            _logger.LogInformation("DXF read successfully!");
+                            _logger.LogInformation("Trying to parse file as DXF...");
+                            var dxf = DxfDocument.Load(memoryStream);
+                            if (dxf != null)
+                            {
+                                _logger.LogInformation("DXF read successfully!");
 
-                            // convert dxf to a model that can be serialized
-                            // since I am unable to get the default dxfnet model to be serialized
-                            drawModel = DrawModel.FromDxfDocument(dxf, file.FileName);
-                            _logger.LogInformation("Successfully parsed DXF to draw model!");
+                                // convert dxf to a model that can be serialized
+                                // since I am unable to get the default dxfnet model to be serialized
+                                drawModel = DrawModel.FromDxfDocument(dxf, file.FileName);
+                                _logger.LogInformation("Successfully parsed DXF to draw model!");
+                                hasParsedSuccessfully = true;
+                            }
                         }
-                    }
-                    catch (System.Exception e)
-                    {
-                        _logger.LogError("Failed parsing as DXF: " + e.Message);
-                        // ignore
+                        catch (System.Exception e)
+                        {
+                            _logger.LogError(e, "Failed parsing as DXF!");
+                            // ignore
+                        }
                     }
 
                     // try to parse as SVG
-                    try
+                    if (!hasParsedSuccessfully)
                     {
-                        _logger.LogInformation("Trying to parse file as SVG...");
-                        var svg = SVGDocument.Load(memoryStream);
-                        if (svg != null)
+                        try
                         {
-                            _logger.LogInformation("SVG read successfully!");
-                            drawModel = DrawModel.FromSVGDocument(svg, file.FileName);
-                            _logger.LogInformation("Successfully parsed SVG to draw model!");
+                            _logger.LogInformation("Trying to parse file as SVG...");
+                            var svg = SVGDocument.Load(memoryStream);
+                            if (svg != null)
+                            {
+                                _logger.LogInformation("SVG read successfully!");
+                                drawModel = DrawModel.FromSVGDocument(svg, file.FileName);
+                                _logger.LogInformation("Successfully parsed SVG to draw model!");
+                                hasParsedSuccessfully = true;
+                            }
                         }
-                    }
-                    catch (System.Exception e)
-                    {
-                        _logger.LogError("Failed parsing as SVG: " + e.Message);
-                        // ignore
+                        catch (System.Exception e)
+                        {
+                            _logger.LogError(e, "Failed parsing as SVG!");
+                            // ignore
+                        }
                     }
 
                     if (drawModel != null) HttpContext.Session.SetObjectAsJson("DrawModel", drawModel);
@@ -118,7 +127,7 @@ namespace CAMToolsNet.Controllers
             }
             else
             {
-                _logger.LogInformation("File upload failed!");
+                _logger.LogError("File upload failed!");
                 TempData["Message"] = "Files missing!";
             }
 
