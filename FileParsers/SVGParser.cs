@@ -869,7 +869,10 @@ namespace SVG
                 }
             }
 
-            // for drawModel we don't transform here, rather do it in the sub methods
+            // Note! Update - didn't get the arc's to work since we need to flip the coordinate system around the y axix
+            // due to different origins for SVGs, DXFs etc.
+            // Therefore we are (unfortunately) still using the polyline instead of lines and arc's
+            // for drawModel we don't use the points transformed here, rather do it in the sub methods
             // only used by the graphics path
             points = Transform(points);
             graphicsPath.AddPolygon(points.ToArray());
@@ -899,7 +902,7 @@ namespace SVG
             // always add the second point
             points.Add(endpoint);
 
-            // for drawModel we need to transform here and not in the parent method
+            // for drawModel we transform here and are not using the transformed points in the parent method
             // var startpointT = Transform(startpoint);
             // var endpointT = Transform(endpoint);
             // drawModel.AddLine(startpointT, endpointT);
@@ -989,7 +992,7 @@ namespace SVG
                 points.AddRange(tmpPoints);
             }
 
-            // for drawModel we need to transform here and not in the parent method
+            // for drawModel we transform here and are not using the transformed points in the parent method
             // var centerT = Transform(center);
             // note - radius might have to be transformed as well?!
             // drawModel.AddArc(centerT, (float)radius, (float)(angleB * 180 / Math.PI), (float)(angleA * 180 / Math.PI));

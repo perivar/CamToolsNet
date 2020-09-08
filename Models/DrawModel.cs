@@ -358,6 +358,10 @@ namespace CAMToolsNet.Models
                 // var maxY = svg.MaxY;
                 // var minX = svg.MinX;
 
+                // Assuming these points come from a SVG
+                // we need to shift the Y pos since
+                // the SVG origin is upper left, while in DXF and GCode it is assumed to be lower left
+
                 foreach (var shape in svg.Shapes)
                 {
                     var elem = shape.DrawModel;
@@ -371,7 +375,7 @@ namespace CAMToolsNet.Models
                     // Polylines.AddRange(polylines);
 
                     // svg doesn't have polylines lw
-                    
+
                     Circles.AddRange(elem.Circles);
                     Lines.AddRange(elem.Lines);
                     Arcs.AddRange(elem.Arcs);
