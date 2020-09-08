@@ -63,11 +63,11 @@ namespace CAMToolsNet.Controllers
                 {
                     await file.CopyToAsync(memoryStream);
 
-                    // At this point, the Offset is at the end of the MemoryStream
-                    // Either do this to seek to the beginning
-                    memoryStream.Seek(0, SeekOrigin.Begin);
-
                     _logger.LogInformation("Successfully uploaded file!");
+
+                    // At this point, the Offset is at the end of the MemoryStream
+                    // Do this to seek to the beginning
+                    memoryStream.Seek(0, SeekOrigin.Begin);
 
                     // try to parse as dxf
                     if (!hasParsedSuccessfully)
@@ -94,6 +94,10 @@ namespace CAMToolsNet.Controllers
                         }
                     }
 
+                    // At this point, the Offset is at the end of the MemoryStream
+                    // Do this to seek to the beginning
+                    memoryStream.Seek(0, SeekOrigin.Begin);
+
                     // try to parse as SVG
                     if (!hasParsedSuccessfully)
                     {
@@ -112,6 +116,33 @@ namespace CAMToolsNet.Controllers
                         catch (System.Exception e)
                         {
                             _logger.LogError(e, "Failed parsing as SVG!");
+                            // ignore
+                        }
+                    }
+
+                    // At this point, the Offset is at the end of the MemoryStream
+                    // Do this to seek to the beginning
+                    memoryStream.Seek(0, SeekOrigin.Begin);
+
+                    // try to parse as GCODE
+                    if (!hasParsedSuccessfully)
+                    {
+                        try
+                        {
+                            _logger.LogInformation("Trying to parse file as GCODE...");
+                            StreamReader reader = new StreamReader(memoryStream);
+                            string gCode = reader.ReadToEnd();
+                            if (!"".Equals(gCode))
+                            {
+                                _logger.LogInformation("GCODE read successfully!");
+                                drawModel = DrawModel.FromGCode(gCode, file.FileName);
+                                _logger.LogInformation("Successfully parsed GCODE to draw model!");
+                                hasParsedSuccessfully = true;
+                            }
+                        }
+                        catch (System.Exception e)
+                        {
+                            _logger.LogError(e, "Failed parsing as GCODE!");
                             // ignore
                         }
                     }

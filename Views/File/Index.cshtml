@@ -5,21 +5,23 @@
     </div> *@
 }	
     <div class="container">
-        <div class="row pb-2">
-            <div class=column">
-                <input type="button" class="btn btn-outline-secondary btn-sm mx-1" title="ConvertToCircles" value="Convert Polyline to Circles" onclick="location.href='@Url.Action("PolylineToCircles", "File")'" />
-            </div>
-            <div class=column">
-                <input type="button" class="btn btn-outline-secondary btn-sm mx-1" title="MoveEqual" value="Move Equal Circles To Unique Layers" onclick="location.href='@Url.Action("CirclesToLayers", "File")?doSave=false'" />
-            </div>
-        </div>
-
-        <div class="row">
-            <canvas id="myCanvas" width="800" height="400" class="border">
-            </canvas>
-        </div>
+        <canvas id="drawCanvas" width="800" height="480" class="border">
+        </canvas>
     </div>
-                       
+
+    <nav class="navbar fixed-bottom navbar-light border-top">
+        <div class="container">
+            <div class="row">
+                <div class=column">
+                    <input type="button" class="btn btn-outline-secondary btn-sm mx-1" title="ConvertToCircles" value="Convert Polyline to Circles" onclick="location.href='@Url.Action("PolylineToCircles", "File")'" />
+                </div>
+                <div class=column">
+                    <input type="button" class="btn btn-outline-secondary btn-sm mx-1" title="MoveEqual" value="Move Equal Circles To Unique Layers" onclick="location.href='@Url.Action("CirclesToLayers", "File")?doSave=false'" />
+                </div>
+            </div>
+        </div>
+    </nav>
+
 @section Scripts {
     <script src="~/js/viewer.js"></script>
     <script type="text/javascript">

@@ -879,7 +879,7 @@ namespace SVG
 
             // don't add the polyline - use arcs and lines instead
             // see AddStraightLineSegment, AddBiArcSegment etc.
-            drawModel.AddPolyline(points);
+            // drawModel.AddPolyline(points);
         }
 
         private void AddStraightLineSegment(PointF startpoint, PointF endpoint)
@@ -903,9 +903,9 @@ namespace SVG
             points.Add(endpoint);
 
             // for drawModel we transform here and are not using the transformed points in the parent method
-            // var startpointT = Transform(startpoint);
-            // var endpointT = Transform(endpoint);
-            // drawModel.AddLine(startpointT, endpointT);
+            var startpointT = Transform(startpoint);
+            var endpointT = Transform(endpoint);
+            drawModel.AddLine(startpointT, endpointT);
         }
 
         private static PointF FromVector2(System.Numerics.Vector2 v)
@@ -993,10 +993,9 @@ namespace SVG
             }
 
             // for drawModel we transform here and are not using the transformed points in the parent method
-            // var centerT = Transform(center);
+            var centerT = Transform(center);
             // note - radius might have to be transformed as well?!
-            // drawModel.AddArc(centerT, (float)radius, (float)(angleB * 180 / Math.PI), (float)(angleA * 180 / Math.PI));
-            // drawModel.AddArc(centerT, (float)radius, (float)(angleA * 180 / Math.PI), (float)(angleB * 180 / Math.PI));
+            drawModel.AddArc(centerT, (float)radius, (float)(angleA * 180 / Math.PI), (float)(angleB * 180 / Math.PI));
         }
 
         private void AddArcSegmentV2(PointF startpoint, PointF endpoint, PointF center, bool clockwise)

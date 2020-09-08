@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using CoordinateUtils;
+using GCode;
 using Util;
 
 namespace CAMToolsNet.Models
@@ -169,6 +170,11 @@ namespace CAMToolsNet.Models
                 }
             }
 
+            public DrawPolyline(List<Point3D> vertexes)
+            {
+                Vertexes = vertexes;
+            }
+
             public DrawPolyline(netDxf.Entities.Polyline p) : base(p)
             {
                 IsClosed = p.IsClosed;
@@ -236,6 +242,17 @@ namespace CAMToolsNet.Models
         public static DrawModel FromSVGDocument(SVG.SVGDocument svg, string fileName)
         {
             return new DrawModel(svg, fileName);
+        }
+
+        /// <summary>
+        /// Parse gcode to a draw model, just store the filename
+        /// </summary>
+        /// <param name="gcode">GCode to parse</param>
+        /// <param name="fileName">original filename</param>
+        /// <returns></returns>
+        public static DrawModel FromGCode(string gcode, string fileName)
+        {
+            return new DrawModel(gcode, fileName);
         }
 
         public static netDxf.DxfDocument ToDxfDocument(DrawModel model)
@@ -380,6 +397,63 @@ namespace CAMToolsNet.Models
                     Lines.AddRange(elem.Lines);
                     Arcs.AddRange(elem.Arcs);
                     Polylines.AddRange(elem.Polylines);
+                }
+            }
+        }
+
+        public DrawModel(string gcode, string fileName) : this()
+        {
+            FileName = fileName;
+
+            if (gcode != null)
+            {
+                var parsedInstructions = SimpleGCodeParser.ParseText(gcode);
+
+                // turn the instructions into blocks
+                var myBlocks = GCodeUtils.GetBlocks(parsedInstructions);
+
+                // calculate max values for X, Y and Z
+                // while finalizing the blocks and adding them to the lstPlot
+                // var maxX = 0.0f;
+                // var maxY = 0.0f;
+                // var maxZ = 0.0f;
+                // var minX = 0.0f;
+                // var minY = 0.0f;
+                // var minZ = 0.0f;
+                foreach (Block blockItem in myBlocks)
+                {
+                    // // cache if this is a drill point
+                    // blockItem.CheckIfDrillOrProbePoint();
+
+                    // blockItem.CalculateMinAndMax();
+
+                    // maxX = Math.Max(maxX, blockItem.MaxX);
+                    // maxY = Math.Max(maxY, blockItem.MaxY);
+                    // maxZ = Math.Max(maxZ, blockItem.MaxZ);
+
+                    // minX = Math.Min(minX, blockItem.MinX);
+                    // minY = Math.Min(minY, blockItem.MinY);
+                    // minZ = Math.Min(minZ, blockItem.MinZ);
+
+                    if (blockItem.PlotPoints != null)
+                    {
+                        foreach (var linePlots in blockItem.PlotPoints)
+                        {
+                            var points = new List<Point3D>();
+                            if (linePlots.Pen == PenColorList.RapidMove)
+                            {
+                                // TODO - how to represent rapid movements
+                            }
+                            else
+                            {
+                                var p1 = new Point3D(linePlots.X1, linePlots.Y1, linePlots.Z1);
+                                var p2 = new Point3D(linePlots.X2, linePlots.Y2, linePlots.Z2);
+                                points.Add(p1);
+                                points.Add(p2);
+                                Polylines.Add(new DrawPolyline(points));
+                            }
+                        }
+                    }
                 }
             }
         }

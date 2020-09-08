@@ -9,10 +9,21 @@ var uri = 'api/Editor';
 var drawModel = [];
 var bounds = { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } };
 // get on-screen canvas
-var canvas = document.getElementById('myCanvas');
-var canvasWidth = canvas.width;
-var canvasHeight = canvas.height;
-var ctx = canvas.getContext('2d');
+var canvas = document.getElementById('drawCanvas');
+// make the images crisp
+// https://stackoverflow.com/questions/31910043/html5-canvas-drawimage-draws-image-blurry
+// get current size of the canvas
+var rect = canvas.getBoundingClientRect();
+var canvasWidth = rect.width;
+var canvasHeight = rect.height;
+// increase the actual size of our canvas
+canvas.width = canvasWidth * devicePixelRatio;
+canvas.height = canvasHeight * devicePixelRatio;
+canvas.style.width = canvasWidth + "px";
+canvas.style.height = canvasHeight + "px";
+var ctx = canvas.getContext('2d', { alpha: false });
+// offscreen canvas
+var off_ctx;
 var translatePos = {
     x: canvasWidth / 2,
     y: canvasHeight / 2
@@ -26,8 +37,8 @@ var inverseOriginTransform = new DOMMatrix();
 // https://stackoverflow.com/questions/45852075/getting-relative-mouse-position-on-canvas-after-scaling
 function setZoomAndOffsetTransform() {
     originTransform = new DOMMatrix();
-    originTransform.translateSelf(translatePos.x, translatePos.y);
-    originTransform.scaleSelf(scale, scale);
+    originTransform.translateSelf(translatePos.x * devicePixelRatio, translatePos.y * devicePixelRatio);
+    originTransform.scaleSelf(scale * devicePixelRatio, scale * devicePixelRatio);
     inverseOriginTransform = originTransform.inverse();
 }
 function getElementRelativeMousePosition(e) {
@@ -63,9 +74,12 @@ canvas.addEventListener("mouseout", function (evt) {
 canvas.addEventListener("mousemove", function (evt) {
     var mousePos = getTransformRelativeMousePosition(evt);
     // clear small area where the mouse pos is plotted
-    ctx.clearRect(10, 43, 100, 20);
+    ctx.save();
+    ctx.scale(devicePixelRatio, devicePixelRatio);
+    ctx.clearRect(10, 42, 100, 20);
     ctx.font = '10px sans-serif';
-    ctx.fillText('pos: ' + round2TwoDecimal(mousePos.x) + ' : ' + round2TwoDecimal(mousePos.y), 10, 50);
+    ctx.fillText('pos: ' + round2TwoDecimal(mousePos.x) + ' , ' + round2TwoDecimal(mousePos.y), 10, 50);
+    ctx.restore();
     if (mouseDown) {
         translatePos.x = evt.clientX - startDragOffset.x;
         translatePos.y = evt.clientY - startDragOffset.y;
@@ -106,10 +120,22 @@ function zoomToFit() {
 function round2TwoDecimal(number) {
     return Math.round((number + Number.EPSILON) * 100) / 100;
 }
+// create off-screen canvas to draw pixels on
+// https://stackoverflow.com/questions/48858220/javascript-put-image-data-on-top-of-canvas
+// var off_ctx = createOffscreenContext(canvasWidth, canvasHeight);
+// var imgData = off_ctx.createImageData(canvasWidth, canvasHeight);
+// ... drawing ...
+// doesn't work for negative x or y
+// drawPixel(imgData, canvasWidth, x, y, 255, 0, 0, 255);
+// copy offscreen to onscreen
+// off_ctx.putImageData(imgData, 0, 0);
+// ctx.drawImage(off_ctx.canvas, 0, 0);
 function createOffscreenContext(width, height) {
     var offScreenCanvas = document.createElement('canvas');
-    offScreenCanvas.width = width;
-    offScreenCanvas.height = height;
+    offScreenCanvas.width = width * devicePixelRatio;
+    offScreenCanvas.height = height * devicePixelRatio;
+    // offScreenCanvas.style.width = `${width}px`;
+    // offScreenCanvas.style.height = `${height}px`;
     var off_ctx = offScreenCanvas.getContext("2d");
     return off_ctx; // use off_ctx.canvas to get the the context's canvas
 }
@@ -222,106 +248,121 @@ function calculateBounds() {
     // add canvasHeight to y axis to flip the y axis
     return { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } };
 }
-function drawGrid(gridCanvas, gridPixelSize, color, gap) {
-    var ctx = gridCanvas.getContext("2d");
-    ctx.lineWidth = 0.5;
-    ctx.strokeStyle = color;
+function drawGrid(context, gridPixelSize, color, gap, width, height) {
+    context.lineWidth = 0.8;
+    context.strokeStyle = color;
+    // x axis
+    drawLineWithArrows(ctx, 0, 0, bounds.max.x + 25, 0, 2, 4, false, true);
+    // y axis
+    drawLineWithArrows(ctx, 0, 0, 0, bounds.max.y + 25, 2, 4, false, true);
     // horizontal grid lines
-    for (var i = 0; i <= gridCanvas.height; i = i + gridPixelSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, i);
-        ctx.lineTo(gridCanvas.width, i);
+    for (var i = 0; i <= height; i = i + gridPixelSize) {
+        context.beginPath();
+        context.moveTo(0, i);
+        context.lineTo(width, i);
         if (i % gap == 0) {
-            ctx.lineWidth = 0.5;
+            context.lineWidth = 0.8;
         }
         else {
-            ctx.lineWidth = 0.5;
+            context.lineWidth = 0.3;
         }
-        ctx.closePath();
-        ctx.stroke();
+        context.closePath();
+        context.stroke();
     }
     // vertical grid lines
-    for (var j = 0; j <= gridCanvas.width; j = j + gridPixelSize) {
-        ctx.beginPath();
-        ctx.moveTo(j, 0);
-        ctx.lineTo(j, gridCanvas.height);
+    for (var j = 0; j <= width; j = j + gridPixelSize) {
+        context.beginPath();
+        context.moveTo(j, 0);
+        context.lineTo(j, height);
         if (j % gap == 0) {
-            ctx.lineWidth = 0.5;
+            context.lineWidth = 0.8;
         }
         else {
-            ctx.lineWidth = 0.5;
+            context.lineWidth = 0.3;
         }
-        ctx.closePath();
-        ctx.stroke();
+        context.closePath();
+        context.stroke();
     }
-    for (var ii = 0; ii <= gridCanvas.width; ii += 2) {
-        for (var jj = 0; jj <= gridCanvas.height; jj += 2) {
-            ctx.clearRect(ii, jj, 1, 1);
-        }
-    }
+    // make dotted
+    // for (var ii = 0; ii <= width; ii += 2) {
+    //     for (var jj = 0; jj <= height; jj += 2) {
+    //         context.clearRect(ii, jj, 1, 2);
+    //     }
+    // }
 }
-function draw(scale, translatePos) {
-    // create off-screen canvas to draw pixels on
-    // https://stackoverflow.com/questions/48858220/javascript-put-image-data-on-top-of-canvas
-    var off_ctx = createOffscreenContext(canvasWidth, canvasHeight);
-    var imgData = off_ctx.createImageData(canvasWidth, canvasHeight);
-    // clear
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-    // debugging: draw non zoomed and non panned
-    ctx.font = '10px sans-serif';
-    ctx.fillText('scale: ' + round2TwoDecimal(scale), 10, 10);
-    ctx.fillText('panning: ' + round2TwoDecimal(translatePos.x) + ' : ' + round2TwoDecimal(translatePos.y), 10, 20);
-    // get bounds
-    ctx.fillText('x bounds: ' + round2TwoDecimal(bounds.min.x) + ' - ' + round2TwoDecimal(bounds.max.x), 10, 30);
-    ctx.fillText('y bounds: ' + round2TwoDecimal(bounds.min.y) + ' - ' + round2TwoDecimal(bounds.max.y), 10, 40);
-    ctx.save();
-    // ctx.translate(translatePos.x, translatePos.y);
-    // ctx.scale(scale, scale);
-    setZoomAndOffsetTransform();
-    ctx.setTransform(originTransform.a, originTransform.b, originTransform.c, originTransform.d, // flip y axis (-originTransform.d)
-    originTransform.e, originTransform.f); // (canvasHeight - originTransform.f) move by canvasHeight (due to flipping)
-    // ---- start drawing the model ---
-    // drawGrid(canvas, 40, 'gray', 10);
+// x0,y0: the line's starting point
+// x1,y1: the line's ending point
+// width: the distance the arrowhead perpendicularly extends away from the line
+// height: the distance the arrowhead extends backward from the endpoint
+// arrowStart: true/false directing to draw arrowhead at the line's starting point
+// arrowEnd: true/false directing to draw arrowhead at the line's ending point
+// Usage: 
+// drawLineWithArrows(50, 50, 150, 50, 5, 8, true, true);
+function drawLineWithArrows(context, x0, y0, x1, y1, aWidth, aLength, arrowStart, arrowEnd) {
+    var dx = x1 - x0;
+    var dy = y1 - y0;
+    var angle = Math.atan2(dy, dx);
+    var length = Math.sqrt(dx * dx + dy * dy);
+    context.save();
+    context.translate(x0, y0);
+    context.rotate(angle);
+    context.beginPath();
+    // line
+    context.moveTo(0, 0);
+    context.lineTo(length, 0);
+    if (arrowStart) {
+        context.moveTo(aLength, -aWidth);
+        context.lineTo(0, 0);
+        context.lineTo(aLength, aWidth);
+    }
+    if (arrowEnd) {
+        context.moveTo(length - aLength, -aWidth);
+        context.lineTo(length, 0);
+        context.lineTo(length - aLength, aWidth);
+    }
+    context.stroke();
+    context.restore();
+}
+function drawFile(context) {
+    drawGrid(context, 10, "#F2F2F2", 100, bounds.max.x + 20, bounds.max.y + 20);
     // drawing circles
-    ctx.beginPath(); // begin
+    context.beginPath(); // begin
     drawModel.circles.forEach(function (circle) {
         var startAngle = 0;
         var endAngle = 2 * Math.PI;
         var x = circle.center.x;
         var y = circle.center.y;
         var radius = circle.radius;
-        ctx.moveTo(x + radius, y);
-        ctx.arc(x, y, radius, startAngle, endAngle, false);
-        // doesn't work for negative x or y
-        // drawPixel(imgData, canvasWidth, x, y, 255, 0, 0, 255);
-        ctx.fillRect(x - 0.2, y - 0.2, 0.4, 0.4); // fill in the pixel
+        context.moveTo(x + radius, y);
+        context.arc(x, y, radius, startAngle, endAngle, false);
+        context.fillRect(x - 0.2, y - 0.2, 0.4, 0.4); // fill in the pixel
         // draw diameter
         var dia = round2TwoDecimal(radius * 2);
-        ctx.font = '2px sans-serif';
-        ctx.fillText('' + dia, x, y + 6);
+        context.font = '2px sans-serif';
+        context.fillText('' + dia, x, y + 6);
     });
-    ctx.closePath(); // end
-    ctx.lineWidth = 0.3;
-    ctx.strokeStyle = "#0000ff";
-    ctx.stroke();
+    context.closePath(); // end
+    context.lineWidth = 0.3;
+    context.strokeStyle = "#0000ff";
+    context.stroke();
     // done drawing circles
     // drawing lines
-    ctx.beginPath(); // begin
+    context.beginPath(); // begin
     drawModel.lines.forEach(function (line) {
         var startX = line.startPoint.x;
         var startY = line.startPoint.y;
         var endX = line.endPoint.x;
         var endY = line.endPoint.y;
-        ctx.moveTo(startX, startY);
-        ctx.lineTo(endX, endY);
+        context.moveTo(startX, startY);
+        context.lineTo(endX, endY);
     });
-    ctx.closePath(); // end
-    ctx.lineWidth = 0.3;
-    ctx.strokeStyle = "#44cc44";
-    ctx.stroke();
+    context.closePath(); // end
+    context.lineWidth = 0.3;
+    context.strokeStyle = "#44cc44";
+    context.stroke();
     // done drawing lines    
     // drawing arcs
-    ctx.beginPath(); // begin
+    context.beginPath(); // begin
     drawModel.arcs.forEach(function (a) {
         var centerX = a.center.x;
         var centerY = a.center.y;
@@ -333,37 +374,37 @@ function draw(scale, translatePos) {
         var endX = (centerX + Math.cos(endAngle * Math.PI / 180) * radius);
         var endY = (centerY + Math.sin(endAngle * Math.PI / 180) * radius);
         var isCounterClockwise = false;
-        ctx.moveTo(startX, startY);
-        ctx.arc(centerX, centerY, radius, startAngle * Math.PI / 180, endAngle * Math.PI / 180, isCounterClockwise);
-        ctx.moveTo(endX, endY);
+        context.moveTo(startX, startY);
+        context.arc(centerX, centerY, radius, startAngle * Math.PI / 180, endAngle * Math.PI / 180, isCounterClockwise);
+        context.moveTo(endX, endY);
     });
-    ctx.closePath(); // end
-    ctx.lineWidth = 0.3;
-    ctx.strokeStyle = "#000000";
-    ctx.stroke();
+    context.closePath(); // end
+    context.lineWidth = 0.3;
+    context.strokeStyle = "#000000";
+    context.stroke();
     // done drawing arcs    
     // drawing polylines
-    ctx.beginPath(); // begin
+    context.beginPath(); // begin
     drawModel.polylines.forEach(function (p) {
         for (var i = 0; i < p.vertexes.length; i++) {
             var vertex = p.vertexes[i];
             var pointX = vertex.x;
             var pointY = vertex.y;
             if (i == 0) {
-                ctx.moveTo(pointX, pointY);
+                context.moveTo(pointX, pointY);
             }
             else {
-                ctx.lineTo(pointX, pointY);
+                context.lineTo(pointX, pointY);
             }
         }
     });
-    ctx.closePath(); // end
-    ctx.lineWidth = 0.3;
-    ctx.strokeStyle = "#ff00ff";
-    ctx.stroke();
+    context.closePath(); // end
+    context.lineWidth = 0.3;
+    context.strokeStyle = "#ff00ff";
+    context.stroke();
     // done drawing polylines
     // drawing polylines light weight
-    ctx.beginPath(); // begin
+    context.beginPath(); // begin
     drawModel.polylinesLW.forEach(function (p) {
         for (var i = 0; i < p.vertexes.length; i++) {
             var vertex = p.vertexes[i];
@@ -373,30 +414,56 @@ function draw(scale, translatePos) {
             var prePointX = 0;
             var prePointY = 0;
             if (i == 0) {
-                ctx.moveTo(pointX, pointY);
+                context.moveTo(pointX, pointY);
             }
             else {
                 var angle = 4 * Math.atan(Math.abs(bulge)) / Math.PI * 180;
                 var length_1 = Math.sqrt((pointX - prePointX) * (pointX - prePointX) + (pointY - prePointY) * (pointY - prePointY));
                 var radius = Math.abs(length_1 / (2 * Math.sin(angle / 360 * Math.PI)));
-                ctx.arc(pointX, pointY, radius, 0, angle * Math.PI / 180, false);
+                context.arc(pointX, pointY, radius, 0, angle * Math.PI / 180, false);
                 prePointX = pointX;
                 prePointY = pointY;
             }
         }
     });
-    ctx.closePath(); // end
-    ctx.lineWidth = 0.3;
-    ctx.strokeStyle = "#002266";
-    ctx.stroke();
+    context.closePath(); // end
+    context.lineWidth = 0.3;
+    context.strokeStyle = "#002266";
+    context.stroke();
     // done drawing polylines light weight
-    // copy offscreen to onscreen
-    off_ctx.putImageData(imgData, 0, 0);
-    ctx.drawImage(off_ctx.canvas, 0, 0);
+}
+function draw(scale, translatePos) {
+    ctx.imageSmoothingEnabled = false;
+    // clear
+    ctx.clearRect(0, 0, canvasWidth * devicePixelRatio, canvasHeight * devicePixelRatio);
+    // main drawing routine
+    ctx.save();
+    setZoomAndOffsetTransform();
+    ctx.setTransform(originTransform.a, originTransform.b, originTransform.c, originTransform.d, // flip y axis (-originTransform.d)
+    originTransform.e, originTransform.f); // (canvasHeight - originTransform.f) move by canvasHeight (due to flipping)
+    // ---- start drawing the model ---
+    // draw offscreen image    
+    // ctx.drawImage(
+    //     off_ctx.canvas, 0, 0,
+    //     off_ctx.canvas.width * devicePixelRatio,
+    //     off_ctx.canvas.height * devicePixelRatio
+    // );
+    drawFile(ctx);
     // mark bounds area
     // ctx.strokeStyle = "hsl(" + (360 * Math.random()) + ", 80%, 50%)";
     // ctx.strokeRect(bounds.min.x, bounds.min.y, bounds.max.x - bounds.min.x, bounds.max.y - bounds.min.y);
     ctx.restore();
+    // debugging: draw non zoomed and non panned
+    ctx.save();
+    ctx.scale(devicePixelRatio, devicePixelRatio);
+    ctx.font = '10px sans-serif';
+    ctx.fillText('scale: ' + round2TwoDecimal(scale), 10, 10);
+    ctx.fillText('panning: ' + round2TwoDecimal(translatePos.x) + ' , ' + round2TwoDecimal(translatePos.y), 10, 20);
+    // get bounds
+    ctx.fillText('bounds X: ' + round2TwoDecimal(bounds.min.x) + ' - ' + round2TwoDecimal(bounds.max.x), 10, 30);
+    ctx.fillText('bounds Y: ' + round2TwoDecimal(bounds.min.y) + ' - ' + round2TwoDecimal(bounds.max.y), 10, 40);
+    ctx.restore();
+    // end debugging
 }
 function getDrawModel() {
     fetch(uri)
@@ -405,6 +472,10 @@ function getDrawModel() {
         // console.log(data);
         drawModel = data;
         bounds = calculateBounds();
+        // create off-screen canvas to draw pixels on
+        // https://stackoverflow.com/questions/48858220/javascript-put-image-data-on-top-of-canvas
+        // off_ctx = createOffscreenContext(canvasWidth, canvasHeight);
+        // drawFile(off_ctx);
         zoomToFit();
         draw(scale, translatePos);
     })
