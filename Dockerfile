@@ -7,6 +7,14 @@ WORKDIR /app
 # ENV ASPNETCORE_URLS http://+:5000
 # EXPOSE 5000
 
+# Install System.Drawing native dependencies
+RUN apt-get update -yq \
+    && apt-get install -y --allow-unauthenticated \
+        libc6-dev \
+        libgdiplus \
+        libx11-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 FROM mcr.microsoft.com/dotnet/core/sdk:3.1-buster AS build
 
 # Install current node-js and npm
