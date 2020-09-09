@@ -21,7 +21,6 @@ using CoordinateUtils;
 using BiArcUtils;
 using CAMToolsNet.Models;
 
-
 namespace SVG
 {
     /// <summary>
@@ -31,10 +30,6 @@ namespace SVG
     {
         // zero (or epsilon)
         public const float SELF_ZERO = 0.0000001f;
-
-        // smooth factor that decides how many steps the arc curve will have
-        // i.e. divide the length of the arc with this constant
-        public const float CURVE_SECTION = 2.0f;
 
         /// <summary>
         /// Read from the data string while a whitespace is found
@@ -159,23 +154,7 @@ namespace SVG
         }
 
         /// <summary>
-        /// Calculate number of steps to use for circles and curved rectangles
-        /// </summary>
-        /// <param name="angle">angle in radians</param>
-        /// <param name="radius">radius</param>
-        /// <returns></returns>
-        public static double CalculateSteps(double angle, double radius)
-        {
-            // calculate a couple useful things.
-            double length = radius * angle;
-
-            // Maximum of either 2.4 times the angle in radians
-            // or the length of the curve divided by the curve section constant
-            return Math.Max(angle * 2.4, length / CURVE_SECTION);
-        }
-
-        /// <summary>
-        /// Find out how meny segments to use for the bezier curves
+        /// Find out how many segments to use for the bezier curves
         /// I.e. 1 / number of segments
         /// </summary>
         /// <param name="startpoint">start point</param>
@@ -979,7 +958,7 @@ namespace SVG
             double radius = Math.Sqrt(aX * aX + aY * aY);
 
             // calculate the steps
-            int steps = (int)Math.Ceiling(SVGUtils.CalculateSteps(angle, radius));
+            int steps = Transformation.CalculateStepsAsInt(angle, radius);
 
             // angle in degrees
             float angleDegrees = (float)Transformation.RadianToDegree(angle);
@@ -1043,7 +1022,7 @@ namespace SVG
 
             // Maximum of either 2.4 times the angle in radians
             // or the length of the curve divided by the curve section constant
-            int steps = (int)Math.Ceiling(Math.Max(angle * 2.4, length / SVGUtils.CURVE_SECTION));
+            int steps = Transformation.CalculateStepsAsInt(angle, radius);
 
             // this is the real draw action.
             var newPoint = PointF.Empty;
@@ -1153,7 +1132,7 @@ namespace SVG
             // is the length of the entire circumference divided by the radius, or 2πr / r, or 2π.
             // Thus 2π radians is equal to 360 degrees, meaning that one radian is equal to
             // 180/π degrees.
-            double steps = SVGUtils.CalculateSteps(2 * Math.PI, r);
+            double steps = Transformation.CalculateSteps(2 * Math.PI, r);
 
             for (double theta = 0.0; theta < 2.0 * Math.PI; theta += Math.PI / (steps / 2.0))
             {

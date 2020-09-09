@@ -13,6 +13,10 @@ namespace CoordinateUtils
     {
         const float SELF_ZERO = 0.0000001f;
 
+        // smooth factor that decides how many steps the arc curve will have
+        // i.e. divide the length of the arc with this constant
+        public const float CURVE_SECTION = 1.0f;
+
         /// <summary>
         /// Degree to Radian
         /// </summary>
@@ -769,6 +773,28 @@ namespace CoordinateUtils
         public static PointF ScaleByDPI(this PointF point, float dpiResolution)
         {
             return new PointF(point.X / dpiResolution, point.Y / dpiResolution);
+        }
+
+        /// <summary>
+        /// Calculate number of steps to use for circles and curved rectangles
+        /// </summary>
+        /// <param name="angle">angle in radians</param>
+        /// <param name="radius">radius</param>
+        /// <returns></returns>
+        public static double CalculateSteps(double angle, double radius)
+        {
+            // calculate a couple useful things.
+            double length = radius * angle;
+
+            // Maximum of either 2.4 times the angle in radians
+            // or the length of the curve divided by the curve section constant
+            return Math.Max(angle * 2.4, length / CURVE_SECTION);
+        }
+
+        public static int CalculateStepsAsInt(double angle, double radius)
+        {
+            double steps = CalculateSteps(angle, radius);
+            return (int)Math.Ceiling(steps);
         }
     }
 }

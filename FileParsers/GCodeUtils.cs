@@ -7,8 +7,6 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using CoordinateUtils;
-using SVG;
-using Util;
 
 namespace GCode
 {
@@ -28,7 +26,6 @@ namespace GCode
         /// <returns>GCode split object</returns>
         public static GCodeGroupObject GroupGCodeInstructions(List<GCodeInstruction> instructions)
         {
-
             // list that will be returned
             var allG0 = new List<Point3DBlock>();
             var priorToG0 = new List<GCodeInstruction>();
@@ -41,7 +38,6 @@ namespace GCode
             float lastY = 0.0f;
             foreach (var currentInstruction in instructions)
             {
-
                 // Check if this line is a G0 command with an X or Y coordinate
                 if (currentInstruction.CommandType == CommandType.RapidMove
                     && (currentInstruction.X.HasValue || currentInstruction.Y.HasValue))
@@ -264,10 +260,9 @@ namespace GCode
         /// <param name="bestPath">best sequence of the point3d elements</param>
         /// <param name="points">Point elements</param>
         /// <param name="filePath">filepath to save</param>
-        /// <returns>succesful or not</returns>
+        /// <returns>successful or not</returns>
         public static bool SaveGCode(List<int> bestPath, List<IPoint2D> points, string filePath)
         {
-
             if (points != null && points.Count > 0 && points[0] is Point3DBlock)
             {
 
@@ -323,13 +318,10 @@ namespace GCode
         /// <returns>the gcode or null</returns>
         public static String GetGCode(List<int> bestPath, List<IPoint2D> points)
         {
-
             if (points != null && points.Count > 0 && points[0] is Point3DBlock)
             {
-
                 using (var tw = new StringWriter())
                 {
-
                     /*
 					tw.WriteLine("(File built with GCodeTools)");
 					tw.WriteLine("(Generated on " + DateTime.Now + ")");
@@ -387,7 +379,6 @@ namespace GCode
         /// <returns>the gcode instructions using a list of contour elements</returns>
         public static string GetGCode(IEnumerable<IEnumerable<PointF>> contours, float z, float rapidFeed, float plungeFeed, float safeHeight)
         {
-
             var sb = new StringBuilder();
             int contourCounter = 0;
 
@@ -439,7 +430,6 @@ namespace GCode
         /// <returns>the gcode instructions for center drilling using a list of contour elements</returns>
         public static string GetGCodeCenter(IEnumerable<IEnumerable<PointF>> contours, float z, float rapidFeed, float plungeFeed, float safeHeight)
         {
-
             var sb = new StringBuilder();
             int contourCounter = 0;
 
@@ -513,7 +503,6 @@ namespace GCode
         /// <returns>minimized gcode</returns>
         public static List<GCodeInstruction> GetMinimizeGCode(List<GCodeInstruction> instructions)
         {
-
             var cleanedList = new List<GCodeInstruction>();
             var prevInstruction = new GCodeInstruction(CommandType.RapidMove, Point3D.Empty, 0);
 
@@ -526,7 +515,6 @@ namespace GCode
 
             foreach (GCodeInstruction currentInstruction in instructions)
             {
-
                 if (currentInstruction.Equals(prevInstruction))
                 {
                     continue;
@@ -688,7 +676,6 @@ namespace GCode
         /// <returns>list of rotated gcode</returns>
         public static List<GCodeInstruction> GetRotatedGCodeMatrix(List<GCodeInstruction> instructions, PointF center, float angle)
         {
-
             // NOTE, THIS DOESN'T SUPPORT ARCS
 
             var transformed = new List<GCodeInstruction>();
@@ -747,7 +734,7 @@ namespace GCode
         }
 
         /// <summary>
-        /// Rotate the passed gcode around the center point by the given degees
+        /// Rotate the passed gcode around the center point by the given degrees
         /// </summary>
         /// <param name="instructions">list of instruction elements</param>
         /// <param name="center">center point to rotate around</param>
@@ -755,7 +742,6 @@ namespace GCode
         /// <returns>list of rotated gcode</returns>
         public static List<GCodeInstruction> GetRotatedGCode(List<GCodeInstruction> instructions, PointF center, float degrees)
         {
-
             var transformed = new List<GCodeInstruction>();
 
             // Sources
@@ -892,7 +878,6 @@ namespace GCode
     /// </summary>
     public class GCodeGroupObject
     {
-
         public List<Point3DBlock> G0Sections { get; set; }
         public List<GCodeInstruction> PriorToFirstG0Section { get; set; }
         public List<GCodeInstruction> AfterLastG0Section { get; set; }
