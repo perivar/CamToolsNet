@@ -371,9 +371,9 @@ namespace CAMToolsNet.Models
 
             if (svg != null)
             {
-                // var contours = svg.GetScaledContoursAndSetMinMax();
-                // var maxY = svg.MaxY;
-                // var minX = svg.MinX;
+                var contours = svg.GetScaledContoursAndSetMinMax();
+                var maxY = svg.MaxY;
+                var minX = svg.MinX;
 
                 // Assuming these points come from a SVG
                 // we need to shift the Y pos since
@@ -383,20 +383,20 @@ namespace CAMToolsNet.Models
                 {
                     var elem = shape.DrawModel;
 
-                    // Circles.AddRange(elem.Circles.Select(c => new DrawCircle(new PointF { X = c.Center.X - minX, Y = maxY - c.Center.Y }, c.Radius)).ToList());
-                    // Lines.AddRange(elem.Lines.Select(l => new DrawLine(new PointF { X = l.StartPoint.X - minX, Y = maxY - l.StartPoint.Y }, new PointF { X = l.EndPoint.X - minX, Y = maxY - l.EndPoint.Y })).ToList());
-                    // Arcs.AddRange(elem.Arcs.Select(a => new DrawArc(new PointF { X = a.Center.X - minX, Y = maxY - a.Center.Y }, a.Radius, a.StartAngle, a.EndAngle)).ToList());
+                    Circles.AddRange(elem.Circles.Select(c => new DrawCircle(new PointF { X = c.Center.X - minX, Y = maxY - c.Center.Y }, c.Radius)).ToList());
+                    Lines.AddRange(elem.Lines.Select(l => new DrawLine(new PointF { X = l.StartPoint.X - minX, Y = maxY - l.StartPoint.Y }, new PointF { X = l.EndPoint.X - minX, Y = maxY - l.EndPoint.Y })).ToList());
+                    Arcs.AddRange(elem.Arcs.Select(a => new DrawArc(new PointF { X = a.Center.X - minX, Y = maxY - a.Center.Y }, a.Radius, -a.EndAngle, -a.StartAngle)).ToList());
 
-                    // // fix vertexes for polylines
-                    // var polylines = (elem.Polylines.Select(a => new DrawPolyline(a.Vertexes.Select(b => new PointF { X = b.X - minX, Y = maxY - b.Y }).ToList())));
-                    // Polylines.AddRange(polylines);
+                    // fix vertexes for polylines
+                    var polylines = (elem.Polylines.Select(a => new DrawPolyline(a.Vertexes.Select(b => new PointF { X = b.X - minX, Y = maxY - b.Y }).ToList())));
+                    Polylines.AddRange(polylines);
 
                     // svg doesn't have polylines lw
 
-                    Circles.AddRange(elem.Circles);
-                    Lines.AddRange(elem.Lines);
-                    Arcs.AddRange(elem.Arcs);
-                    Polylines.AddRange(elem.Polylines);
+                    // Circles.AddRange(elem.Circles);
+                    // Lines.AddRange(elem.Lines);
+                    // Arcs.AddRange(elem.Arcs);
+                    // Polylines.AddRange(elem.Polylines);
                 }
             }
         }
