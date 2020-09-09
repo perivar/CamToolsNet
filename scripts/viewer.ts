@@ -52,7 +52,8 @@ let inverseOriginTransform = new DOMMatrix();
 function setZoomAndOffsetTransform() {
     originTransform = new DOMMatrix();
     originTransform.translateSelf(translatePos.x * devicePixelRatio, translatePos.y * devicePixelRatio);
-    originTransform.scaleSelf(scale * devicePixelRatio, scale * devicePixelRatio);
+    // do '-scale' as second argument to flip around the y axis
+    originTransform.scaleSelf(scale * devicePixelRatio, -scale * devicePixelRatio);
     inverseOriginTransform = originTransform.inverse();
 }
 
@@ -141,8 +142,8 @@ canvas.addEventListener('mousewheel', handleScroll, false);
 function zoomToFit() {
     // https://stackoverflow.com/questions/38354488/zoom-to-fit-canvas-javascript
 
-    var dataWidth = bounds.max.x - bounds.min.x;
-    var dataHeight = bounds.max.y - bounds.min.y;
+    var dataWidth = (bounds.max.x - bounds.min.x);
+    var dataHeight = (bounds.max.y - bounds.min.y);
 
     var scaleY = canvasHeight / dataHeight;
     var scaleX = canvasWidth / dataWidth;
@@ -150,7 +151,8 @@ function zoomToFit() {
 
     // move the origin  
     translatePos.x = (canvasWidth / 2) - ((dataWidth / 2) + bounds.min.x) * scale;
-    translatePos.y = ((canvasHeight / 2) - ((dataHeight / 2) + bounds.min.y) * scale);
+    // offset with 'canvasHeight -¨' since we are flipping around y axis
+    translatePos.y = canvasHeight - ((canvasHeight / 2) - ((dataHeight / 2) + bounds.min.y) * scale);
 }
 
 function round2TwoDecimal(number) {
@@ -304,20 +306,12 @@ function calculateBounds(): Bounds {
         }
     });
 
-    // add canvasHeight to y axis to flip the y axis
     return { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } };
 }
 
-function drawGrid(context: CanvasRenderingContext2D, gridPixelSize: number, color: string, gap: number, width: number, height: number) {
+function drawGrid(context: CanvasRenderingContext2D, gridPixelSize: number, colorAxis: string, colorGrid: string, gap: number, width: number, height: number) {
 
-    context.lineWidth = 0.8;
-    context.strokeStyle = color;
-
-    // x axis
-    drawLineWithArrows(ctx, 0, 0, bounds.max.x + 25, 0, 2, 4, false, true);
-
-    // y axis
-    drawLineWithArrows(ctx, 0, 0, 0, bounds.max.y + 25, 2, 4, false, true);
+    context.strokeStyle = colorGrid;
 
     // horizontal grid lines
     for (var i = 0; i <= height; i = i + gridPixelSize) {
@@ -347,12 +341,14 @@ function drawGrid(context: CanvasRenderingContext2D, gridPixelSize: number, colo
         context.stroke();
     }
 
-    // make dotted
-    // for (var ii = 0; ii <= width; ii += 2) {
-    //     for (var jj = 0; jj <= height; jj += 2) {
-    //         context.clearRect(ii, jj, 1, 2);
-    //     }
-    // }
+    context.lineWidth = 0.5;
+    context.strokeStyle = colorAxis;
+
+    // x axis
+    drawLineWithArrows(ctx, 0, 0, bounds.max.x + 25, 0, 2, 4, false, true);
+
+    // y axis
+    drawLineWithArrows(ctx, 0, 0, 0, bounds.max.y + 25, 2, 4, false, true);
 }
 
 // x0,y0: the line's starting point
@@ -395,7 +391,7 @@ function drawLineWithArrows(context: CanvasRenderingContext2D, x0, y0, x1, y1, a
 
 function drawFile(context: CanvasRenderingContext2D) {
 
-    drawGrid(context, 10, "#F2F2F2", 100, bounds.max.x + 20, bounds.max.y + 20);
+    drawGrid(context, 10, "#999999", "#F2F2F2", 100, bounds.max.x + 20, bounds.max.y + 20);
 
     // drawing circles
     context.beginPath(); // begin
@@ -409,12 +405,16 @@ function drawFile(context: CanvasRenderingContext2D) {
         context.moveTo(x + radius, y);
         context.arc(x, y, radius, startAngle, endAngle, false);
 
-        context.fillRect(x - 0.2, y - 0.2, 0.4, 0.4); // fill in the pixel
+        // draw diameter and center (need to flip y axis back first)     
+        context.save();
+        context.scale(1, -1); // flip back 
+        context.translate(0, -canvasHeight); // and translate so that we draw the text the right way up
+        context.fillRect(x - 0.2, canvasHeight - y - 0.2, 0.4, 0.4); // fill in the pixel
 
-        // draw diameter
         var dia = round2TwoDecimal(radius * 2);
-        context.font = '2px sans-serif';
-        context.fillText('' + dia, x, y + 6);
+        context.font = '4px sans-serif';
+        context.fillText('' + dia, x + 4, canvasHeight - y);
+        context.restore();
     });
     context.closePath(); // end
     context.lineWidth = 0.3;
@@ -537,9 +537,9 @@ function draw(scale: number, translatePos: Point) {
         originTransform.a,
         originTransform.b,
         originTransform.c,
-        originTransform.d, // flip y axis (-originTransform.d)
+        originTransform.d,
         originTransform.e,
-        originTransform.f); // (canvasHeight - originTransform.f) move by canvasHeight (due to flipping)
+        originTransform.f);
 
     // ---- start drawing the model ---
     // draw offscreen image    
