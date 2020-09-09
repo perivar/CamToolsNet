@@ -412,45 +412,56 @@ namespace CAMToolsNet.Models
                 // turn the instructions into blocks
                 var myBlocks = GCodeUtils.GetBlocks(parsedInstructions);
 
-                // calculate max values for X, Y and Z
-                // while finalizing the blocks and adding them to the lstPlot
-                // var maxX = 0.0f;
-                // var maxY = 0.0f;
-                // var maxZ = 0.0f;
-                // var minX = 0.0f;
-                // var minY = 0.0f;
-                // var minZ = 0.0f;
-                foreach (Block blockItem in myBlocks)
+                if (myBlocks != null && myBlocks.Count > 0)
                 {
-                    // // cache if this is a drill point
-                    // blockItem.CheckIfDrillOrProbePoint();
-
-                    // blockItem.CalculateMinAndMax();
-
-                    // maxX = Math.Max(maxX, blockItem.MaxX);
-                    // maxY = Math.Max(maxY, blockItem.MaxY);
-                    // maxZ = Math.Max(maxZ, blockItem.MaxZ);
-
-                    // minX = Math.Min(minX, blockItem.MinX);
-                    // minY = Math.Min(minY, blockItem.MinY);
-                    // minZ = Math.Min(minZ, blockItem.MinZ);
-
-                    if (blockItem.PlotPoints != null)
+                    // calculate max values for X, Y and Z
+                    // while finalizing the blocks and adding them to the lstPlot
+                    var maxX = 0.0f;
+                    var maxY = 0.0f;
+                    var maxZ = 0.0f;
+                    var minX = 0.0f;
+                    var minY = 0.0f;
+                    var minZ = 0.0f;
+                    foreach (Block blockItem in myBlocks)
                     {
-                        foreach (var linePlots in blockItem.PlotPoints)
+                        // cache if this is a drill point
+                        blockItem.CheckIfDrillOrProbePoint();
+
+                        blockItem.CalculateMinAndMax();
+                        maxX = Math.Max(maxX, blockItem.MaxX);
+                        maxY = Math.Max(maxY, blockItem.MaxY);
+                        maxZ = Math.Max(maxZ, blockItem.MaxZ);
+
+                        minX = Math.Min(minX, blockItem.MinX);
+                        minY = Math.Min(minY, blockItem.MinY);
+                        minZ = Math.Min(minZ, blockItem.MinZ);
+
+                        if (blockItem.PlotPoints != null)
                         {
-                            var points = new List<Point3D>();
-                            if (linePlots.Pen == PenColorList.RapidMove)
+                            foreach (var linePlots in blockItem.PlotPoints)
                             {
-                                // TODO - how to represent rapid movements
+                                var points = new List<Point3D>();
+                                if (linePlots.Pen == PenColorList.RapidMove)
+                                {
+                                    // TODO - how to represent rapid movements?
+                                }
+                                else
+                                {
+                                    var p1 = new Point3D(linePlots.X1, linePlots.Y1, linePlots.Z1);
+                                    var p2 = new Point3D(linePlots.X2, linePlots.Y2, linePlots.Z2);
+                                    points.Add(p1);
+                                    points.Add(p2);
+                                    Polylines.Add(new DrawPolyline(points));
+                                }
                             }
-                            else
+
+                            // if this is a drillblock, paint a circle at the point
+                            if (blockItem.IsDrillPoint)
                             {
-                                var p1 = new Point3D(linePlots.X1, linePlots.Y1, linePlots.Z1);
-                                var p2 = new Point3D(linePlots.X2, linePlots.Y2, linePlots.Z2);
-                                points.Add(p1);
-                                points.Add(p2);
-                                Polylines.Add(new DrawPolyline(points));
+                                var x = blockItem.PlotPoints[1].X1;
+                                var y = blockItem.PlotPoints[1].Y1;
+                                var radius = 4;
+                                AddCircle(new PointF(x, y), radius);
                             }
                         }
                     }

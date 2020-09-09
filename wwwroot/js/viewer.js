@@ -460,8 +460,8 @@ function draw(scale, translatePos) {
     ctx.fillText('scale: ' + round2TwoDecimal(scale), 10, 10);
     ctx.fillText('panning: ' + round2TwoDecimal(translatePos.x) + ' , ' + round2TwoDecimal(translatePos.y), 10, 20);
     // get bounds
-    ctx.fillText('bounds X: ' + round2TwoDecimal(bounds.min.x) + ' - ' + round2TwoDecimal(bounds.max.x), 10, 30);
-    ctx.fillText('bounds Y: ' + round2TwoDecimal(bounds.min.y) + ' - ' + round2TwoDecimal(bounds.max.y), 10, 40);
+    ctx.fillText('bounds X: ' + round2TwoDecimal(bounds.min.x) + ' to ' + round2TwoDecimal(bounds.max.x), 10, 30);
+    ctx.fillText('bounds Y: ' + round2TwoDecimal(bounds.min.y) + ' to ' + round2TwoDecimal(bounds.max.y), 10, 40);
     ctx.restore();
     // end debugging
 }
