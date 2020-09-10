@@ -500,8 +500,9 @@ function getDrawModel() {
         // drawFile(off_ctx);
         zoomToFit();
         draw(scale, translatePos);
-        // treed('treemenu', {openedClass:'fa-folder-open', closedClass:'fa-folder'});
-        treed('treemenu');
+        // initTreeMenu('treeMenuDiv', 'treemenu', drawModel);
+        // readTreeMenu('treemenu', { openedClass: 'fas fa-folder-open', closedClass: 'fas fa-folder' });
+        // readTreeMenu('treemenu');
     })
         .catch(function (error) { return console.error('Unable to get draw model.', error); });
 }

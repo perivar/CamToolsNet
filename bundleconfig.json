@@ -1,16 +1,12 @@
 ﻿[
   {
     "outputFileName": "wwwroot/css/site.min.css",
-    "inputFiles": [
-      "wwwroot/css/site.css"
-    ],
+    "inputFiles": ["wwwroot/css/site.css"],
     "minify": { "enabled": true }
   },
   {
     "outputFileName": "wwwroot/js/site.min.js",
-    "inputFiles": [
-      "wwwroot/js/site.js"
-    ],    
+    "inputFiles": ["wwwroot/js/site.js"],
     "minify": {
       "enabled": true,
       "renameLocals": true
@@ -19,9 +15,7 @@
   },
   {
     "outputFileName": "wwwroot/css/vendor.min.css",
-    "inputFiles": [
-      "node_modules/bootstrap/dist/css/bootstrap.min.css"      
-    ],
+    "inputFiles": ["node_modules/bootstrap/dist/css/bootstrap.min.css"],
     "minify": {
       "enabled": true,
       "renameLocals": false,
@@ -40,7 +34,7 @@
       "renameLocals": false,
       "adjustRelativePaths": false
     }
-  },  
+  },
   {
     "outputFileName": "wwwroot/js/vendor-validation.min.js",
     "inputFiles": [
@@ -57,9 +51,7 @@
   },
   {
     "outputFileName": "wwwroot/js/signalr.min.js",
-    "inputFiles": [
-      "node_modules/@aspnet/signalr/dist/browser/signalr.min.js"
-    ],
+    "inputFiles": ["node_modules/@aspnet/signalr/dist/browser/signalr.min.js"],
     "minify": {
       "enabled": false,
       "renameLocals": false,
