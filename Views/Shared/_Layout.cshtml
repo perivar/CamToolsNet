@@ -12,6 +12,7 @@
         <link rel="stylesheet" href="~/css/site.min.css" asp-append-version="true" />
     </environment>
     <link rel="stylesheet" href="~/css/vendor.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css" integrity="sha512-1PKOgIY59xJ8Co8+NE6FZ+LOAZKjy+KY8iq0G4B3CyeY6wYHN3yt9PW0XpSriVlkMXe40PTKnXrLnZ9+fkDaog==" crossorigin="anonymous" />    
     
     @RenderSection("Head", false)
 </head>
@@ -49,8 +50,8 @@
         </nav>
     </header>
                         
-    <div class="container-fluid py-0">
-        <main role="main" class="py-0">
+    <div class="mx-auto px-0 py-0">
+        <main role="main" class="px-0 py-0">
             @RenderBody()
         </main>
     </div>
@@ -64,9 +65,6 @@
     <script src="~/js/vendor-validation.min.js" asp-append-version="true"></script>
     <script src="~/js/site.min.js" asp-append-version="true"></script>
  
-    @* <script src="~/js/app.js"></script> *@
-    @* <script src="~/js/library.js"></script> *@
-
     @RenderSection("Scripts", required: false)
 </body>
 </html>

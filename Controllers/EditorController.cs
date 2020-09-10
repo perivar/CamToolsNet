@@ -26,7 +26,7 @@ namespace CAMToolsNet.Controllers
             if (drawModel == null)
             {
                 _logger.LogError("Could not read drawmodel from session!");
-                return null;
+                return new DrawModel();
             }
             else
             {

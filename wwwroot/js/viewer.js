@@ -13,9 +13,11 @@ var canvas = document.getElementById('drawCanvas');
 // make the images crisp
 // https://stackoverflow.com/questions/31910043/html5-canvas-drawimage-draws-image-blurry
 // get current size of the canvas
-var rect = canvas.getBoundingClientRect();
-var canvasWidth = rect.width;
-var canvasHeight = rect.height;
+var canvasDiv = document.getElementById('canvasDiv');
+// console.log('canvas div width: ' + canvasDiv.clientWidth);
+// console.log('canvas div height: ' + canvasDiv.clientHeight);
+var canvasWidth = canvasDiv.clientWidth;
+var canvasHeight = canvasDiv.clientHeight;
 // increase the actual size of our canvas
 canvas.width = canvasWidth * devicePixelRatio;
 canvas.height = canvasHeight * devicePixelRatio;
@@ -57,6 +59,22 @@ function getTransformRelativeMousePosition(e) {
     var point = inverseOriginTransform.transformPoint(p);
     return { x: point.x, y: point.y };
 }
+// event handler to resize the canvas when the document view is changed
+window.addEventListener('resize', function (evt) {
+    var div = document.getElementById('canvasDiv');
+    // console.log('canvas div width: ' + div.clientWidth);
+    // console.log('canvas div height: ' + div.clientHeight);
+    var canvasWidth = div.clientWidth;
+    var canvasHeight = div.clientHeight;
+    // increase the actual size of our canvas
+    canvas.width = canvasWidth * devicePixelRatio;
+    canvas.height = canvasHeight * devicePixelRatio;
+    canvas.style.width = canvasWidth + "px";
+    canvas.style.height = canvasHeight + "px";
+    zoomToFit();
+    draw(scale, translatePos);
+    return false;
+});
 // add event listeners to handle screen drag
 canvas.addEventListener("mousedown", function (evt) {
     mouseDown = true;
@@ -77,8 +95,10 @@ canvas.addEventListener("mousemove", function (evt) {
     // clear small area where the mouse pos is plotted
     ctx.save();
     ctx.scale(devicePixelRatio, devicePixelRatio);
-    ctx.clearRect(10, 42, 100, 20);
+    ctx.fillStyle = "white";
+    ctx.fillRect(10, 42, 120, 10);
     ctx.font = '10px sans-serif';
+    ctx.fillStyle = "black";
     ctx.fillText('pos: ' + round2TwoDecimal(mousePos.x) + ' , ' + round2TwoDecimal(mousePos.y), 10, 50);
     ctx.restore();
     if (mouseDown) {
@@ -435,7 +455,10 @@ function drawFile(context) {
 function draw(scale, translatePos) {
     ctx.imageSmoothingEnabled = false;
     // clear
-    ctx.clearRect(0, 0, canvasWidth * devicePixelRatio, canvasHeight * devicePixelRatio);
+    // ctx.clearRect(0, 0, canvasWidth * devicePixelRatio, canvasHeight * devicePixelRatio);
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, canvasWidth * devicePixelRatio, canvasHeight * devicePixelRatio);
+    ctx.fillStyle = "black";
     // main drawing routine
     ctx.save();
     setZoomAndOffsetTransform();
@@ -477,6 +500,8 @@ function getDrawModel() {
         // drawFile(off_ctx);
         zoomToFit();
         draw(scale, translatePos);
+        // treed('treemenu', {openedClass:'fa-folder-open', closedClass:'fa-folder'});
+        treed('treemenu');
     })
         .catch(function (error) { return console.error('Unable to get draw model.', error); });
 }

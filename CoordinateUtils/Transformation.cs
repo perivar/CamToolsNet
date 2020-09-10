@@ -129,11 +129,11 @@ namespace CoordinateUtils
         public static bool IsPolygonCircle(IEnumerable<PointF> points)
         {
             // A circle:
-            // 1. Has more than 6 vertices.
+            // 1. Has more than 10 vertices.
             // 2. Has diameter of the same size in each direction.
             // 3. The area of the contour is ~πr2
 
-            if (points.Count() < 6) return false;
+            if (points.Count() < 10) return false;
 
             double area = PolygonArea(points);
             var r = BoundingRect(points);

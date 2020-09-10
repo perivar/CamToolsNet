@@ -392,11 +392,6 @@ namespace CAMToolsNet.Models
                     Polylines.AddRange(polylines);
 
                     // svg doesn't have polylines lw
-
-                    // Circles.AddRange(elem.Circles);
-                    // Lines.AddRange(elem.Lines);
-                    // Arcs.AddRange(elem.Arcs);
-                    // Polylines.AddRange(elem.Polylines);
                 }
             }
         }
@@ -447,11 +442,14 @@ namespace CAMToolsNet.Models
                                 }
                                 else
                                 {
-                                    var p1 = new Point3D(linePlots.X1, linePlots.Y1, linePlots.Z1);
-                                    var p2 = new Point3D(linePlots.X2, linePlots.Y2, linePlots.Z2);
-                                    points.Add(p1);
-                                    points.Add(p2);
-                                    Polylines.Add(new DrawPolyline(points));
+                                    if (!blockItem.IsDrillPoint)
+                                    {
+                                        var p1 = new Point3D(linePlots.X1, linePlots.Y1, linePlots.Z1);
+                                        var p2 = new Point3D(linePlots.X2, linePlots.Y2, linePlots.Z2);
+                                        points.Add(p1);
+                                        points.Add(p2);
+                                        Polylines.Add(new DrawPolyline(points));
+                                    }
                                 }
                             }
 

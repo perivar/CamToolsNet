@@ -4,25 +4,70 @@
         @ViewData["Message"]
     </div> *@
 }	
-    <div class="container">
-        <canvas id="drawCanvas" width="800" height="480" class="border">
-        </canvas>
-    </div>
-
-    <nav class="navbar fixed-bottom navbar-light border-top">
-        <div class="container">
-            <div class="row">
-                <div class=column">
-                    <input type="button" class="btn btn-outline-secondary btn-sm mx-1" title="ConvertToCircles" value="Convert Polyline to Circles" onclick="location.href='@Url.Action("PolylineToCircles", "File")'" />
-                </div>
-                <div class=column">
-                    <input type="button" class="btn btn-outline-secondary btn-sm mx-1" title="MoveEqual" value="Move Equal Circles To Unique Layers" onclick="location.href='@Url.Action("CirclesToLayers", "File")?doSave=false'" />
-                </div>
+    <div class="container-fluid">        
+        <div class="row">
+            <div class="col-md-2 px-0 py-0">
+                <ul id="treemenu">
+                    <li>
+                        <i class="fa fa-plus-circle" aria-hidden="true"></i>                        
+                        <a href="#">Gcode</a>
+                        <ul>
+                        <li>Company Maintenance</li>
+                        <li>
+                            Employees
+                            <ul>
+                                <li>
+                                    Reports
+                                    <ul>
+                                    <li>Report1</li>
+                                    <li>Report2</li>
+                                    <li>Report3</li>
+                                    </ul>
+                                </li>
+                                <li>Employee Maint.</li>
+                            </ul>
+                        </li>
+                        <li>Human Resources</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <i class="fa fa-plus-circle" aria-hidden="true"></i>
+                        XRP
+                        <ul>
+                        <li>Company Maintenance</li>
+                        <li>
+                            Employees
+                            <ul>
+                                <li>
+                                    Reports
+                                    <ul>
+                                    <li>Report1</li>
+                                    <li>Report2</li>
+                                    <li>Report3</li>
+                                    </ul>
+                                </li>
+                                <li>Employee Maint.</li>
+                            </ul>
+                        </li>
+                        <li>Human Resources</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div id="canvasDiv" class="col-md-8 px-0 py-0">
+                <canvas id="drawCanvas" width="200" height="200" class="border">
+                    Sorry, your browser doesn't support the &lt;canvas&gt; element.
+                </canvas>
+            </div>
+            <div class="col-md-2">
+                <input type="button" class="btn btn-outline-secondary btn-sm mb-2" title="ConvertToCircles" value="Poly to Circle" onclick="location.href='@Url.Action("PolylineToCircles", "File")'" />
+                <input type="button" class="btn btn-outline-secondary btn-sm mb-2" title="MoveEqual" value="Circles to Layers" onclick="location.href='@Url.Action("CirclesToLayers", "File")?doSave=false'" />
             </div>
         </div>
-    </nav>
+    </div>
 
 @section Scripts {
+    <script src="~/js/treeview.js"></script>
     <script src="~/js/viewer.js"></script>
     <script type="text/javascript">
         window.onload = function(e) {
