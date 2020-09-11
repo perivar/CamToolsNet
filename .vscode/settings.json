@@ -1,3 +1,48 @@
 {
-    "typescript.tsdk": "node_modules\\typescript\\lib"
+  "cSpell.enabled": false,
+  "editor.detectIndentation": false,
+  "editor.insertSpaces": false,
+  "editor.tabSize": 4,
+  "editor.formatOnSave": true,
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": false,
+    "editor.tabSize": 2
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": false,
+    "editor.tabSize": 2
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": false,
+    "editor.tabSize": 2
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": false,
+    "editor.tabSize": 2
+  },
+  "eslint.alwaysShowStatus": true,
+  "eslint.workingDirectories": [
+    { "directory": "camclient", "changeProcessCWD": true }
+  ],
+  "css.validate": false,
+  "less.validate": false,
+  "scss.validate": false,
+  "scss.showErrors": false,
+  "backtix.languages": {
+    "javascript": true,
+    "typescript": true,
+    "javascriptreact": true,
+    "typescriptreact": true
+  },
+  "backtix.placeholders": {
+    "active": true,
+    "text": "Add placeholder."
+  },
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  }
 }

@@ -1,0 +1,74 @@
+{
+  "name": "camclient",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@testing-library/jest-dom": "^5.11.4",
+    "@testing-library/react": "^11.0.2",
+    "@testing-library/user-event": "^12.1.4",
+    "axios": "^0.20.0",
+    "bootstrap": "^4.5.2",
+    "history": "^5.0.0",
+    "react": "^16.13.1",
+    "react-bootstrap": "^1.3.0",
+    "react-bootstrap-typeahead": "^5.1.1",
+    "react-dom": "^16.13.1",
+    "react-router-dom": "^5.2.0",
+    "react-scripts": "3.4.3",
+    "react-dropzone": "^11.1.0",
+    "node-sass": "^4.14.1",
+    "rimraf": "^3.0.2"
+  },
+  "devDependencies": {
+    "@types/jest": "^26.0.13",
+    "@types/node": "^14.10.0",
+    "@types/react": "^16.9.49",
+    "@types/react-bootstrap-typeahead": "^3.4.6",
+    "@types/react-dom": "^16.9.8",
+    "@types/react-router-dom": "^5.1.5",
+    "@typescript-eslint/eslint-plugin": "^4.1.0",
+    "@typescript-eslint/parser": "^4.1.0",
+    "typescript": "^4.0.2",
+    "eslint": "6.6.0",
+    "eslint-config-airbnb": "^18.2.0",
+    "eslint-config-airbnb-typescript-prettier": "^3.1.0",
+    "eslint-config-prettier": "^6.11.0",
+    "eslint-import-resolver-typescript": "^2.3.0",
+    "eslint-plugin-import": "^2.22.0",
+    "eslint-plugin-json": "^2.1.2",
+    "eslint-plugin-jsx-a11y": "^6.3.1",
+    "eslint-plugin-prettier": "^3.1.4",
+    "eslint-plugin-react": "^7.20.6",
+    "eslint-plugin-react-hooks": "^4.1.1",
+    "prettier": "^2.1.1",
+    "sass-mq": "^5.0.1",
+    "stylelint": "^13.7.0",
+    "stylelint-config-prettier": "^8.0.2",
+    "stylelint-prettier": "^1.1.2",
+    "stylelint-scss": "^3.18.0"
+  },
+  "scripts": {
+    "start": "rimraf ./build && react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "lint-autofix": "eslint --config .eslintrc.js --parser-options={tsconfigRootDir:null} --quiet --fix --ext .js,.ts,.tsx src",
+    "lint-check": "eslint --config .eslintrc.js --parser-options={tsconfigRootDir:null} --ext .js,.ts,.tsx src",
+    "eslint-check": "eslint --print-config src/index.tsx | eslint-config-prettier-check"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

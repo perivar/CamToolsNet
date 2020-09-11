@@ -616,8 +616,8 @@ function getDrawModel() {
             zoomToFit();
             draw(scale, translatePos);
 
-            initTreeMenu('treeMenuDiv', 'treemenu', drawModel);
-            readTreeMenu('treemenu', {openedClass:'fas fa-folder-open', closedClass:'fas fa-folder'});
+            // initTreeMenu('treeMenuDiv', 'treemenu', drawModel);
+            // readTreeMenu('treemenu', {openedClass:'fas fa-folder-open', closedClass:'fas fa-folder'});
             // readTreeMenu('treemenu');
         })
         .catch(error => console.error('Unable to get draw model.', error));

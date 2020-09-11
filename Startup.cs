@@ -35,7 +35,28 @@ namespace CAMToolsNet
                 options.Cookie.IsEssential = true;
             });
 
-            var mvcBuilder = services.AddControllersWithViews();
+            services.AddCors(o =>
+                       {
+                           o.AddPolicy("Everything",
+
+                               // To avoid the following error - use SetIsOriginAllowed(_ => true)
+                               // Access to XMLHttpRequest at 'https://api.nerseth.com/crosswordsignalrhub/negotiate' from origin 'https://crossword.nerseth.com' 
+                               // has been blocked by CORS policy: Response to preflight request doesn't pass access control check: 
+                               // The value of the 'Access-Control-Allow-Origin' header in the response must not be the wildcard '*' 
+                               // when the request's credentials mode is 'include'. 
+
+                               // The credentials mode of requests initiated by the XMLHttpRequest is controlled by the withCredentials attribute.
+                               // When using "AllowCredentials()" we cannot use AllowAnyOrigin()
+                               // instead the SetIsOriginAllowed(_ => true) is required.
+                               builder => builder
+                                   .AllowAnyHeader()
+                                   .AllowAnyMethod()
+                                   // .AllowAnyOrigin()
+                                   .SetIsOriginAllowed(_ => true)
+                                   .AllowCredentials()
+                                   .WithExposedHeaders("WWW-Authenticate", "Token-Expired", "Refresh-Token-Expired", "Invalid-Token", "Invalid-Refresh-Token")
+                               );
+                       });
 
             services.Configure<ForwardedHeadersOptions>(options =>
             {
@@ -43,6 +64,7 @@ namespace CAMToolsNet
                     ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
             });
 
+            var mvcBuilder = services.AddControllersWithViews();
             if (Env.IsDevelopment())
             {
                 mvcBuilder.AddRazorRuntimeCompilation();
@@ -53,7 +75,6 @@ namespace CAMToolsNet
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             app.UseForwardedHeaders();
-
 
             if (env.IsDevelopment())
             {
@@ -69,6 +90,8 @@ namespace CAMToolsNet
             app.UseStaticFiles();
 
             app.UseRouting();
+
+            app.UseCors("Everything");
 
             app.UseAuthorization();
 

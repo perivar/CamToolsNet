@@ -45,6 +45,14 @@
       "problemMatcher": ["$tsc-watch"],
       "group": "build",
       "label": "tsc: watch - tsconfig.json"
+    },
+    {
+      "type": "typescript",
+      "tsconfig": "camclient/tsconfig.json",
+      "option": "watch",
+      "problemMatcher": ["$tsc-watch"],
+      "group": "build",
+      "label": "tsc: watch - camclient/tsconfig.json"
     }
   ]
 }
