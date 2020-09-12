@@ -711,19 +711,14 @@ export default class Home extends React.PureComponent {
               )}
             </Dropzone>
           </Col>
-        </Row>
-        <Row>
-          <Col>
-            <div id="treeMenuDiv" className="px-0 py-0" />
-          </Col>
-          <Col>
-            <div ref={(ref) => (this.canvasDiv = ref)} id="canvasDiv" className="px-0 py-1">
+          <Col xs={8}>
+            <div ref={(ref) => (this.canvasDiv = ref)} id="canvasDiv">
               <canvas
+                className="border"
                 ref={(ref) => (this.canvas = ref)}
                 id="drawCanvas"
                 width="200"
                 height="200"
-                className="border"
                 onWheel={this.handleMouseScroll}
                 onMouseDown={this.onMouseDown}
                 onMouseUp={this.OnMouseFinished}
