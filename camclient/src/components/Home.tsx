@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Col, Container, Row } from 'react-bootstrap';
+import { Button, Card, Col, Container, Row } from 'react-bootstrap';
 import Dropzone from 'react-dropzone';
 import axios from 'axios';
 import './Home.scss';
@@ -15,7 +15,7 @@ interface Bounds {
 }
 
 const readUrl = 'http://localhost:5001/api/Editor';
-const uploadUrl = 'http://localhost:5001/File/UploadToFileSystem';
+const uploadUrl = 'http://localhost:5001/api/Editor/Upload';
 
 function round2TwoDecimal(number: number): number {
   return Math.round((number + Number.EPSILON) * 100) / 100;
@@ -264,11 +264,15 @@ export default class Home extends React.PureComponent {
   };
 
   private onPolyToCircle = () => {
-    // "location.href='@Url.Action(" PolylineToCircles", "File")'
-  };
-
-  private onCirclesToLayers = () => {
-    // "location.href='@Url.Action(" CirclesToLayers", "File")?doSave=false'
+    axios
+      .get(`${readUrl}/PolylineToCircles`, { withCredentials: true })
+      .then((response) => {
+        console.log(response);
+        this.getDrawModel();
+      })
+      .catch((error) => {
+        console.error('Unable to perform poly to circle.', error);
+      });
   };
 
   private zoomToFit = () => {
@@ -698,20 +702,23 @@ export default class Home extends React.PureComponent {
   render() {
     return (
       <Container fluid>
-        <Row>
-          <Col>
+        <Row className="my-2">
+          <Col xs={3} className="px-0 py-0 mx-1">
+            <Card className="mb-2">
+              <Card.Header>
+                <b>CAM tools</b> - dxf, svg and gcode support!
+              </Card.Header>
+            </Card>
             <Dropzone onDrop={this.onDrop}>
               {({ getRootProps, getInputProps, isDragActive }) => (
-                <div {...getRootProps()}>
+                <div {...getRootProps()} className="drop-zone">
                   <input {...getInputProps()} />
-                  <div className="drop-zone">
-                    {isDragActive ? "Drop it like it's hot!" : 'Click me or drag a file to upload!'}
-                  </div>
+                  {isDragActive ? "Drop it like it's hot!" : 'Click me or drag a file to upload!'}
                 </div>
               )}
             </Dropzone>
           </Col>
-          <Col xs={8}>
+          <Col xs={8} className="px-0 py-0 mx-1">
             <div ref={(ref) => (this.canvasDiv = ref)} id="canvasDiv">
               <canvas
                 className="border"
@@ -731,13 +738,13 @@ export default class Home extends React.PureComponent {
               </canvas>
             </div>
           </Col>
-          <Col>
-            <Button title="ConvertToCircles" variant="outline-secondary" onClick={this.onPolyToCircle} size="sm">
+          <Col className="px-0 py-0 mx-1">
+            <Button title="ConvertToCircles" variant="info" onClick={this.onPolyToCircle} size="sm">
               Poly to Circle
             </Button>
-            <Button title="CirclesToLayers" variant="outline-secondary" onClick={this.onCirclesToLayers} size="sm">
+            <a className="btn btn-info btn-sm my-1" href={`${readUrl}/CirclesToLayers/false`}>
               Circles to Layers
-            </Button>
+            </a>
           </Col>
         </Row>
       </Container>

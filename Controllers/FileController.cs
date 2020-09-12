@@ -19,6 +19,7 @@ using System.Drawing;
 
 namespace CAMToolsNet.Controllers
 {
+	// This Controller is used by the ASP NET Core Razor Client (not the react client)
 	public class FileController : Controller
 	{
 		private readonly ILogger<FileController> _logger;
