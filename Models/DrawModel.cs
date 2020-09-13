@@ -86,6 +86,7 @@ namespace CAMToolsNet.Models
 			{
 				Center = new Point3D(center.X, center.Y);
 				Radius = radius;
+				IsVisible = true;
 			}
 
 			public DrawCircle(netDxf.Entities.Circle c) : base(c)
@@ -93,6 +94,7 @@ namespace CAMToolsNet.Models
 				Center = new Point3D((float)c.Center.X, (float)c.Center.Y, (float)c.Center.Z);
 				Radius = (float)c.Radius;
 				Thickness = (float)c.Thickness;
+				IsVisible = true;
 			}
 		}
 
@@ -110,12 +112,14 @@ namespace CAMToolsNet.Models
 			{
 				StartPoint = new Point3D(startPoint.X, startPoint.Y, 0);
 				EndPoint = new Point3D(endPoint.X, endPoint.Y, 0);
+				IsVisible = true;
 			}
 
 			public DrawLine(netDxf.Entities.Line l) : base(l)
 			{
 				StartPoint = new Point3D((float)l.StartPoint.X, (float)l.StartPoint.Y, (float)l.StartPoint.Z);
 				EndPoint = new Point3D((float)l.EndPoint.X, (float)l.EndPoint.Y, (float)l.EndPoint.Z);
+				IsVisible = true;
 			}
 		}
 
@@ -137,6 +141,7 @@ namespace CAMToolsNet.Models
 				Radius = radius;
 				StartAngle = startAngle;
 				EndAngle = endAngle;
+				IsVisible = true;
 			}
 
 			public DrawArc(netDxf.Entities.Arc a) : base(a)
@@ -146,6 +151,7 @@ namespace CAMToolsNet.Models
 				Thickness = (float)a.Thickness;
 				StartAngle = (float)a.StartAngle;
 				EndAngle = (float)a.EndAngle;
+				IsVisible = true;
 			}
 		}
 
@@ -168,11 +174,13 @@ namespace CAMToolsNet.Models
 					var Point3D = new Point3D(v.X, v.Y, 0);
 					Vertexes.Add(Point3D);
 				}
+				IsVisible = true;
 			}
 
 			public DrawPolyline(List<Point3D> vertexes)
 			{
 				Vertexes = vertexes;
+				IsVisible = true;
 			}
 
 			public DrawPolyline(netDxf.Entities.Polyline p) : base(p)
@@ -185,6 +193,7 @@ namespace CAMToolsNet.Models
 					var Point3D = new Point3D((float)v.Position.X, (float)v.Position.Y, (float)v.Position.Z);
 					Vertexes.Add(Point3D);
 				}
+				IsVisible = true;
 			}
 		}
 
@@ -210,9 +219,9 @@ namespace CAMToolsNet.Models
 					Point3D.Bulge = (float)v.Bulge;
 					Vertexes.Add(Point3D);
 				}
+				IsVisible = true;
 			}
 		}
-
 
 		// used by the serializer and de-serializer
 		public string FileName { get; set; }
@@ -265,7 +274,12 @@ namespace CAMToolsNet.Models
 				var circles = new List<netDxf.Entities.Circle>();
 				foreach (var c in model.Circles)
 				{
-					circles.Add(new netDxf.Entities.Circle(new netDxf.Vector3(c.Center.X, c.Center.Y, c.Center.Z), c.Radius));
+					if (c.IsVisible)
+					{
+						var circle = new netDxf.Entities.Circle(new netDxf.Vector3(c.Center.X, c.Center.Y, c.Center.Z), c.Radius);
+						if (c.LayerName != null) circle.Layer = new netDxf.Tables.Layer(c.LayerName);
+						circles.Add(circle);
+					}
 				}
 				dxf.AddEntity(circles);
 
@@ -273,7 +287,12 @@ namespace CAMToolsNet.Models
 				var lines = new List<netDxf.Entities.Line>();
 				foreach (var l in model.Lines)
 				{
-					lines.Add(new netDxf.Entities.Line(new netDxf.Vector3(l.StartPoint.X, l.StartPoint.Y, l.StartPoint.Z), new netDxf.Vector3(l.EndPoint.X, l.EndPoint.Y, l.EndPoint.Z)));
+					if (l.IsVisible)
+					{
+						var line = new netDxf.Entities.Line(new netDxf.Vector3(l.StartPoint.X, l.StartPoint.Y, l.StartPoint.Z), new netDxf.Vector3(l.EndPoint.X, l.EndPoint.Y, l.EndPoint.Z));
+						if (l.LayerName != null) line.Layer = new netDxf.Tables.Layer(l.LayerName);
+						lines.Add(line);
+					}
 				}
 				dxf.AddEntity(lines);
 
@@ -281,7 +300,12 @@ namespace CAMToolsNet.Models
 				var arcs = new List<netDxf.Entities.Arc>();
 				foreach (var a in model.Arcs)
 				{
-					arcs.Add(new netDxf.Entities.Arc(new netDxf.Vector3(a.Center.X, a.Center.Y, a.Center.Z), a.Radius, a.StartAngle, a.EndAngle));
+					if (a.IsVisible)
+					{
+						var arc = new netDxf.Entities.Arc(new netDxf.Vector3(a.Center.X, a.Center.Y, a.Center.Z), a.Radius, a.StartAngle, a.EndAngle);
+						if (a.LayerName != null) arc.Layer = new netDxf.Tables.Layer(a.LayerName);
+						arcs.Add(arc);
+					}
 				}
 				dxf.AddEntity(arcs);
 
@@ -289,12 +313,18 @@ namespace CAMToolsNet.Models
 				var polylines = new List<netDxf.Entities.Polyline>();
 				foreach (var p in model.Polylines)
 				{
-					var vertexes = new List<netDxf.Entities.PolylineVertex>();
-					foreach (var v in p.Vertexes)
+					// cannot add a polyline with only one point
+					if (p.IsVisible && p.Vertexes.Count >= 2)
 					{
-						vertexes.Add(new netDxf.Entities.PolylineVertex(v.X, v.Y, v.Z));
+						var vertexes = new List<netDxf.Entities.PolylineVertex>();
+						foreach (var v in p.Vertexes)
+						{
+							vertexes.Add(new netDxf.Entities.PolylineVertex(v.X, v.Y, v.Z));
+						}
+						var polyLine = new netDxf.Entities.Polyline(vertexes, p.IsClosed);
+						if (p.LayerName != null) polyLine.Layer = new netDxf.Tables.Layer(p.LayerName);
+						polylines.Add(polyLine);
 					}
-					polylines.Add(new netDxf.Entities.Polyline(vertexes, p.IsClosed));
 				}
 				dxf.AddEntity(polylines);
 
@@ -302,12 +332,18 @@ namespace CAMToolsNet.Models
 				var polylinesLW = new List<netDxf.Entities.LwPolyline>();
 				foreach (var p in model.PolylinesLW)
 				{
-					var vertexes = new List<netDxf.Entities.LwPolylineVertex>();
-					foreach (var v in p.Vertexes)
+					// cannot add a polyline with only one point
+					if (p.IsVisible && p.Vertexes.Count >= 2)
 					{
-						vertexes.Add(new netDxf.Entities.LwPolylineVertex(v.Position.X, v.Position.Y, v.Bulge));
+						var vertexes = new List<netDxf.Entities.LwPolylineVertex>();
+						foreach (var v in p.Vertexes)
+						{
+							vertexes.Add(new netDxf.Entities.LwPolylineVertex(v.Position.X, v.Position.Y, v.Bulge));
+						}
+						var polyLineLW = new netDxf.Entities.LwPolyline(vertexes, p.IsClosed);
+						if (p.LayerName != null) polyLineLW.Layer = new netDxf.Tables.Layer(p.LayerName);
+						polylinesLW.Add(polyLineLW);
 					}
-					polylinesLW.Add(new netDxf.Entities.LwPolyline(vertexes, p.IsClosed));
 				}
 				dxf.AddEntity(polylinesLW);
 
@@ -435,6 +471,7 @@ namespace CAMToolsNet.Models
 						{
 							// add each block as polyline
 							var vertexes = new List<Point3D>();
+							var curP2 = Point3D.Empty;
 							foreach (var linePlots in blockItem.PlotPoints)
 							{
 								var p1 = new Point3D(linePlots.X1, linePlots.Y1, linePlots.Z1);
@@ -442,9 +479,9 @@ namespace CAMToolsNet.Models
 
 								if (linePlots.Pen == PenColorList.RapidMove)
 								{
-									// TODO - should we represent rapid movements as lines?
+									// we represent rapid movements as invisible lines
 									var line = new DrawLine(p1.PointF, p2.PointF);
-									line.LayerName = blockItem.Name;
+									if (blockItem.Name != null) line.LayerName = blockItem.Name;
 									line.IsVisible = false;
 									Lines.Add(line);
 								}
@@ -452,17 +489,35 @@ namespace CAMToolsNet.Models
 								{
 									if (!blockItem.IsDrillPoint)
 									{
-										if (!vertexes.Contains(p1)) vertexes.Add(p1);
-										if (!vertexes.Contains(p2)) vertexes.Add(p2);
+										if (p1.PointF == p2.PointF)
+										{
+											// if these are the same, we are only moving in z direction
+											// ignore
+										}
+										else
+										{
+											// a closed polyline has the same first and last point
+											// but a line plot contains from and to points
+											// solve this by only adding p1, and make sure to add p2 as the very last point
+											vertexes.Add(p1);
+											curP2 = p2; // store p2 for later
+										}
 									}
 								}
 							}
+							// make sure to add the last p2
+							if (!blockItem.IsDrillPoint)
+							{
+								vertexes.Add(curP2);
+							}
+
 							if (vertexes.Count > 0)
 							{
 								// add information
 								var poly = new DrawPolyline();
 								poly.Vertexes = vertexes;
-								poly.LayerName = blockItem.Name;
+								if (blockItem.Name != null) poly.LayerName = blockItem.Name;
+								poly.IsVisible = true;
 								Polylines.Add(poly);
 							}
 
