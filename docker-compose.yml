@@ -1,8 +1,8 @@
 version: "3.7"
 
 services:
-camapi:	
-  container_name: camtools.api
+  camapi:
+    container_name: camtools.api
     build:
       context: ./
       dockerfile: Dockerfile
@@ -16,15 +16,15 @@ camapi:
       - "7070:7070"
 
   camclient:
-	container_name: camclient
-	build:
-		context: ./camclient
-		dockerfile: Dockerfile
-	restart: always
-	expose:
-		- "4040"
-	ports:
-		- "4040:4040"
+    container_name: camclient
+    build:
+      context: ./camclient
+      dockerfile: Dockerfile
+    restart: always
+    expose:
+      - "4040"
+    ports:
+      - "4040:4040"
 
 # Remember to start the network before running this file:
 # $ docker network create crossword-net

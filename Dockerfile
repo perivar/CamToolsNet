@@ -18,11 +18,11 @@ RUN apt-get update -yq \
 FROM mcr.microsoft.com/dotnet/core/sdk:3.1-buster AS build
 
 # Install current node-js and npm
-RUN apt-get update -yq \
-	&& apt-get install curl gnupg -yq \
-	&& curl -sL https://deb.nodesource.com/setup_current.x | bash - \
-	&& apt-get install nodejs -yq \
-	&& rm -rf /var/lib/apt/lists/*
+#RUN apt-get update -yq \
+#	&& apt-get install curl gnupg -yq \
+#	&& curl -sL https://deb.nodesource.com/setup_current.x | bash - \
+#	&& apt-get install nodejs -yq \
+#	&& rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
 COPY CAMToolsNet.csproj CamToolsNet/
@@ -32,7 +32,7 @@ COPY  . .
 #WORKDIR /src/CamToolsNet
 
 # Install dependicies for node
-RUN npm install
+#RUN npm install
 
 FROM build AS publish
 RUN dotnet publish "CAMToolsNet.csproj" -c Release -o /app
