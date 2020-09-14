@@ -1,20 +1,31 @@
-version: "2"
+version: "3.7"
 
 services:
-  cam:
-    container_name: camtools
+camapi:	
+  container_name: camtools.api
     build:
       context: ./
       dockerfile: Dockerfile
     restart: always
     environment:
-      ASPNETCORE_ENVIRONMENT: 'Production'      
+      ASPNETCORE_ENVIRONMENT: "Production"
       ASPNETCORE_URLS: http://+:7070
     expose:
       - "7070"
     ports:
       - "7070:7070"
- 
+
+  camclient:
+	container_name: camclient
+	build:
+		context: ./camclient
+		dockerfile: Dockerfile
+	restart: always
+	expose:
+		- "4040"
+	ports:
+		- "4040:4040"
+
 # Remember to start the network before running this file:
 # $ docker network create crossword-net
 #

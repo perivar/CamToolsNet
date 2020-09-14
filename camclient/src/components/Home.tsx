@@ -6,7 +6,8 @@ import './Home.scss';
 import DrawingCanvas from './DrawingCanvas';
 import { DrawingModel } from '../types/DrawingModel';
 
-const apiUrl = 'http://localhost:5001/api/Editor';
+// read from .env files
+const config = { apiUrl: process.env.REACT_APP_API };
 
 export interface IHomeState {
   isLoading: boolean;
@@ -38,7 +39,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
 
   private getDrawModel = () => {
     axios
-      .get(apiUrl, { withCredentials: true })
+      .get(`${config.apiUrl}`, { withCredentials: true })
       .then((response) => {
         const { data } = response;
         this.setState({ isLoading: false, drawModel: data });
@@ -58,7 +59,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
       formData.append('files', acceptedFiles[i]);
       formData.append('description', acceptedFiles[i].name);
       axios
-        .post(`${apiUrl}/Upload`, formData, {
+        .post(`${config.apiUrl}/Upload`, formData, {
           withCredentials: true
         })
         .then(() => {
@@ -72,7 +73,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
 
   private onPolyToCircle = () => {
     axios
-      .get(`${apiUrl}/PolylineToCircles`, { withCredentials: true })
+      .get(`${config.apiUrl}/PolylineToCircles`, { withCredentials: true })
       .then((response) => {
         console.log(response);
         this.getDrawModel();
@@ -120,7 +121,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
             <Button title="ConvertToCircles" variant="info" onClick={this.onPolyToCircle} size="sm">
               Poly to Circle
             </Button>
-            <a className="btn btn-info btn-sm my-1" href={`${apiUrl}/CirclesToLayers/false`}>
+            <a className="btn btn-info btn-sm my-1" href={`${config.apiUrl}/CirclesToLayers/false`}>
               Circles to Layers
             </a>
           </Col>

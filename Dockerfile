@@ -9,20 +9,20 @@ WORKDIR /app
 
 # Install System.Drawing native dependencies
 RUN apt-get update -yq \
-    && apt-get install -y --allow-unauthenticated \
-        libc6-dev \
-        libgdiplus \
-        libx11-dev \
-    && rm -rf /var/lib/apt/lists/*
+	&& apt-get install -y --allow-unauthenticated \
+	libc6-dev \
+	libgdiplus \
+	libx11-dev \
+	&& rm -rf /var/lib/apt/lists/*
 
 FROM mcr.microsoft.com/dotnet/core/sdk:3.1-buster AS build
 
 # Install current node-js and npm
 RUN apt-get update -yq \
-    && apt-get install curl gnupg -yq \
-    && curl -sL https://deb.nodesource.com/setup_current.x | bash - \
-    && apt-get install nodejs -yq \
-    && rm -rf /var/lib/apt/lists/*
+	&& apt-get install curl gnupg -yq \
+	&& curl -sL https://deb.nodesource.com/setup_current.x | bash - \
+	&& apt-get install nodejs -yq \
+	&& rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
 COPY CAMToolsNet.csproj CamToolsNet/
