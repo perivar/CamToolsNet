@@ -5,13 +5,12 @@
   "version": "0.2.0",
   "compounds": [
     {
-      "name": ".NET Core Web (Chrome) & JavaScript",
-      "configurations": [".NET Core Launch (No Browser)", "Launch Chrome (5001)"]
-    },
-    {
-        "name": ".NET Core API Launch & React",
-        "configurations": [".NET Core Launch (No Browser)", "Launch Chrome CamClient (3000)"]
-      }
+      "name": ".NET Core API Launch & React",
+      "configurations": [
+        ".NET Core Launch (No Browser)",
+        "Launch Chrome CamClient (3000)"
+      ]
+    }
   ],
   "configurations": [
     {
@@ -21,7 +20,7 @@
       "processId": "${command:pickProcess}"
     },
     {
-      "name": ".NET Core Launch (web)",
+      "name": ".NET Core Launch (Browser)",
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "build",
@@ -36,11 +35,7 @@
         "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
       },
       "env": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation"
-      },
-      "sourceFileMap": {
-        "/Views": "${workspaceRoot}/Views"
+        "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
     {
@@ -59,19 +54,8 @@
       },
       "env": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "ASPNETCORE_URLS": "http://*:5001",
-        "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation"
-      },
-      "sourceFileMap": {
-        "/Views": "${workspaceRoot}/Views"
+        "ASPNETCORE_URLS": "http://*:5001"
       }
-    },
-    {
-      "name": "Launch Chrome (5001)",
-      "type": "chrome",
-      "request": "launch",
-      "url": "http://localhost:5001",
-      "webRoot": "${workspaceRoot}/wwwroot"
     },
     {
       "name": "Launch Chrome CamClient (3000)",

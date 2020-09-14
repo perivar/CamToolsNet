@@ -16,8 +16,6 @@ using SVG;
 
 namespace CAMToolsNet.Controllers
 {
-	// This Controller is used by the React Client
-
 	[ApiController]
 	[Route("api/[controller]")]
 	public class EditorController : ControllerBase
