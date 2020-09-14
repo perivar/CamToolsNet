@@ -23,6 +23,6 @@ RUN rm /etc/nginx/conf.d/default.conf
 COPY nginx/default.conf /etc/nginx/conf.d
 COPY nginx/gzip.conf /etc/nginx/conf.d
 
-# EXPOSE 3000 # Remember, I like to expose ports in docker-compose
+# EXPOSE 4040 # Remember, I like to expose ports in docker-compose
 
 CMD ["nginx", "-g", "daemon off;"]
