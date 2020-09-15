@@ -11,7 +11,7 @@ namespace CoordinateUtils
 		float X { get; }
 
 		float Y { get; }
-		
+
 		bool IsEmpty { get; }
 	}
 }

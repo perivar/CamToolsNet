@@ -280,5 +280,27 @@ namespace CAMToolsNet.Controllers
 
 			return Ok();
 		}
+
+
+		[HttpGet("Trim")]  // GET /api/Editor/Trim
+		public IActionResult Trim()
+		{
+			// traverse through all polylines and convert those that are circles to circles
+			var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
+			if (drawModel != null)
+			{
+				drawModel.Trim();
+
+				// update model
+				HttpContext.Session.SetObjectAsJson("DrawModel", drawModel);
+			}
+			else
+			{
+				_logger.LogError("Trim unsuccessfull!");
+				return BadRequest();
+			}
+
+			return Ok();
+		}
 	}
 }

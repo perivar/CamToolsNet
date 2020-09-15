@@ -17,12 +17,11 @@ export interface Point3D {
   z: number;
 }
 
-export interface Vertex {
-  pointF: PointF;
-  isEmpty: boolean;
-  x: number;
-  y: number;
-  z: number;
+export type Vertex = Point3D;
+
+export interface VertexLW {
+  position: PointF;
+  bulge: number;
 }
 
 export interface Color {
@@ -68,8 +67,14 @@ export interface Polyline extends BaseElement {
   vertexes: Vertex[];
 }
 
+export interface PolylineLW extends BaseElement {
+  isClosed: boolean;
+  vertexes: VertexLW[];
+}
+
 export interface DrawingModel {
   fileName: string;
+  bounds: Bounds;
   circles: Circle[];
   lines: Line[];
   arcs: Arc[];

@@ -1,6 +1,6 @@
 import React from 'react';
 import './DrawingCanvas.scss';
-import { Bounds, PointF, DrawingModel } from '../types/DrawingModel';
+import { Bounds, PointF, DrawingModel, Circle, Line, Arc, Polyline, PolylineLW } from '../types/DrawingModel';
 
 function round2TwoDecimal(number: number): number {
   return Math.round((number + Number.EPSILON) * 100) / 100;
@@ -66,6 +66,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
 
   private drawModel: DrawingModel = {
     fileName: '',
+    bounds: { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } },
     circles: [],
     lines: [],
     arcs: [],
@@ -272,89 +273,21 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     let curX = 0;
     let curY = 0;
 
-    this.drawModel.circles.forEach((circle: any) => {
-      const { x } = circle.center;
-      const { y } = circle.center;
-      const { radius } = circle;
+    this.drawModel.circles.forEach((circle: Circle) => {
+      if (circle.isVisible) {
+        const { x } = circle.center;
+        const { y } = circle.center;
+        const { radius } = circle;
 
-      curX = x + radius;
-      curY = y + radius;
-      maxX = curX > maxX ? curX : maxX;
-      minX = curX < minX ? curX : minX;
-      maxY = curY > maxY ? curY : maxY;
-      minY = curY < minY ? curY : minY;
+        curX = x + radius;
+        curY = y + radius;
+        maxX = curX > maxX ? curX : maxX;
+        minX = curX < minX ? curX : minX;
+        maxY = curY > maxY ? curY : maxY;
+        minY = curY < minY ? curY : minY;
 
-      curX = x - radius;
-      curY = y - radius;
-      maxX = curX > maxX ? curX : maxX;
-      minX = curX < minX ? curX : minX;
-      maxY = curY > maxY ? curY : maxY;
-      minY = curY < minY ? curY : minY;
-    });
-
-    this.drawModel.lines.forEach((line: any) => {
-      const startX = line.startPoint.x;
-      const startY = line.startPoint.y;
-      const endX = line.endPoint.x;
-      const endY = line.endPoint.y;
-
-      curX = startX;
-      curY = startY;
-      maxX = curX > maxX ? curX : maxX;
-      minX = curX < minX ? curX : minX;
-      maxY = curY > maxY ? curY : maxY;
-      minY = curY < minY ? curY : minY;
-
-      curX = endX;
-      curY = endY;
-      maxX = curX > maxX ? curX : maxX;
-      minX = curX < minX ? curX : minX;
-      maxY = curY > maxY ? curY : maxY;
-      minY = curY < minY ? curY : minY;
-    });
-
-    this.drawModel.arcs.forEach((a: any) => {
-      const centerX = a.center.x;
-      const centerY = a.center.y;
-      const { radius } = a;
-      const { startAngle } = a;
-      const { endAngle } = a;
-      const startX = centerX + Math.cos((startAngle * Math.PI) / 180) * radius;
-      const startY = centerY + Math.sin((startAngle * Math.PI) / 180) * radius;
-      const endX = centerX + Math.cos((endAngle * Math.PI) / 180) * radius;
-      const endY = centerY + Math.sin((endAngle * Math.PI) / 180) * radius;
-
-      curX = startX;
-      curY = startY;
-      maxX = curX > maxX ? curX : maxX;
-      minX = curX < minX ? curX : minX;
-      maxY = curY > maxY ? curY : maxY;
-      minY = curY < minY ? curY : minY;
-
-      curX = endX;
-      curY = endY;
-      maxX = curX > maxX ? curX : maxX;
-      minX = curX < minX ? curX : minX;
-      maxY = curY > maxY ? curY : maxY;
-      minY = curY < minY ? curY : minY;
-
-      curX = centerX;
-      curY = centerY;
-      maxX = curX > maxX ? curX : maxX;
-      minX = curX < minX ? curX : minX;
-      maxY = curY > maxY ? curY : maxY;
-      minY = curY < minY ? curY : minY;
-    });
-
-    // drawing polylines
-    this.drawModel.polylines.forEach((p: any) => {
-      for (let i = 0; i < p.vertexes.length; i++) {
-        const vertex = p.vertexes[i];
-        const pointX = vertex.x;
-        const pointY = vertex.y;
-
-        curX = pointX;
-        curY = pointY;
+        curX = x - radius;
+        curY = y - radius;
         maxX = curX > maxX ? curX : maxX;
         minX = curX < minX ? curX : minX;
         maxY = curY > maxY ? curY : maxY;
@@ -362,19 +295,95 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
       }
     });
 
-    // drawing polylines light weight
-    this.drawModel.polylinesLW.forEach((p: any) => {
-      for (let i = 0; i < p.vertexes.length; i++) {
-        const vertex = p.vertexes[i];
-        const pointX = vertex.position.x;
-        const pointY = vertex.Position.y;
+    this.drawModel.lines.forEach((line: Line) => {
+      if (line.isVisible) {
+        const startX = line.startPoint.x;
+        const startY = line.startPoint.y;
+        const endX = line.endPoint.x;
+        const endY = line.endPoint.y;
 
-        curX = pointX;
-        curY = pointY;
+        curX = startX;
+        curY = startY;
         maxX = curX > maxX ? curX : maxX;
         minX = curX < minX ? curX : minX;
         maxY = curY > maxY ? curY : maxY;
         minY = curY < minY ? curY : minY;
+
+        curX = endX;
+        curY = endY;
+        maxX = curX > maxX ? curX : maxX;
+        minX = curX < minX ? curX : minX;
+        maxY = curY > maxY ? curY : maxY;
+        minY = curY < minY ? curY : minY;
+      }
+    });
+
+    this.drawModel.arcs.forEach((a: Arc) => {
+      if (a.isVisible) {
+        const centerX = a.center.x;
+        const centerY = a.center.y;
+        const { radius } = a;
+        const { startAngle } = a;
+        const { endAngle } = a;
+        const startX = centerX + Math.cos((startAngle * Math.PI) / 180) * radius;
+        const startY = centerY + Math.sin((startAngle * Math.PI) / 180) * radius;
+        const endX = centerX + Math.cos((endAngle * Math.PI) / 180) * radius;
+        const endY = centerY + Math.sin((endAngle * Math.PI) / 180) * radius;
+
+        curX = startX;
+        curY = startY;
+        maxX = curX > maxX ? curX : maxX;
+        minX = curX < minX ? curX : minX;
+        maxY = curY > maxY ? curY : maxY;
+        minY = curY < minY ? curY : minY;
+
+        curX = endX;
+        curY = endY;
+        maxX = curX > maxX ? curX : maxX;
+        minX = curX < minX ? curX : minX;
+        maxY = curY > maxY ? curY : maxY;
+        minY = curY < minY ? curY : minY;
+
+        curX = centerX;
+        curY = centerY;
+        maxX = curX > maxX ? curX : maxX;
+        minX = curX < minX ? curX : minX;
+        maxY = curY > maxY ? curY : maxY;
+        minY = curY < minY ? curY : minY;
+      }
+    });
+
+    this.drawModel.polylines.forEach((p: Polyline) => {
+      if (p.isVisible && p.vertexes.length >= 2) {
+        for (let i = 0; i < p.vertexes.length; i++) {
+          const vertex = p.vertexes[i];
+          const pointX = vertex.x;
+          const pointY = vertex.y;
+
+          curX = pointX;
+          curY = pointY;
+          maxX = curX > maxX ? curX : maxX;
+          minX = curX < minX ? curX : minX;
+          maxY = curY > maxY ? curY : maxY;
+          minY = curY < minY ? curY : minY;
+        }
+      }
+    });
+
+    this.drawModel.polylinesLW.forEach((p: PolylineLW) => {
+      if (p.isVisible && p.vertexes.length >= 2) {
+        for (let i = 0; i < p.vertexes.length; i++) {
+          const vertex = p.vertexes[i];
+          const pointX = vertex.position.x;
+          const pointY = vertex.position.y;
+
+          curX = pointX;
+          curY = pointY;
+          maxX = curX > maxX ? curX : maxX;
+          minX = curX < minX ? curX : minX;
+          maxY = curY > maxY ? curY : maxY;
+          minY = curY < minY ? curY : minY;
+        }
       }
     });
 
@@ -483,7 +492,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
 
     // drawing circles
     context.beginPath(); // begin
-    this.drawModel.circles.forEach((circle: any) => {
+    this.drawModel.circles.forEach((circle: Circle) => {
       const startAngle = 0;
       const endAngle = 2 * Math.PI;
       const { x } = circle.center;
@@ -512,7 +521,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
 
     // drawing lines
     context.beginPath(); // begin
-    this.drawModel.lines.forEach((line: any) => {
+    this.drawModel.lines.forEach((line: Line) => {
       const startX = line.startPoint.x;
       const startY = line.startPoint.y;
       const endX = line.endPoint.x;
@@ -529,7 +538,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
 
     // drawing arcs
     context.beginPath(); // begin
-    this.drawModel.arcs.forEach((a: any) => {
+    this.drawModel.arcs.forEach((a: Arc) => {
       const centerX = a.center.x;
       const centerY = a.center.y;
       const { radius } = a;
@@ -562,7 +571,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
 
     // drawing polylines
     context.beginPath(); // begin
-    this.drawModel.polylines.forEach((p: any) => {
+    this.drawModel.polylines.forEach((p: Polyline) => {
       for (let i = 0; i < p.vertexes.length; i++) {
         const vertex = p.vertexes[i];
         const pointX = vertex.x;
@@ -583,11 +592,11 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
 
     // drawing polylines light weight
     context.beginPath(); // begin
-    this.drawModel.polylinesLW.forEach((p: any) => {
+    this.drawModel.polylinesLW.forEach((p: PolylineLW) => {
       for (let i = 0; i < p.vertexes.length; i++) {
         const vertex = p.vertexes[i];
         const pointX = vertex.position.x;
-        const pointY = vertex.Position.y;
+        const pointY = vertex.position.y;
         const { bulge } = vertex;
         let prePointX = 0;
         let prePointY = 0;
@@ -657,17 +666,34 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
       this.ctx.fillText(`scale: ${round2TwoDecimal(scale)}`, 10, 10);
       this.ctx.fillText(`panning: ${round2TwoDecimal(translatePos.x)} , ${round2TwoDecimal(translatePos.y)}`, 10, 20);
 
-      // get bounds
+      // get locally calculated bounds
       this.ctx.fillText(
-        `bounds X: ${round2TwoDecimal(this.bounds.min.x)} to ${round2TwoDecimal(this.bounds.max.x)}`,
+        `loc bounds X: ${round2TwoDecimal(this.bounds.min.x)} to ${round2TwoDecimal(this.bounds.max.x)}`,
         10,
         30
       );
       this.ctx.fillText(
-        `bounds Y: ${round2TwoDecimal(this.bounds.min.y)} to ${round2TwoDecimal(this.bounds.max.y)}`,
+        `loc bounds Y: ${round2TwoDecimal(this.bounds.min.y)} to ${round2TwoDecimal(this.bounds.max.y)}`,
         10,
         40
       );
+
+      // get bounds from the fetched model
+      this.ctx.fillText(
+        `api bounds X: ${round2TwoDecimal(this.drawModel.bounds.min.x)} to ${round2TwoDecimal(
+          this.drawModel.bounds.max.x
+        )}`,
+        10,
+        60
+      );
+      this.ctx.fillText(
+        `api bounds Y: ${round2TwoDecimal(this.drawModel.bounds.min.y)} to ${round2TwoDecimal(
+          this.drawModel.bounds.max.y
+        )}`,
+        10,
+        70
+      );
+
       this.ctx.restore();
     }
     // end debugging

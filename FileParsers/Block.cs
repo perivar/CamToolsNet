@@ -21,7 +21,7 @@ namespace GCode
 		public float Y2 { get; set; }
 		public float Z2 { get; set; }
 		public PenColorList Pen { get; set; }
-		
+
 		public LinePoints(Point3D start, Point3D end, PenColorList pen)
 			: this()
 		{
@@ -34,13 +34,15 @@ namespace GCode
 			Pen = pen;
 		}
 
-		public void DrawSegment(Graphics g, int height, bool highlight = false, float multiplier = 1, bool renderG0 = true, int left = 0, int bottom = 0, float zoomScale=1.0f)
+		public void DrawSegment(Graphics g, int height, bool highlight = false, float multiplier = 1, bool renderG0 = true, int left = 0, int bottom = 0, float zoomScale = 1.0f)
 		{
-			if (Pen == PenColorList.RapidMove && !renderG0) {
+			if (Pen == PenColorList.RapidMove && !renderG0)
+			{
 				return;
 			}
-			
-			if (Pen == PenColorList.RapidMove && highlight) {
+
+			if (Pen == PenColorList.RapidMove && highlight)
+			{
 				var rapidPen = ColorHelper.GetPen(PenColorList.RapidMoveHighlight, zoomScale);
 				float[] dashValues = { 5, 2 };
 				rapidPen.DashPattern = dashValues;
@@ -48,20 +50,26 @@ namespace GCode
 				return;
 			}
 
-			if (highlight) {
+			if (highlight)
+			{
 				g.DrawLine(ColorHelper.GetPen(PenColorList.LineHighlight, zoomScale), X1 * multiplier + left, height - (Y1 * multiplier) - bottom, X2 * multiplier + left, height - (Y2 * multiplier) - bottom);
-			} else {
-				if (Pen == PenColorList.RapidMove) {
+			}
+			else
+			{
+				if (Pen == PenColorList.RapidMove)
+				{
 					var rapidPen = ColorHelper.GetPen(Pen, zoomScale);
 					float[] dashValues = { 5, 2 };
 					rapidPen.DashPattern = dashValues;
 					g.DrawLine(rapidPen, X1 * multiplier + left, height - (Y1 * multiplier) - bottom, X2 * multiplier + left, height - (Y2 * multiplier) - bottom);
-				} else {
+				}
+				else
+				{
 					g.DrawLine(ColorHelper.GetPen(Pen, zoomScale), X1 * multiplier + left, height - (Y1 * multiplier) - bottom, X2 * multiplier + left, height - (Y2 * multiplier) - bottom);
 				}
 			}
 		}
-		
+
 		public override string ToString()
 		{
 			return string.Format("[{0:0.##}, {1:0.##}, {2:0.##}] - [{3:0.##}, {4:0.##}, {5:0.##}]", X1, Y1, Z1, X2, Y2, Z2);
@@ -72,26 +80,29 @@ namespace GCode
 	// A block includes a number of LinePoints that is used to draw the plot
 	public class Block
 	{
-		private float minX, minY, minZ;
-		private float maxX, maxY, maxZ;
-		
+		// set min to a high number to ensure min isn't always zero
+		private float minX = 100000.0f;
+		private float minY = 100000.0f;
+		private float minZ = 100000.0f;
+
+		private float maxX, maxY, maxZ = 0.0f;
 		public float MinX { get { return this.minX; } }
 		public float MaxX { get { return this.maxX; } }
 		public float MinY { get { return this.minY; } }
 		public float MaxY { get { return this.maxY; } }
 		public float MinZ { get { return this.minZ; } }
 		public float MaxZ { get { return this.maxZ; } }
-		
+
 		public string Name { get; set; }
-		
+
 		public bool IsDrillPoint { get; set; }
-		
+
 		private List<LinePoints> plotPoints = new List<LinePoints>();
 		public List<LinePoints> PlotPoints { get { return plotPoints; } }
 
 		private List<GCodeInstruction> gcodeInstructions = new List<GCodeInstruction>();
 		public List<GCodeInstruction> GCodeInstructions { get { return gcodeInstructions; } }
-		
+
 		/// <summary>
 		/// Cache whether this is a drill block
 		/// I.e. 3 instructions:
@@ -99,40 +110,51 @@ namespace GCode
 		/// 2. Drill
 		/// 3. Raise bit
 		/// </summary>
-		public void CheckIfDrillOrProbePoint() {
-			if (GCodeInstructions.Count == 3) {
+		public void CheckIfDrillOrProbePoint()
+		{
+			if (GCodeInstructions.Count == 3)
+			{
 				bool hasRapidMove = false;
 				bool hasZUp = false;
 				bool hasZDown = false;
-				foreach (var instruction in GCodeInstructions) {
+				foreach (var instruction in GCodeInstructions)
+				{
 					if ((instruction.CommandType == CommandType.RapidMove
-					     || instruction.CommandType == CommandType.NormalMove)
-					    && instruction.Z.HasValue
-					    && instruction.Z.Value > 0) {
+						 || instruction.CommandType == CommandType.NormalMove)
+						&& instruction.Z.HasValue
+						&& instruction.Z.Value > 0)
+					{
 						hasZUp = true;
-					} else if (instruction.CommandType == CommandType.RapidMove
-					           && !instruction.Z.HasValue) {
+					}
+					else if (instruction.CommandType == CommandType.RapidMove
+							 && !instruction.Z.HasValue)
+					{
 						hasRapidMove = true;
 						// Z down
-					} else if (instruction.CommandType == CommandType.NormalMove
-					           && instruction.Z.HasValue
-					           && instruction.Z.Value < 0) {
+					}
+					else if (instruction.CommandType == CommandType.NormalMove
+							 && instruction.Z.HasValue
+							 && instruction.Z.Value < 0)
+					{
 						hasZDown = true;
 						// also Probe Point is a Z down point
-					} else if ("G38.2".Equals(instruction.Command)
-					           && instruction.Z.HasValue
-					           && instruction.Z.Value < 0) {
+					}
+					else if ("G38.2".Equals(instruction.Command)
+							 && instruction.Z.HasValue
+							 && instruction.Z.Value < 0)
+					{
 						hasZDown = true;
 					}
 				}
-				if (hasZUp && hasZDown && hasRapidMove) {
+				if (hasZUp && hasZDown && hasRapidMove)
+				{
 					IsDrillPoint = true;
 					return;
 				}
 			}
 			IsDrillPoint = false;
 		}
-		
+
 		/// <summary>
 		/// Calculate Min and Max values based on all included gcode instructions
 		/// </summary>
@@ -158,40 +180,49 @@ namespace GCode
 			return sb.ToString();
 		}
 
-		public string BuildGCodeOutput(bool doPeckDrilling) {
+		public string BuildGCodeOutput(bool doPeckDrilling)
+		{
 			return BuildGCodeOutput(this.Name, this.GCodeInstructions, doPeckDrilling);
 		}
-		
+
 		public static string BuildGCodeOutput(string name, List<GCodeInstruction> gCodeInstructions, bool doPeckDrilling)
 		{
 			var sb = new StringBuilder();
 
 			//sb.AppendFormat("(Start cutting path id: {0})", name).AppendLine();
 
-			if (doPeckDrilling) {
+			if (doPeckDrilling)
+			{
 				var data = QuickSettings.Get["ZDepths"];
 				if (string.IsNullOrEmpty(data))
 				{
 					data = "-0.1,-0.15,-0.2";
 				}
 
-				string [] bits = null;
-				if (data.Contains(',')) {
+				string[] bits = null;
+				if (data.Contains(','))
+				{
 					bits = data.Split(',');
-				} else {
+				}
+				else
+				{
 					bits = new string[] { data };
 				}
 
 				string lastLine = "";
-				foreach(var line in bits) {
+				foreach (var line in bits)
+				{
 					float f;
-					if (float.TryParse(line, NumberStyles.Float, CultureInfo.InvariantCulture, out f)) {
+					if (float.TryParse(line, NumberStyles.Float, CultureInfo.InvariantCulture, out f))
+					{
 						//sb.AppendFormat(CultureInfo.InvariantCulture, "(Start peck drilling: {0:0.####})", f).AppendLine();
-						foreach (var gCodeLine in gCodeInstructions) {
+						foreach (var gCodeLine in gCodeInstructions)
+						{
 							string newLine = gCodeLine.ToString(true, zOverride: f);
-							
+
 							// ensure we don't duplicate lines
-							if (!newLine.Equals(lastLine)) {
+							if (!newLine.Equals(lastLine))
+							{
 								sb.AppendLine(newLine);
 								lastLine = newLine;
 							}
@@ -199,8 +230,11 @@ namespace GCode
 						//sb.AppendFormat(CultureInfo.InvariantCulture, "(End peck drilling: {0:0.####})", f).AppendLine();
 					}
 				}
-			} else {
-				foreach (var line in gCodeInstructions) {
+			}
+			else
+			{
+				foreach (var line in gCodeInstructions)
+				{
 					sb.AppendLine(line.ToString(false));
 				}
 			}

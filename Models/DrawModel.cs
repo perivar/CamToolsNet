@@ -4,12 +4,20 @@ using System.Drawing;
 using System.Linq;
 using CoordinateUtils;
 using GCode;
-using Util;
 
 namespace CAMToolsNet.Models
 {
 	public class DrawModel
 	{
+		// used by the serializer and de-serializer
+		public string FileName { get; set; }
+		public Bounds Bounds { get; set; }
+		public List<DrawCircle> Circles { get; set; }
+		public List<DrawLine> Lines { get; set; }
+		public List<DrawArc> Arcs { get; set; }
+		public List<DrawPolyline> Polylines { get; set; }
+		public List<DrawPolylineLW> PolylinesLW { get; set; }
+
 		public class VertexLW
 		{
 			//
@@ -48,7 +56,6 @@ namespace CAMToolsNet.Models
 				Position = new Point3D(x, y, z);
 			}
 		}
-
 
 		public abstract class DrawElement
 		{
@@ -223,14 +230,6 @@ namespace CAMToolsNet.Models
 			}
 		}
 
-		// used by the serializer and de-serializer
-		public string FileName { get; set; }
-		public List<DrawCircle> Circles { get; set; }
-		public List<DrawLine> Lines { get; set; }
-		public List<DrawArc> Arcs { get; set; }
-		public List<DrawPolyline> Polylines { get; set; }
-		public List<DrawPolylineLW> PolylinesLW { get; set; }
-
 		/// <summary>
 		/// Parse dxf to a draw model, just store the filename
 		/// </summary>
@@ -356,6 +355,7 @@ namespace CAMToolsNet.Models
 		// parameter-less constructor needed for de-serialization
 		public DrawModel()
 		{
+			Bounds = new Bounds();
 			Circles = new List<DrawCircle>();
 			Lines = new List<DrawLine>();
 			Arcs = new List<DrawArc>();
@@ -369,35 +369,168 @@ namespace CAMToolsNet.Models
 
 			if (dxf != null)
 			{
+				// calculate max values for X, Y and Z
+				var maxX = 0.0;
+				var maxY = 0.0;
+				var maxZ = 0.0;
+				var minX = 100000.0;
+				var minY = 100000.0;
+				var minZ = 100000.0;
+				var curX = 0.0;
+				var curY = 0.0;
+				var curZ = 0.0;
+
 				// circles
 				foreach (var c in dxf.Circles)
 				{
 					Circles.Add(new DrawCircle(c));
+
+					var x = c.Center.X;
+					var y = c.Center.Y;
+					var z = c.Center.Z;
+					var radius = c.Radius;
+
+					curX = x + radius;
+					curY = y + radius;
+					maxX = curX > maxX ? curX : maxX;
+					minX = curX < minX ? curX : minX;
+					maxY = curY > maxY ? curY : maxY;
+					minY = curY < minY ? curY : minY;
+
+					curX = x - radius;
+					curY = y - radius;
+					maxX = curX > maxX ? curX : maxX;
+					minX = curX < minX ? curX : minX;
+					maxY = curY > maxY ? curY : maxY;
+					minY = curY < minY ? curY : minY;
+
+					curZ = z;
+					maxZ = curZ > maxZ ? curZ : maxZ;
+					minZ = curZ < minZ ? curZ : minZ;
 				}
 
 				// lines
 				foreach (var l in dxf.Lines)
 				{
+					var startX = l.StartPoint.X;
+					var startY = l.StartPoint.Y;
+					var startZ = l.StartPoint.Z;
+					var endX = l.EndPoint.X;
+					var endY = l.EndPoint.Y;
+					var endZ = l.EndPoint.Z;
+
+					curX = startX;
+					curY = startY;
+					curZ = startZ;
+					maxX = curX > maxX ? curX : maxX;
+					minX = curX < minX ? curX : minX;
+					maxY = curY > maxY ? curY : maxY;
+					minY = curY < minY ? curY : minY;
+					maxZ = curZ > maxZ ? curZ : maxZ;
+					minZ = curZ < minZ ? curZ : minZ;
+
+					curX = endX;
+					curY = endY;
+					curZ = endZ;
+					maxX = curX > maxX ? curX : maxX;
+					minX = curX < minX ? curX : minX;
+					maxY = curY > maxY ? curY : maxY;
+					minY = curY < minY ? curY : minY;
+					maxZ = curZ > maxZ ? curZ : maxZ;
+					minZ = curZ < minZ ? curZ : minZ;
+
 					Lines.Add(new DrawLine(l));
 				}
 
 				// arcs
 				foreach (var a in dxf.Arcs)
 				{
+					var centerX = a.Center.X;
+					var centerY = a.Center.Y;
+					var centerZ = a.Center.Z;
+					var radius = a.Radius;
+					var startAngle = a.StartAngle;
+					var endAngle = a.EndAngle;
+
+					var startX = centerX + Math.Cos((startAngle * Math.PI) / 180) * radius;
+					var startY = centerY + Math.Sin((startAngle * Math.PI) / 180) * radius;
+					var endX = centerX + Math.Cos((endAngle * Math.PI) / 180) * radius;
+					var endY = centerY + Math.Sin((endAngle * Math.PI) / 180) * radius;
+
+					curX = startX;
+					curY = startY;
+					maxX = curX > maxX ? curX : maxX;
+					minX = curX < minX ? curX : minX;
+					maxY = curY > maxY ? curY : maxY;
+					minY = curY < minY ? curY : minY;
+
+					curX = endX;
+					curY = endY;
+					maxX = curX > maxX ? curX : maxX;
+					minX = curX < minX ? curX : minX;
+					maxY = curY > maxY ? curY : maxY;
+					minY = curY < minY ? curY : minY;
+
+					curX = centerX;
+					curY = centerY;
+					maxX = curX > maxX ? curX : maxX;
+					minX = curX < minX ? curX : minX;
+					maxY = curY > maxY ? curY : maxY;
+					minY = curY < minY ? curY : minY;
+
+					curZ = centerZ;
+					maxZ = curZ > maxZ ? curZ : maxZ;
+					minZ = curZ < minZ ? curZ : minZ;
+
 					Arcs.Add(new DrawArc(a));
 				}
 
 				// polylines
 				foreach (var p in dxf.Polylines)
 				{
+					for (var i = 0; i < p.Vertexes.Count; i++)
+					{
+						var vertex = p.Vertexes[i];
+						var pointX = vertex.Position.X;
+						var pointY = vertex.Position.Y;
+						var pointZ = vertex.Position.Z;
+
+						curX = pointX;
+						curY = pointY;
+						curZ = pointZ;
+						maxX = curX > maxX ? curX : maxX;
+						minX = curX < minX ? curX : minX;
+						maxY = curY > maxY ? curY : maxY;
+						minY = curY < minY ? curY : minY;
+						maxZ = curZ > maxZ ? curZ : maxZ;
+						minZ = curZ < minZ ? curZ : minZ;
+					}
+
 					Polylines.Add(new DrawPolyline(p));
 				}
 
 				// polylines light weight
 				foreach (var plw in dxf.LwPolylines)
 				{
+					for (var i = 0; i < plw.Vertexes.Count; i++)
+					{
+						var vertex = plw.Vertexes[i];
+						var pointX = vertex.Position.X;
+						var pointY = vertex.Position.Y;
+						// polyline vertex doesn't have Z
+
+						curX = pointX;
+						curY = pointY;
+						maxX = curX > maxX ? curX : maxX;
+						minX = curX < minX ? curX : minX;
+						maxY = curY > maxY ? curY : maxY;
+						minY = curY < minY ? curY : minY;
+					}
+
 					PolylinesLW.Add(new DrawPolylineLW(plw));
 				}
+
+				Bounds = new Bounds((float)minX, (float)maxX, (float)minY, (float)maxY, (float)minZ, (float)maxZ);
 			}
 		}
 
@@ -410,6 +543,9 @@ namespace CAMToolsNet.Models
 				var contours = svg.GetScaledContoursAndSetMinMax();
 				var maxY = svg.MaxY;
 				var minX = svg.MinX;
+				// Make sure we are taking the shift of y origin into account
+				// Bounds = new Bounds(svg.MinX, svg.MaxX, 0, svg.MaxY - svg.MinY, 0, 0);
+				Bounds = new Bounds(0, svg.MaxX - svg.MinX, 0, svg.MaxY - svg.MinY, 0, 0);
 
 				// Assuming these points come from a SVG
 				// we need to shift the Y pos since
@@ -445,27 +581,10 @@ namespace CAMToolsNet.Models
 
 				if (myBlocks != null && myBlocks.Count > 0)
 				{
-					// calculate max values for X, Y and Z
-					// while finalizing the blocks and adding them to the lstPlot
-					var maxX = 0.0f;
-					var maxY = 0.0f;
-					var maxZ = 0.0f;
-					var minX = 0.0f;
-					var minY = 0.0f;
-					var minZ = 0.0f;
 					foreach (Block blockItem in myBlocks)
 					{
 						// cache if this is a drill point
 						blockItem.CheckIfDrillOrProbePoint();
-
-						blockItem.CalculateMinAndMax();
-						maxX = Math.Max(maxX, blockItem.MaxX);
-						maxY = Math.Max(maxY, blockItem.MaxY);
-						maxZ = Math.Max(maxZ, blockItem.MaxZ);
-
-						minX = Math.Min(minX, blockItem.MinX);
-						minY = Math.Min(minY, blockItem.MinY);
-						minZ = Math.Min(minZ, blockItem.MinZ);
 
 						if (blockItem.PlotPoints != null)
 						{
@@ -531,6 +650,8 @@ namespace CAMToolsNet.Models
 							}
 						}
 					}
+
+					RecalculateBounds();
 				}
 			}
 		}
@@ -559,5 +680,229 @@ namespace CAMToolsNet.Models
 			Arcs.Add(arc);
 		}
 
+		public void RecalculateBounds()
+		{
+			// calculate max values for X, Y and Z
+			var maxX = 0.0;
+			var maxY = 0.0;
+			var maxZ = 0.0;
+			var minX = 100000.0;
+			var minY = 100000.0;
+			var minZ = 100000.0;
+			var curX = 0.0;
+			var curY = 0.0;
+			var curZ = 0.0;
+
+			// circles
+			foreach (var c in Circles)
+			{
+				var x = c.Center.X;
+				var y = c.Center.Y;
+				var z = c.Center.Z;
+				var radius = c.Radius;
+
+				curX = x + radius;
+				curY = y + radius;
+				maxX = curX > maxX ? curX : maxX;
+				minX = curX < minX ? curX : minX;
+				maxY = curY > maxY ? curY : maxY;
+				minY = curY < minY ? curY : minY;
+
+				curX = x - radius;
+				curY = y - radius;
+				maxX = curX > maxX ? curX : maxX;
+				minX = curX < minX ? curX : minX;
+				maxY = curY > maxY ? curY : maxY;
+				minY = curY < minY ? curY : minY;
+
+				curZ = z;
+				maxZ = curZ > maxZ ? curZ : maxZ;
+				minZ = curZ < minZ ? curZ : minZ;
+			}
+
+			// lines
+			foreach (var l in Lines)
+			{
+				var startX = l.StartPoint.X;
+				var startY = l.StartPoint.Y;
+				var startZ = l.StartPoint.Z;
+				var endX = l.EndPoint.X;
+				var endY = l.EndPoint.Y;
+				var endZ = l.EndPoint.Z;
+
+				curX = startX;
+				curY = startY;
+				curZ = startZ;
+				maxX = curX > maxX ? curX : maxX;
+				minX = curX < minX ? curX : minX;
+				maxY = curY > maxY ? curY : maxY;
+				minY = curY < minY ? curY : minY;
+				maxZ = curZ > maxZ ? curZ : maxZ;
+				minZ = curZ < minZ ? curZ : minZ;
+
+				curX = endX;
+				curY = endY;
+				curZ = endZ;
+				maxX = curX > maxX ? curX : maxX;
+				minX = curX < minX ? curX : minX;
+				maxY = curY > maxY ? curY : maxY;
+				minY = curY < minY ? curY : minY;
+				maxZ = curZ > maxZ ? curZ : maxZ;
+				minZ = curZ < minZ ? curZ : minZ;
+			}
+
+			// arcs
+			foreach (var a in Arcs)
+			{
+				var centerX = a.Center.X;
+				var centerY = a.Center.Y;
+				var centerZ = a.Center.Z;
+				var radius = a.Radius;
+				var startAngle = a.StartAngle;
+				var endAngle = a.EndAngle;
+
+				var startX = centerX + Math.Cos((startAngle * Math.PI) / 180) * radius;
+				var startY = centerY + Math.Sin((startAngle * Math.PI) / 180) * radius;
+				var endX = centerX + Math.Cos((endAngle * Math.PI) / 180) * radius;
+				var endY = centerY + Math.Sin((endAngle * Math.PI) / 180) * radius;
+
+				curX = startX;
+				curY = startY;
+				maxX = curX > maxX ? curX : maxX;
+				minX = curX < minX ? curX : minX;
+				maxY = curY > maxY ? curY : maxY;
+				minY = curY < minY ? curY : minY;
+
+				curX = endX;
+				curY = endY;
+				maxX = curX > maxX ? curX : maxX;
+				minX = curX < minX ? curX : minX;
+				maxY = curY > maxY ? curY : maxY;
+				minY = curY < minY ? curY : minY;
+
+				curX = centerX;
+				curY = centerY;
+				maxX = curX > maxX ? curX : maxX;
+				minX = curX < minX ? curX : minX;
+				maxY = curY > maxY ? curY : maxY;
+				minY = curY < minY ? curY : minY;
+
+				curZ = centerZ;
+				maxZ = curZ > maxZ ? curZ : maxZ;
+				minZ = curZ < minZ ? curZ : minZ;
+			}
+
+			// polylines
+			foreach (var p in Polylines)
+			{
+				for (var i = 0; i < p.Vertexes.Count; i++)
+				{
+					var vertex = p.Vertexes[i];
+					var pointX = vertex.X;
+					var pointY = vertex.Y;
+					var pointZ = vertex.Z;
+
+					curX = pointX;
+					curY = pointY;
+					curZ = pointZ;
+					maxX = curX > maxX ? curX : maxX;
+					minX = curX < minX ? curX : minX;
+					maxY = curY > maxY ? curY : maxY;
+					minY = curY < minY ? curY : minY;
+					maxZ = curZ > maxZ ? curZ : maxZ;
+					minZ = curZ < minZ ? curZ : minZ;
+				}
+			}
+
+			// polylines light weight
+			foreach (var plw in PolylinesLW)
+			{
+				for (var i = 0; i < plw.Vertexes.Count; i++)
+				{
+					var vertex = plw.Vertexes[i];
+					var pointX = vertex.Position.X;
+					var pointY = vertex.Position.Y;
+					// polyline vertex doesn't have Z
+
+					curX = pointX;
+					curY = pointY;
+					maxX = curX > maxX ? curX : maxX;
+					minX = curX < minX ? curX : minX;
+					maxY = curY > maxY ? curY : maxY;
+					minY = curY < minY ? curY : minY;
+				}
+			}
+
+			Bounds = new Bounds((float)minX, (float)maxX, (float)minY, (float)maxY, (float)minZ, (float)maxZ);
+		}
+
+		public void Trim()
+		{
+			// don't do any trimming if the min values are already 0
+			if (Bounds.Min.X == 0 && Bounds.Min.Y == 0) return;
+
+			// circles
+			foreach (var circle in Circles)
+			{
+				if (circle.IsVisible)
+				{
+					circle.Center.X -= Bounds.Min.X;
+					circle.Center.Y -= Bounds.Min.Y;
+				}
+			}
+
+			// lines
+			foreach (var line in Lines)
+			{
+				if (line.IsVisible)
+				{
+					line.StartPoint.X -= Bounds.Min.X;
+					line.StartPoint.Y -= Bounds.Min.Y;
+					line.EndPoint.X -= Bounds.Min.X;
+					line.EndPoint.Y -= Bounds.Min.Y;
+				}
+			}
+
+			// arcs
+			foreach (var a in Arcs)
+			{
+				if (a.IsVisible)
+				{
+					a.Center.X -= Bounds.Min.X;
+					a.Center.Y -= Bounds.Min.Y;
+				}
+			}
+
+			// polylines
+			foreach (var p in Polylines)
+			{
+				if (p.IsVisible && p.Vertexes.Count >= 2)
+				{
+					for (int i = 0; i < p.Vertexes.Count; i++)
+					{
+						var vertex = p.Vertexes[i];
+						vertex.X -= Bounds.Min.X;
+						vertex.Y -= Bounds.Min.Y;
+					}
+				}
+			}
+
+			// polylines light weight
+			foreach (var p in PolylinesLW)
+			{
+				if (p.IsVisible && p.Vertexes.Count >= 2)
+				{
+					for (int i = 0; i < p.Vertexes.Count; i++)
+					{
+						var vertex = p.Vertexes[i];
+						vertex.Position.X -= Bounds.Min.X;
+						vertex.Position.Y -= Bounds.Min.Y;
+					}
+				}
+			}
+
+			// update bounds
+			Bounds = new Bounds(0, Bounds.Max.X - Bounds.Min.X, 0, Bounds.Max.Y - Bounds.Min.Y, Bounds.Min.Z, Bounds.Max.Z);
+		}
 	}
 }
