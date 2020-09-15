@@ -520,6 +520,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     // done drawing circles
 
     // drawing lines
+    const arrowLen = 2; // length of head in pixels
     context.beginPath(); // begin
     this.drawModel.lines.forEach((line: Line) => {
       const startX = line.startPoint.x;
@@ -527,8 +528,29 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
       const endX = line.endPoint.x;
       const endY = line.endPoint.y;
 
-      context.moveTo(startX, startY);
-      context.lineTo(endX, endY);
+      // don't draw if the start end points for x and y are the same
+      // likely a z only move
+      if (startX !== endX || startY !== endY) {
+        const dx = endX - startX;
+        const dy = endY - startY;
+        const angle = Math.atan2(dy, dx);
+
+        // draw arrow head
+        context.moveTo(endX, endY);
+        context.lineTo(
+          endX - arrowLen * Math.cos(angle - Math.PI / 6),
+          endY - arrowLen * Math.sin(angle - Math.PI / 6)
+        );
+        context.moveTo(endX, endY);
+        context.lineTo(
+          endX - arrowLen * Math.cos(angle + Math.PI / 6),
+          endY - arrowLen * Math.sin(angle + Math.PI / 6)
+        );
+
+        // draw line
+        context.moveTo(startX, startY);
+        context.lineTo(endX, endY);
+      }
     });
     context.closePath(); // end
     context.lineWidth = 0.3;
@@ -667,31 +689,31 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
       this.ctx.fillText(`panning: ${round2TwoDecimal(translatePos.x)} , ${round2TwoDecimal(translatePos.y)}`, 10, 20);
 
       // get locally calculated bounds
+      // this.ctx.fillText(
+      //   `bounds X: ${round2TwoDecimal(this.bounds.min.x)} to ${round2TwoDecimal(this.bounds.max.x)}`,
+      //   10,
+      //   30
+      // );
+      // this.ctx.fillText(
+      //   `bounds Y: ${round2TwoDecimal(this.bounds.min.y)} to ${round2TwoDecimal(this.bounds.max.y)}`,
+      //   10,
+      //   40
+      // );
+
+      // get bounds from the fetched model
       this.ctx.fillText(
-        `loc bounds X: ${round2TwoDecimal(this.bounds.min.x)} to ${round2TwoDecimal(this.bounds.max.x)}`,
+        `bounds X: ${round2TwoDecimal(this.drawModel.bounds.min.x)} to ${round2TwoDecimal(
+          this.drawModel.bounds.max.x
+        )}`,
         10,
         30
       );
       this.ctx.fillText(
-        `loc bounds Y: ${round2TwoDecimal(this.bounds.min.y)} to ${round2TwoDecimal(this.bounds.max.y)}`,
-        10,
-        40
-      );
-
-      // get bounds from the fetched model
-      this.ctx.fillText(
-        `api bounds X: ${round2TwoDecimal(this.drawModel.bounds.min.x)} to ${round2TwoDecimal(
-          this.drawModel.bounds.max.x
-        )}`,
-        10,
-        60
-      );
-      this.ctx.fillText(
-        `api bounds Y: ${round2TwoDecimal(this.drawModel.bounds.min.y)} to ${round2TwoDecimal(
+        `bounds Y: ${round2TwoDecimal(this.drawModel.bounds.min.y)} to ${round2TwoDecimal(
           this.drawModel.bounds.max.y
         )}`,
         10,
-        70
+        40
       );
 
       this.ctx.restore();
