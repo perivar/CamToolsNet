@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
+using System.Text;
 using CoordinateUtils;
 using GCode;
 
@@ -350,6 +352,165 @@ namespace CAMToolsNet.Models
 			}
 
 			return null;
+		}
+
+		public static string ToGCode(DrawModel model)
+		{
+			var plungeFeed = 50;
+			var rapidFeed = 200;
+			var safeZ = 10;
+
+			var sb = new StringBuilder();
+			if (model != null)
+			{
+				sb.AppendLine("G21; Set units to millimeters");
+				sb.AppendLine("G90; Set absolute coordinates");
+				sb.AppendLine("G17; Set X Y Plane");
+
+				// circles
+				foreach (var circle in model.Circles)
+				{
+					if (circle.IsVisible)
+					{
+						var centerX = circle.Center.X;
+						var centerY = circle.Center.Y;
+						var centerZ = circle.Center.Z;
+						var radius = circle.Radius;
+
+						var startX = centerX - radius;
+						var startY = centerY;
+
+						sb.AppendLine("(Draw Circle)");
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeZ);
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##} \n", startX, startY);
+
+						// G2 = clockwise arc
+						// G3 = counter clockwise arc
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G3 I{0:0.##} J{1:0.##}\n", radius, 0);
+
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeZ);
+						sb.AppendLine();
+					}
+				}
+
+				// lines
+				foreach (var line in model.Lines)
+				{
+					if (line.IsVisible)
+					{
+						var startX = line.StartPoint.X;
+						var startY = line.StartPoint.Y;
+						var startZ = line.StartPoint.Z;
+						var endX = line.EndPoint.X;
+						var endY = line.EndPoint.Y;
+						var endZ = line.EndPoint.Z;
+
+						sb.AppendLine("(Draw Line)");
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeZ);
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##} \n", startX, startY);
+
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G1 X{0:0.##} Y{1:0.##} \n", endX, endY);
+
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeZ);
+						sb.AppendLine();
+					}
+				}
+
+				// arcs
+				foreach (var a in model.Arcs)
+				{
+					if (a.IsVisible)
+					{
+						var centerX = a.Center.X;
+						var centerY = a.Center.Y;
+						var centerZ = a.Center.Z;
+						var radius = a.Radius;
+						var startAngle = a.StartAngle;
+						var endAngle = a.EndAngle;
+
+						var startX = centerX + Math.Cos((startAngle * Math.PI) / 180) * radius;
+						var startY = centerY + Math.Sin((startAngle * Math.PI) / 180) * radius;
+						var endX = centerX + Math.Cos((endAngle * Math.PI) / 180) * radius;
+						var endY = centerY + Math.Sin((endAngle * Math.PI) / 180) * radius;
+
+						sb.AppendLine("(Draw Arc)");
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeZ);
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##} \n", startX, startY);
+
+						// G2 = clockwise arc
+						// G3 = counter clockwise arc					
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G3 X{0:0.##} Y{1:0.##} I{2:0.##} J{3:0.##}\n", endX, endY, centerX - startX, centerY - startY);
+
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeZ);
+						sb.AppendLine();
+					}
+				}
+
+				// polylines
+				foreach (var p in model.Polylines)
+				{
+					if (p.IsVisible && p.Vertexes.Count >= 2)
+					{
+						bool first = true;
+
+						for (var i = 0; i < p.Vertexes.Count; i++)
+						{
+							var vertex = p.Vertexes[i];
+							var pointX = vertex.X;
+							var pointY = vertex.Y;
+							var pointZ = vertex.Z;
+
+							if (first)
+							{
+								sb.AppendLine("(Draw Polyline)");
+								sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeZ);
+								sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##} \n", pointX, pointY);
+								sb.AppendFormat(CultureInfo.InvariantCulture, "G1 Z{0:0.##} F{1:0.##}\n", pointZ, plungeFeed);
+								first = false;
+							}
+							else
+							{
+								sb.AppendFormat(CultureInfo.InvariantCulture, "G1 X{0:0.##} Y{1:0.##} F{2:0.##}\n", pointX, pointY, rapidFeed);
+							}
+						}
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeZ);
+						sb.AppendLine();
+					}
+				}
+
+				// polylines light weight
+				foreach (var plw in model.PolylinesLW)
+				{
+					if (plw.IsVisible && plw.Vertexes.Count >= 2)
+					{
+						bool first = true;
+						for (var i = 0; i < plw.Vertexes.Count; i++)
+						{
+							var vertex = plw.Vertexes[i];
+							var pointX = vertex.Position.X;
+							var pointY = vertex.Position.Y;
+							// polyline vertex doesn't have Z
+							var pointZ = safeZ;
+
+							if (first)
+							{
+								sb.AppendLine("(Draw Polyline LW)");
+								sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeZ);
+								sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##} \n", pointX, pointY);
+								sb.AppendFormat(CultureInfo.InvariantCulture, "G1 Z{0:0.##} F{1:0.##}\n", pointZ, plungeFeed);
+								first = false;
+							}
+							else
+							{
+								sb.AppendFormat(CultureInfo.InvariantCulture, "G1 X{0:0.##} Y{1:0.##} F{2:0.##}\n", pointX, pointY, rapidFeed);
+							}
+						}
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeZ);
+						sb.AppendLine();
+					}
+				}
+			}
+			return sb.ToString();
 		}
 
 		// parameter-less constructor needed for de-serialization

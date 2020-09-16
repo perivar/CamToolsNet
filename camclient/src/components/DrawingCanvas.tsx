@@ -634,15 +634,17 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     // drawing polylines
     context.beginPath(); // begin
     this.drawModel.polylines.forEach((p: Polyline) => {
-      for (let i = 0; i < p.vertexes.length; i++) {
-        const vertex = p.vertexes[i];
-        const pointX = vertex.x;
-        const pointY = vertex.y;
+      if (p.vertexes.length >= 2) {
+        for (let i = 0; i < p.vertexes.length; i++) {
+          const vertex = p.vertexes[i];
+          const pointX = vertex.x;
+          const pointY = vertex.y;
 
-        if (i === 0) {
-          context.moveTo(pointX, pointY);
-        } else {
-          context.lineTo(pointX, pointY);
+          if (i === 0) {
+            context.moveTo(pointX, pointY);
+          } else {
+            context.lineTo(pointX, pointY);
+          }
         }
       }
     });
@@ -655,26 +657,28 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     // drawing polylines light weight
     context.beginPath(); // begin
     this.drawModel.polylinesLW.forEach((p: PolylineLW) => {
-      for (let i = 0; i < p.vertexes.length; i++) {
-        const vertex = p.vertexes[i];
-        const pointX = vertex.position.x;
-        const pointY = vertex.position.y;
-        const { bulge } = vertex;
-        let prePointX = 0;
-        let prePointY = 0;
+      if (p.vertexes.length >= 2) {
+        for (let i = 0; i < p.vertexes.length; i++) {
+          const vertex = p.vertexes[i];
+          const pointX = vertex.position.x;
+          const pointY = vertex.position.y;
+          const { bulge } = vertex;
+          let prePointX = 0;
+          let prePointY = 0;
 
-        if (i === 0) {
-          context.moveTo(pointX, pointY);
-        } else {
-          const angle = ((4 * Math.atan(Math.abs(bulge))) / Math.PI) * 180;
-          const length = Math.sqrt(
-            (pointX - prePointX) * (pointX - prePointX) + (pointY - prePointY) * (pointY - prePointY)
-          );
-          const radius = Math.abs(length / (2 * Math.sin((angle / 360) * Math.PI)));
-          context.arc(pointX, pointY, radius, 0, (angle * Math.PI) / 180, false);
+          if (i === 0) {
+            context.moveTo(pointX, pointY);
+          } else {
+            const angle = ((4 * Math.atan(Math.abs(bulge))) / Math.PI) * 180;
+            const length = Math.sqrt(
+              (pointX - prePointX) * (pointX - prePointX) + (pointY - prePointY) * (pointY - prePointY)
+            );
+            const radius = Math.abs(length / (2 * Math.sin((angle / 360) * Math.PI)));
+            context.arc(pointX, pointY, radius, 0, (angle * Math.PI) / 180, false);
 
-          prePointX = pointX;
-          prePointY = pointY;
+            prePointX = pointX;
+            prePointY = pointY;
+          }
         }
       }
     });

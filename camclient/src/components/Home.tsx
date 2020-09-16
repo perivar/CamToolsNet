@@ -96,6 +96,30 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
       });
   };
 
+  private onRotate = () => {
+    axios
+      .get(`${config.apiUrl}/Rotate/45`, { withCredentials: true })
+      .then((response) => {
+        console.log(response);
+        this.getDrawModel();
+      })
+      .catch((error) => {
+        console.error('Unable to perform Rotate.', error);
+      });
+  };
+
+  private onSplit = () => {
+    axios
+      .get(`${config.apiUrl}/Split/90/100/10`, { withCredentials: true })
+      .then((response) => {
+        console.log(response);
+        this.getDrawModel();
+      })
+      .catch((error) => {
+        console.error('Unable to perform Split.', error);
+      });
+  };
+
   private onTrimDisabled = () => {
     const { drawModel } = this.state;
 
@@ -183,6 +207,12 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
           <Col className="px-0 py-0 mx-1">
             <Button className="mb-1" title="Trim" variant="info" onClick={this.onTrim} size="sm">
               Trim X and Y
+            </Button>
+            <Button className="mb-1" title="Rotate" variant="info" onClick={this.onRotate} size="sm">
+              Rotate
+            </Button>
+            <Button className="mb-1" title="Split" variant="info" onClick={this.onSplit} size="sm">
+              Split
             </Button>
             <Button className="mb-1" title="ConvertToCircles" variant="info" onClick={this.onPolyToCircle} size="sm">
               Poly to Circle

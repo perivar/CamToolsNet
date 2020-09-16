@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CAMToolsNet.Models;
 using CoordinateUtils;
+using GCode;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -300,6 +301,49 @@ namespace CAMToolsNet.Controllers
 				return BadRequest();
 			}
 
+			return Ok();
+		}
+
+		[HttpGet("Rotate/{angle:float}")]  // GET /api/Editor/Rotate/20
+		public IActionResult Rotate(float angle)
+		{
+			var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
+			var gCode = DrawModel.ToGCode(drawModel);
+			var parsedInstructions = SimpleGCodeParser.ParseText(gCode);
+
+			var center = new PointF(0, 0);
+			if (angle == 0) angle = 90;
+			var gcodeInstructions = GCodeUtils.GetRotatedGCode(parsedInstructions, center, angle);
+			var gCodeResult = GCodeUtils.GetGCode(gcodeInstructions);
+
+			// convert gcode to draw model
+			var newDrawModel = DrawModel.FromGCode(gCodeResult, drawModel.FileName);
+			HttpContext.Session.SetObjectAsJson("DrawModel", newDrawModel);
+
+			return Ok();
+		}
+
+		[HttpGet("Split/{xSplit:float}/{xSplitAngle:float}/{zClearance:float}")]  // GET /api/Editor/Split/20/10/20
+		public IActionResult Split(float xSplit, float xSplitAngle, float zClearance)
+		{
+			int index = 0; // which side to get back
+			if (xSplit != 0)
+			{
+				var splitPoint = new Point3D(xSplit, 0, 0);
+				var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
+				var gCode = DrawModel.ToGCode(drawModel);
+				var parsedInstructions = SimpleGCodeParser.ParseText(gCode);
+				var gCodeArray = GCodeSplitter.Split(parsedInstructions, splitPoint, xSplitAngle, zClearance);
+
+				// clean up the mess with too many G0 commands
+				var cleanedGCode = GCodeUtils.GetMinimizeGCode(gCodeArray[index]);
+				var gCodeResult = Block.BuildGCodeOutput("Block_1", cleanedGCode, false);
+				// var gCodeResult = GCodeUtils.GetGCode(gCodeArray[index]);
+
+				// convert gcode to draw model
+				var newDrawModel = DrawModel.FromGCode(gCodeResult, drawModel.FileName);
+				HttpContext.Session.SetObjectAsJson("DrawModel", newDrawModel);
+			}
 			return Ok();
 		}
 	}
