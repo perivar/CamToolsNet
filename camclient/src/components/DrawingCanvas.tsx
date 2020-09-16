@@ -487,7 +487,28 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     context.restore();
   };
 
+  private drawArrowHead = (
+    context: CanvasRenderingContext2D,
+    endX: number,
+    endY: number,
+    angle: number,
+    arrowLen: number,
+    color: string
+  ) => {
+    // draw arrow head as filled triangle
+    context.beginPath();
+    context.moveTo(endX, endY);
+    context.lineTo(endX - arrowLen * Math.cos(angle - Math.PI / 6), endY - arrowLen * Math.sin(angle - Math.PI / 6));
+    context.lineTo(endX - arrowLen * Math.cos(angle + Math.PI / 6), endY - arrowLen * Math.sin(angle + Math.PI / 6));
+    context.lineTo(endX, endY);
+    context.closePath();
+    context.fillStyle = color;
+    context.fill();
+  };
+
   private drawFile = (context: CanvasRenderingContext2D) => {
+    const arrowLen = 1; // length of head in pixels
+
     this.drawGrid(context, 10, '#999999', '#F2F2F2', 100, this.bounds.max.x + 20, this.bounds.max.y + 20);
 
     // drawing circles
@@ -520,8 +541,6 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     // done drawing circles
 
     // drawing lines
-    const arrowLen = 2; // length of head in pixels
-    context.beginPath(); // begin
     this.drawModel.lines.forEach((line: Line) => {
       const startX = line.startPoint.x;
       const startY = line.startPoint.y;
@@ -536,30 +555,21 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
         const angle = Math.atan2(dy, dx);
 
         // draw arrow head
-        context.moveTo(endX, endY);
-        context.lineTo(
-          endX - arrowLen * Math.cos(angle - Math.PI / 6),
-          endY - arrowLen * Math.sin(angle - Math.PI / 6)
-        );
-        context.moveTo(endX, endY);
-        context.lineTo(
-          endX - arrowLen * Math.cos(angle + Math.PI / 6),
-          endY - arrowLen * Math.sin(angle + Math.PI / 6)
-        );
+        this.drawArrowHead(context, endX, endY, angle, arrowLen, '#44cc44');
 
         // draw line
+        context.beginPath(); // begin
         context.moveTo(startX, startY);
         context.lineTo(endX, endY);
+        context.closePath(); // end
+        context.lineWidth = 0.3;
+        context.strokeStyle = '#44cc44';
+        context.stroke();
       }
     });
-    context.closePath(); // end
-    context.lineWidth = 0.3;
-    context.strokeStyle = '#44cc44';
-    context.stroke();
     // done drawing lines
 
     // drawing arcs
-    context.beginPath(); // begin
     this.drawModel.arcs.forEach((a: Arc) => {
       const centerX = a.center.x;
       const centerY = a.center.y;
@@ -567,28 +577,58 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
       const { startAngle } = a;
       const { endAngle } = a;
 
-      const startX = centerX + Math.cos((startAngle * Math.PI) / 180) * radius;
-      const startY = centerY + Math.sin((startAngle * Math.PI) / 180) * radius;
-      const endX = centerX + Math.cos((endAngle * Math.PI) / 180) * radius;
-      const endY = centerY + Math.sin((endAngle * Math.PI) / 180) * radius;
-
+      // since we have flipped the y orgin, we have to draw counter clockwise
       const isCounterClockwise = false;
 
-      context.moveTo(startX, startY);
-      context.arc(
-        centerX,
-        centerY,
-        radius,
-        (startAngle * Math.PI) / 180,
-        (endAngle * Math.PI) / 180,
-        isCounterClockwise
-      );
-      context.moveTo(endX, endY);
+      let startX = 0;
+      let startY = 0;
+      let endX = 0;
+      let endY = 0;
+      if (isCounterClockwise) {
+        endX = centerX + Math.cos((startAngle * Math.PI) / 180) * radius;
+        endY = centerY + Math.sin((startAngle * Math.PI) / 180) * radius;
+        startX = centerX + Math.cos((endAngle * Math.PI) / 180) * radius;
+        startY = centerY + Math.sin((endAngle * Math.PI) / 180) * radius;
+      } else {
+        startX = centerX + Math.cos((startAngle * Math.PI) / 180) * radius;
+        startY = centerY + Math.sin((startAngle * Math.PI) / 180) * radius;
+        endX = centerX + Math.cos((endAngle * Math.PI) / 180) * radius;
+        endY = centerY + Math.sin((endAngle * Math.PI) / 180) * radius;
+      }
+
+      // don't draw if the start end points for x and y are the same
+      // likely a z only move
+      if (startX !== endX || startY !== endY) {
+        const dx = endX - centerX;
+        const dy = endY - centerY;
+
+        let arrowAngle = 0;
+        let sAngle = 0;
+        let eAngle = 0;
+        if (isCounterClockwise) {
+          arrowAngle = Math.atan2(dy, dx) - Math.PI / 2; // counter clockwise
+          sAngle = (endAngle * Math.PI) / 180;
+          eAngle = (startAngle * Math.PI) / 180;
+        } else {
+          arrowAngle = Math.atan2(dy, dx) + Math.PI / 2; // clockwise
+          sAngle = (startAngle * Math.PI) / 180;
+          eAngle = (endAngle * Math.PI) / 180;
+        }
+
+        // draw arrow head
+        this.drawArrowHead(context, endX, endY, arrowAngle, arrowLen, '#000000');
+
+        // draw arc
+        context.beginPath(); // begin
+        context.moveTo(startX, startY);
+        context.arc(centerX, centerY, radius, sAngle, eAngle, isCounterClockwise);
+        context.moveTo(endX, endY);
+        context.closePath(); // end
+        context.lineWidth = 0.3;
+        context.strokeStyle = '#000000';
+        context.stroke();
+      }
     });
-    context.closePath(); // end
-    context.lineWidth = 0.3;
-    context.strokeStyle = '#000000';
-    context.stroke();
     // done drawing arcs
 
     // drawing polylines
