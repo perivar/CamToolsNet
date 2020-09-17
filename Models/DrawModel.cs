@@ -358,7 +358,7 @@ namespace CAMToolsNet.Models
 		{
 			var plungeFeed = 50;
 			var rapidFeed = 200;
-			var safeZ = 10;
+			var safeZ = 5;
 
 			var sb = new StringBuilder();
 			if (model != null)
@@ -366,6 +366,7 @@ namespace CAMToolsNet.Models
 				sb.AppendLine("G21; Set units to millimeters");
 				sb.AppendLine("G90; Set absolute coordinates");
 				sb.AppendLine("G17; Set X Y Plane");
+				sb.AppendLine();
 
 				// circles
 				foreach (var circle in model.Circles)
@@ -383,10 +384,11 @@ namespace CAMToolsNet.Models
 						sb.AppendLine("(Draw Circle)");
 						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeZ);
 						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##} \n", startX, startY);
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G1 Z{0:0.##} F{1:0.##}\n", centerZ, plungeFeed);
 
 						// G2 = clockwise arc
 						// G3 = counter clockwise arc
-						sb.AppendFormat(CultureInfo.InvariantCulture, "G3 I{0:0.##} J{1:0.##}\n", radius, 0);
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G3 I{0:0.##} J{1:0.##} F{2:0.##}\n", radius, 0, rapidFeed);
 
 						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeZ);
 						sb.AppendLine();
@@ -408,8 +410,9 @@ namespace CAMToolsNet.Models
 						sb.AppendLine("(Draw Line)");
 						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeZ);
 						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##} \n", startX, startY);
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G1 Z{0:0.##} F{1:0.##}\n", startZ, plungeFeed);
 
-						sb.AppendFormat(CultureInfo.InvariantCulture, "G1 X{0:0.##} Y{1:0.##} \n", endX, endY);
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G1 X{0:0.##} Y{1:0.##} F{2:0.##}\n", endX, endY, rapidFeed);
 
 						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeZ);
 						sb.AppendLine();
@@ -436,10 +439,11 @@ namespace CAMToolsNet.Models
 						sb.AppendLine("(Draw Arc)");
 						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeZ);
 						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##} \n", startX, startY);
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G1 Z{0:0.##} F{1:0.##}\n", centerZ, plungeFeed);
 
 						// G2 = clockwise arc
 						// G3 = counter clockwise arc					
-						sb.AppendFormat(CultureInfo.InvariantCulture, "G3 X{0:0.##} Y{1:0.##} I{2:0.##} J{3:0.##}\n", endX, endY, centerX - startX, centerY - startY);
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G3 X{0:0.##} Y{1:0.##} I{2:0.##} J{3:0.##} F{4:0.##}\n", endX, endY, centerX - startX, centerY - startY, rapidFeed);
 
 						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeZ);
 						sb.AppendLine();

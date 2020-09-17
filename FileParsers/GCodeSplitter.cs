@@ -69,7 +69,6 @@ namespace GCode
 #if DEBUG
 			Debug.WriteLine("Split point: {0}, angle: {1} z-clearance: {2}", splitPoint, angle, zClearance);
 #endif
-
 			int numInstructions = 1;
 			foreach (var instruction in instructions)
 			{
@@ -286,15 +285,12 @@ namespace GCode
 							app[thisSide].AddRange(GCodeInstruction.GetInstructions(command, A, C, D, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
 						}
 					}
-
 				}
 				else
 				{
-
 					// if not any normal or arc moves, store the instruction in both lists
 					// rapid moves are also handled here
-					bool includeRapidMoves = false;
-					if (includeRapidMoves || instruction.CommandType != CommandType.RapidMove)
+					if (instruction.CommandType != CommandType.RapidMove)
 					{
 						app[0].Add(instruction);
 						app[1].Add(instruction);

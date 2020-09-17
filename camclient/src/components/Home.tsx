@@ -110,7 +110,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
 
   private onSplit = () => {
     axios
-      .get(`${config.apiUrl}/Split/90/100/10`, { withCredentials: true })
+      .get(`${config.apiUrl}/Split/100/0/5`, { withCredentials: true })
       .then((response) => {
         console.log(response);
         this.getDrawModel();
@@ -208,12 +208,12 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
             <Button className="mb-1" title="Trim" variant="info" onClick={this.onTrim} size="sm">
               Trim X and Y
             </Button>
-            <Button className="mb-1" title="Rotate" variant="info" onClick={this.onRotate} size="sm">
-              Rotate
-            </Button>
-            <Button className="mb-1" title="Split" variant="info" onClick={this.onSplit} size="sm">
+            {/* <Button className="mb-1" title="Rotate" variant="info" onClick={this.onRotate} size="sm">
+              Rotate 45 degrees
+            </Button> */}
+            {/* <Button className="mb-1" title="Split" variant="info" onClick={this.onSplit} size="sm">
               Split
-            </Button>
+            </Button> */}
             <Button className="mb-1" title="ConvertToCircles" variant="info" onClick={this.onPolyToCircle} size="sm">
               Poly to Circle
             </Button>

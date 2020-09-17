@@ -6,43 +6,6 @@ function round2TwoDecimal(number: number): number {
   return Math.round((number + Number.EPSILON) * 100) / 100;
 }
 
-// https://gist.github.com/callumlocke/cc258a193839691f60dd
-function scaleCanvasDPI(canvas: HTMLCanvasElement, context: any, width: number, height: number) {
-  // make the images crisp
-  // https://stackoverflow.com/questions/31910043/html5-canvas-drawimage-draws-image-blurry
-
-  // assume the device pixel ratio is 1 if the browser doesn't specify it
-  const devicePixelRatio = window.devicePixelRatio || 1;
-
-  // determine the 'backing store ratio' of the canvas context
-  const backingStoreRatio =
-    context.webkitBackingStorePixelRatio ||
-    context.mozBackingStorePixelRatio ||
-    context.msBackingStorePixelRatio ||
-    context.oBackingStorePixelRatio ||
-    context.backingStorePixelRatio ||
-    1;
-
-  // determine the actual ratio we want to draw at
-  const ratio = devicePixelRatio / backingStoreRatio;
-
-  if (devicePixelRatio !== backingStoreRatio) {
-    // set the 'real' canvas size to the higher width/height
-    canvas.width = width * ratio;
-    canvas.height = height * ratio;
-
-    // ...then scale it back down with CSS
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
-  } else {
-    // this is a normal 1:1 device; just scale it simply
-    canvas.width = width;
-    canvas.height = height;
-    canvas.style.width = '';
-    canvas.style.height = '';
-  }
-}
-
 interface IDrawingCanvasProps {
   drawModel: DrawingModel;
 }
@@ -632,22 +595,23 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     // done drawing arcs
 
     // drawing polylines
+    // drawing them backwards seem to get rid of some strange bugs
     context.beginPath(); // begin
-    this.drawModel.polylines.forEach((p: Polyline) => {
-      if (p.vertexes.length >= 2) {
-        for (let i = 0; i < p.vertexes.length; i++) {
-          const vertex = p.vertexes[i];
-          const pointX = vertex.x;
-          const pointY = vertex.y;
+    for (let j = this.drawModel.polylines.length - 1; j >= 0; j--) {
+      const p = this.drawModel.polylines[j];
+      for (let i = 0; i < p.vertexes.length; i++) {
+        const vertex = p.vertexes[i];
+        const pointX = vertex.x;
+        const pointY = vertex.y;
 
-          if (i === 0) {
-            context.moveTo(pointX, pointY);
-          } else {
-            context.lineTo(pointX, pointY);
-          }
+        // context.lineTo(pointX, pointY);
+        if (i === 0) {
+          context.moveTo(pointX, pointY);
+        } else {
+          context.lineTo(pointX, pointY);
         }
       }
-    });
+    }
     context.closePath(); // end
     context.lineWidth = 0.3;
     context.strokeStyle = '#ff00ff';
@@ -655,33 +619,33 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     // done drawing polylines
 
     // drawing polylines light weight
+    // drawing them backwards seem to get rid of some strange bugs
     context.beginPath(); // begin
-    this.drawModel.polylinesLW.forEach((p: PolylineLW) => {
-      if (p.vertexes.length >= 2) {
-        for (let i = 0; i < p.vertexes.length; i++) {
-          const vertex = p.vertexes[i];
-          const pointX = vertex.position.x;
-          const pointY = vertex.position.y;
-          const { bulge } = vertex;
-          let prePointX = 0;
-          let prePointY = 0;
+    for (let j = this.drawModel.polylinesLW.length - 1; j >= 0; j--) {
+      const p = this.drawModel.polylinesLW[j];
+      for (let i = 0; i < p.vertexes.length; i++) {
+        const vertex = p.vertexes[i];
+        const pointX = vertex.position.x;
+        const pointY = vertex.position.y;
+        const { bulge } = vertex;
+        let prePointX = 0;
+        let prePointY = 0;
 
-          if (i === 0) {
-            context.moveTo(pointX, pointY);
-          } else {
-            const angle = ((4 * Math.atan(Math.abs(bulge))) / Math.PI) * 180;
-            const length = Math.sqrt(
-              (pointX - prePointX) * (pointX - prePointX) + (pointY - prePointY) * (pointY - prePointY)
-            );
-            const radius = Math.abs(length / (2 * Math.sin((angle / 360) * Math.PI)));
-            context.arc(pointX, pointY, radius, 0, (angle * Math.PI) / 180, false);
+        if (i === 0) {
+          context.moveTo(pointX, pointY);
+        } else {
+          const angle = ((4 * Math.atan(Math.abs(bulge))) / Math.PI) * 180;
+          const length = Math.sqrt(
+            (pointX - prePointX) * (pointX - prePointX) + (pointY - prePointY) * (pointY - prePointY)
+          );
+          const radius = Math.abs(length / (2 * Math.sin((angle / 360) * Math.PI)));
+          context.arc(pointX, pointY, radius, 0, (angle * Math.PI) / 180, false);
 
-            prePointX = pointX;
-            prePointY = pointY;
-          }
+          prePointX = pointX;
+          prePointY = pointY;
         }
       }
-    });
+    }
     context.closePath(); // end
     context.lineWidth = 0.3;
     context.strokeStyle = '#002266';
