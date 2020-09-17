@@ -1,5 +1,6 @@
 ﻿using System.Drawing;
 using System.Globalization;
+using System.Text.Json.Serialization;
 
 namespace CoordinateUtils
 {
@@ -41,6 +42,7 @@ namespace CoordinateUtils
 			Z = 0;
 		}
 
+		[JsonIgnore]
 		public PointF PointF
 		{
 			get
@@ -49,6 +51,7 @@ namespace CoordinateUtils
 			}
 		}
 
+		[JsonIgnore]
 		public bool IsEmpty
 		{
 			get

@@ -70,7 +70,6 @@ namespace GCode
 
 					// Empty notG0 so it's ready for next block
 					tempNotG0.Clear();
-
 				}
 				else
 				{

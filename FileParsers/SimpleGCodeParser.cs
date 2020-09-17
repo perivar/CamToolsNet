@@ -771,7 +771,7 @@ namespace GCode
 		/// <param name="clockwise">true if clockwise motion</param>
 		/// <param name="startpoint">arc start position</param>
 		/// <returns>the arc interpolated as a list of straight lines</returns>
-		List<LinePoints> RenderArc(Point3D center, Point3D endpoint, bool clockwise, ref Point3D startpoint)
+		public List<LinePoints> RenderArc(Point3D center, Point3D endpoint, bool clockwise, ref Point3D startpoint)
 		{
 			// see also
 			// https://www.marginallyclever.com/2014/03/how-to-improve-the-2-axis-cnc-gcode-interpreter-to-understand-arcs/

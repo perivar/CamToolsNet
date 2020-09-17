@@ -21,5 +21,13 @@ namespace CoordinateUtils
 			Min = new Point3D(minX, minY, minZ);
 			Max = new Point3D(maxX, maxY, maxZ);
 		}
+
+		public Bounds(Point3D min, Point3D max)
+		{
+			Min = min;
+			Max = max;
+		}
+
+
 	}
 }

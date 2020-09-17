@@ -10,6 +10,12 @@ interface IDrawingCanvasProps {
   drawModel: DrawingModel;
 }
 
+const { PI } = Math;
+const HALF_PI = Math.PI / 2;
+const TWO_PI = Math.PI * 2;
+const DEG_TO_RAD = Math.PI / 180;
+const RAD_TO_DEG = 180 / Math.PI;
+
 export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasProps> {
   // instance variables
   private bounds: Bounds = { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } };
@@ -196,9 +202,9 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     const amount = evt.deltaY > 0 ? 1 / 1.1 : 1.1;
 
     // set limits
-    const tmpScale = this.scale * amount;
-    if (tmpScale > 30) return;
-    if (tmpScale < 0.3) return;
+    // const tmpScale = this.scale * amount;
+    // if (tmpScale > 30) return;
+    // if (tmpScale < 0.3) return;
 
     this.scale *= amount; // the new scale
 
@@ -214,6 +220,12 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
   };
 
   private zoomToFit = () => {
+    if (this.bounds.max.x > 1000 || this.bounds.min.x < -100) {
+      // likely something wrong with the bounds calculation
+      // ignore
+      return;
+    }
+
     const dataWidth = this.bounds.max.x - this.bounds.min.x;
     const dataHeight = this.bounds.max.y - this.bounds.min.y;
 
@@ -228,11 +240,74 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
       this.canvasHeight - (this.canvasHeight / 2 - (dataHeight / 2 + this.bounds.min.y) * this.scale);
   };
 
+  getQuadrant = (_angle: number) => {
+    const angle = _angle % TWO_PI;
+
+    if (angle >= 0.0 && angle < HALF_PI) return 0;
+    if (angle >= HALF_PI && angle < PI) return 1;
+    if (angle >= PI && angle < PI + HALF_PI) return 2;
+    return 3;
+  };
+
+  // https://stackoverflow.com/a/35977476/461048
+  getArcBoundingBox = (ini: number, end: number, radius: number, margin = 0) => {
+    const iniQuad = this.getQuadrant(ini);
+    const endQuad = this.getQuadrant(end);
+
+    const ix = Math.cos(ini) * radius;
+    const iy = Math.sin(ini) * radius;
+    const ex = Math.cos(end) * radius;
+    const ey = Math.sin(end) * radius;
+
+    const minX = Math.min(ix, ex);
+    const minY = Math.min(iy, ey);
+    const maxX = Math.max(ix, ex);
+    const maxY = Math.max(iy, ey);
+
+    const r = radius;
+    const xMax = [
+      [maxX, r, r, r],
+      [maxX, maxX, r, r],
+      [maxX, maxX, maxX, r],
+      [maxX, maxX, maxX, maxX]
+    ];
+    const yMax = [
+      [maxY, maxY, maxY, maxY],
+      [r, maxY, r, r],
+      [r, maxY, maxY, r],
+      [r, maxY, maxY, maxY]
+    ];
+    const xMin = [
+      [minX, -r, minX, minX],
+      [minX, minX, minX, minX],
+      [-r, -r, minX, -r],
+      [-r, -r, minX, minX]
+    ];
+    const yMin = [
+      [minY, -r, -r, minY],
+      [minY, minY, -r, minY],
+      [minY, minY, minY, minY],
+      [-r, -r, -r, minY]
+    ];
+
+    const x1 = xMin[endQuad][iniQuad];
+    const y1 = yMin[endQuad][iniQuad];
+    const x2 = xMax[endQuad][iniQuad];
+    const y2 = yMax[endQuad][iniQuad];
+
+    const x = x1 - margin;
+    const y = y1 - margin;
+    const w = x2 - x1 + margin * 2;
+    const h = y2 - y1 + margin * 2;
+
+    return { x, y, w, h };
+  };
+
   private calculateBounds = (): Bounds => {
-    let maxX = 0;
-    let maxY = 0;
-    let minX = 100000;
-    let minY = 100000;
+    let maxX = -1000000;
+    let maxY = -1000000;
+    let minX = 1000000;
+    let minY = 1000000;
     let curX = 0;
     let curY = 0;
 
@@ -288,10 +363,17 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
         const { radius } = a;
         const { startAngle } = a;
         const { endAngle } = a;
-        const startX = centerX + Math.cos((startAngle * Math.PI) / 180) * radius;
-        const startY = centerY + Math.sin((startAngle * Math.PI) / 180) * radius;
-        const endX = centerX + Math.cos((endAngle * Math.PI) / 180) * radius;
-        const endY = centerY + Math.sin((endAngle * Math.PI) / 180) * radius;
+
+        // const startX = centerX + Math.cos((startAngle * Math.PI) / 180) * radius;
+        // const startY = centerY + Math.sin((startAngle * Math.PI) / 180) * radius;
+        // const endX = centerX + Math.cos((endAngle * Math.PI) / 180) * radius;
+        // const endY = centerY + Math.sin((endAngle * Math.PI) / 180) * radius;
+
+        const box = this.getArcBoundingBox(startAngle * DEG_TO_RAD, endAngle * DEG_TO_RAD, radius);
+        const startX = box.x + centerX;
+        const startY = box.y + centerY;
+        const endX = box.x + centerX + box.w;
+        const endY = box.y + centerY + box.h;
 
         curX = startX;
         curY = startY;
@@ -307,12 +389,13 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
         maxY = curY > maxY ? curY : maxY;
         minY = curY < minY ? curY : minY;
 
-        curX = centerX;
-        curY = centerY;
-        maxX = curX > maxX ? curX : maxX;
-        minX = curX < minX ? curX : minX;
-        maxY = curY > maxY ? curY : maxY;
-        minY = curY < minY ? curY : minY;
+        // cannot include center since the center can be way outside the image for some arcs
+        // curX = centerX;
+        // curY = centerY;
+        // maxX = curX > maxX ? curX : maxX;
+        // minX = curX < minX ? curX : minX;
+        // maxY = curY > maxY ? curY : maxY;
+        // minY = curY < minY ? curY : minY;
       }
     });
 
@@ -470,7 +553,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
   };
 
   private drawFile = (context: CanvasRenderingContext2D) => {
-    const arrowLen = 1; // length of head in pixels
+    const arrowLen = 0.8; // length of head in pixels
 
     this.drawGrid(context, 10, '#999999', '#F2F2F2', 100, this.bounds.max.x + 20, this.bounds.max.y + 20);
 
@@ -504,6 +587,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     // done drawing circles
 
     // drawing lines
+    let lineColor = '#44cc44';
     this.drawModel.lines.forEach((line: Line) => {
       const startX = line.startPoint.x;
       const startY = line.startPoint.y;
@@ -517,8 +601,14 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
         const dy = endY - startY;
         const angle = Math.atan2(dy, dx);
 
+        if (line.isVisible) {
+          lineColor = '#44cc44';
+        } else {
+          lineColor = '#44ccff';
+        }
+
         // draw arrow head
-        this.drawArrowHead(context, endX, endY, angle, arrowLen, '#44cc44');
+        this.drawArrowHead(context, endX, endY, angle, arrowLen, lineColor);
 
         // draw line
         context.beginPath(); // begin
@@ -526,7 +616,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
         context.lineTo(endX, endY);
         context.closePath(); // end
         context.lineWidth = 0.3;
-        context.strokeStyle = '#44cc44';
+        context.strokeStyle = lineColor;
         context.stroke();
       }
     });
@@ -678,7 +768,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
       // ---- start drawing the model ---
       this.drawFile(this.ctx);
 
-      // mark bounds area
+      // mark local bounds area
       // this.ctx.strokeStyle = `hsl(${360 * Math.random()}, 80%, 50%)`;
       // this.ctx.strokeRect(
       //   this.bounds.min.x,
@@ -697,31 +787,31 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
       this.ctx.fillText(`panning: ${round2TwoDecimal(translatePos.x)} , ${round2TwoDecimal(translatePos.y)}`, 10, 20);
 
       // get locally calculated bounds
-      // this.ctx.fillText(
-      //   `bounds X: ${round2TwoDecimal(this.bounds.min.x)} to ${round2TwoDecimal(this.bounds.max.x)}`,
-      //   10,
-      //   30
-      // );
-      // this.ctx.fillText(
-      //   `bounds Y: ${round2TwoDecimal(this.bounds.min.y)} to ${round2TwoDecimal(this.bounds.max.y)}`,
-      //   10,
-      //   40
-      // );
-
-      // get bounds from the fetched model
       this.ctx.fillText(
-        `bounds X: ${round2TwoDecimal(this.drawModel.bounds.min.x)} to ${round2TwoDecimal(
-          this.drawModel.bounds.max.x
-        )}`,
+        `local bounds X: ${round2TwoDecimal(this.bounds.min.x)} to ${round2TwoDecimal(this.bounds.max.x)}`,
         10,
         30
       );
       this.ctx.fillText(
-        `bounds Y: ${round2TwoDecimal(this.drawModel.bounds.min.y)} to ${round2TwoDecimal(
+        `local bounds Y: ${round2TwoDecimal(this.bounds.min.y)} to ${round2TwoDecimal(this.bounds.max.y)}`,
+        10,
+        40
+      );
+
+      // get bounds from the fetched model
+      this.ctx.fillText(
+        `remote bounds X: ${round2TwoDecimal(this.drawModel.bounds.min.x)} to ${round2TwoDecimal(
+          this.drawModel.bounds.max.x
+        )}`,
+        10,
+        60
+      );
+      this.ctx.fillText(
+        `remote bounds Y: ${round2TwoDecimal(this.drawModel.bounds.min.y)} to ${round2TwoDecimal(
           this.drawModel.bounds.max.y
         )}`,
         10,
-        40
+        70
       );
 
       this.ctx.restore();
