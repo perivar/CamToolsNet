@@ -641,81 +641,7 @@ namespace CAMToolsNet.Models
 
 				if (doReadUsingBlocks)
 				{
-					// turn the instructions into blocks
-					var myBlocks = GCodeUtils.GetBlocks(parsedInstructions);
-
-					if (myBlocks != null && myBlocks.Count > 0)
-					{
-						foreach (Block blockItem in myBlocks)
-						{
-							// cache if this is a drill point
-							blockItem.CheckIfDrillOrProbePoint();
-
-							if (blockItem.PlotPoints != null)
-							{
-								// add each block as polyline
-								var vertexes = new List<Point3D>();
-								var curP2 = new Point3D();
-								foreach (var linePlots in blockItem.PlotPoints)
-								{
-									var p1 = new Point3D(linePlots.X1, linePlots.Y1, linePlots.Z1);
-									var p2 = new Point3D(linePlots.X2, linePlots.Y2, linePlots.Z2);
-
-									if (linePlots.Pen == PenColorList.RapidMove)
-									{
-										// we represent rapid movements as invisible lines
-										var line = new DrawLine(p1.PointF, p2.PointF);
-										if (blockItem.Name != null) line.LayerName = blockItem.Name;
-										line.IsVisible = false;
-										Lines.Add(line);
-									}
-									else
-									{
-										if (!blockItem.IsDrillPoint)
-										{
-											if (p1.PointF == p2.PointF)
-											{
-												// if these are the same, we are only moving in z direction
-												// ignore
-											}
-											else
-											{
-												// a closed polyline has the same first and last point
-												// but a line plot contains from and to points
-												// solve this by only adding p1, and make sure to add p2 as the very last point
-												vertexes.Add(p1);
-												curP2 = p2; // store p2 for later
-											}
-										}
-									}
-								}
-								// make sure to add the last p2
-								if (!blockItem.IsDrillPoint)
-								{
-									vertexes.Add(curP2);
-								}
-
-								if (vertexes.Count > 0)
-								{
-									// add information
-									var poly = new DrawPolyline();
-									poly.Vertexes = vertexes;
-									if (blockItem.Name != null) poly.LayerName = blockItem.Name;
-									poly.IsVisible = true;
-									Polylines.Add(poly);
-								}
-
-								// if this is a drillblock, paint a circle at the point
-								if (blockItem.IsDrillPoint)
-								{
-									var x = blockItem.PlotPoints[1].X1;
-									var y = blockItem.PlotPoints[1].Y1;
-									var radius = 4;
-									AddCircle(new PointF(x, y), radius);
-								}
-							}
-						}
-					}
+					RenderGCodeAsBlock(parsedInstructions);
 				}
 				else
 				{
@@ -918,6 +844,85 @@ namespace CAMToolsNet.Models
 				}
 
 				CalculateBounds();
+			}
+		}
+
+		private void RenderGCodeAsBlock(List<GCodeInstruction> parsedInstructions)
+		{
+			// turn the instructions into blocks
+			var myBlocks = GCodeUtils.GetBlocks(parsedInstructions);
+
+			if (myBlocks != null && myBlocks.Count > 0)
+			{
+				foreach (Block blockItem in myBlocks)
+				{
+					// cache if this is a drill point
+					blockItem.CheckIfDrillOrProbePoint();
+
+					if (blockItem.PlotPoints != null)
+					{
+						// add each block as polyline
+						var vertexes = new List<Point3D>();
+						var curP2 = new Point3D();
+						foreach (var linePlots in blockItem.PlotPoints)
+						{
+							var p1 = new Point3D(linePlots.X1, linePlots.Y1, linePlots.Z1);
+							var p2 = new Point3D(linePlots.X2, linePlots.Y2, linePlots.Z2);
+
+							if (linePlots.Pen == PenColorList.RapidMove)
+							{
+								// we represent rapid movements as invisible lines
+								var line = new DrawLine(p1.PointF, p2.PointF);
+								if (blockItem.Name != null) line.LayerName = blockItem.Name;
+								line.IsVisible = false;
+								Lines.Add(line);
+							}
+							else
+							{
+								if (!blockItem.IsDrillPoint)
+								{
+									if (p1.PointF == p2.PointF)
+									{
+										// if these are the same, we are only moving in z direction
+										// ignore
+									}
+									else
+									{
+										// a closed polyline has the same first and last point
+										// but a line plot contains from and to points
+										// solve this by only adding p1, and make sure to add p2 as the very last point
+										vertexes.Add(p1);
+										curP2 = p2; // store p2 for later
+									}
+								}
+							}
+						}
+						// make sure to add the last p2
+						if (!blockItem.IsDrillPoint)
+						{
+							vertexes.Add(curP2);
+						}
+
+						if (vertexes.Count > 0)
+						{
+							// add information
+							var poly = new DrawPolyline();
+							poly.Vertexes = vertexes;
+							if (blockItem.Name != null) poly.LayerName = blockItem.Name;
+							poly.IsVisible = true;
+							Polylines.Add(poly);
+						}
+
+						// if this is a drillblock, paint a circle at the point
+						if (blockItem.IsDrillPoint)
+						{
+							var x = blockItem.PlotPoints[1].X1;
+							var y = blockItem.PlotPoints[1].Y1;
+							var radius = 4;
+							AddCircle(new PointF(x, y), radius);
+						}
+					}
+				}
 			}
 		}
 
