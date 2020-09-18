@@ -1,4 +1,4 @@
-using System.Drawing;
+using System;
 
 namespace CoordinateUtils
 {
@@ -12,8 +12,8 @@ namespace CoordinateUtils
 
 		public Bounds()
 		{
-			Min = Point3D.Empty;
-			Max = Point3D.Empty;
+			Min = new Point3D();
+			Max = new Point3D();
 		}
 
 		public Bounds(float minX, float maxX, float minY, float maxY, float minZ, float maxZ)

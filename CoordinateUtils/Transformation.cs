@@ -11,6 +11,12 @@ namespace CoordinateUtils
 	/// </summary>
 	public static class Transformation
 	{
+		const double PI = Math.PI;
+		const double HALF_PI = Math.PI / 2;
+		const double TWO_PI = Math.PI * 2;
+		const double DEG_TO_RAD = Math.PI / 180;
+		const double RAD_TO_DEG = 180 / Math.PI;
+
 		const float SELF_ZERO = 0.0000001f;
 
 		// smooth factor that decides how many steps the arc curve will have
@@ -24,8 +30,7 @@ namespace CoordinateUtils
 		/// <returns>angle in radians</returns>
 		public static double DegreeToRadian(double angle)
 		{
-			const double Deg2Rad = Math.PI / 180.0;
-			return angle * Deg2Rad;
+			return angle * DEG_TO_RAD;
 		}
 
 		/// <summary>
@@ -35,8 +40,7 @@ namespace CoordinateUtils
 		/// <returns>angle in degrees</returns>
 		public static double RadianToDegree(double angle)
 		{
-			const double Rad2Deg = 180.0 / Math.PI;
-			return angle * Rad2Deg;
+			return angle * RAD_TO_DEG;
 		}
 
 		/// <summary>
@@ -797,55 +801,51 @@ namespace CoordinateUtils
 			return (int)Math.Ceiling(steps);
 		}
 
-		const double PI = Math.PI;
-		const double HALF_PI = Math.PI / 2;
-		const double TWO_PI = Math.PI * 2;
-		const double DEG_TO_RAD = Math.PI / 180;
-		const double RAD_TO_DEG = 180 / Math.PI;
-
-		public static Byte GetQuadrant(this Double angle)
+		public static Byte GetQuadrant(this double _angle)
 		{
-			var trueAngle = angle % (2 * PI);
+			var angle = _angle % TWO_PI;
 
-			if (trueAngle >= 0.0 && trueAngle < PI / 2.0)
-				return 1;
-			if (trueAngle >= PI / 2.0 && trueAngle < PI)
-				return 2;
-			if (trueAngle >= PI && trueAngle < PI * 3.0 / 2.0)
-				return 3;
-			// if (trueAngle >= PI * 3.0 / 2.0 && trueAngle < PI * 2)
-			return 4;
+			if (angle >= 0.0 && angle < HALF_PI) return 0;
+			if (angle >= HALF_PI && angle < PI) return 1;
+			if (angle >= PI && angle < PI + HALF_PI) return 2;
+			return 3;
 		}
 
-		public static Bounds GetArcBounds(Double startAngle, Double endAngle, Double r)
+		// https://stackoverflow.com/a/35977476/461048
+		// Note ini and end is in radians
+		public static Rect GetArcBounds(double ini, double end, double radius, double margin = 0)
 		{
-			var startQuad = startAngle.GetQuadrant() - 1;
-			var endQuad = endAngle.GetQuadrant() - 1;
+			var iniQuad = GetQuadrant(ini);
+			var endQuad = GetQuadrant(end);
 
-			// Convert to Cartesian coordinates.
-			var stPt = new Point3D((float)Math.Round(r * Math.Cos(startAngle), 14), (float)Math.Round(r * Math.Sin(startAngle), 14));
-			var enPt = new Point3D((float)Math.Round(r * Math.Cos(endAngle), 14), (float)Math.Round(r * Math.Sin(endAngle), 14));
+			var ix = Math.Cos(ini) * radius;
+			var iy = Math.Sin(ini) * radius;
+			var ex = Math.Cos(end) * radius;
+			var ey = Math.Sin(end) * radius;
 
-			// Find bounding box excluding extremum.
-			var minX = stPt.X;
-			var minY = stPt.Y;
-			var maxX = stPt.X;
-			var maxY = stPt.Y;
-			if (maxX < enPt.X) maxX = enPt.X;
-			if (maxY < enPt.Y) maxY = enPt.Y;
-			if (minX > enPt.X) minX = enPt.X;
-			if (minY > enPt.Y) minY = enPt.Y;
+			var minX = Math.Min(ix, ex);
+			var minY = Math.Min(iy, ey);
+			var maxX = Math.Max(ix, ex);
+			var maxY = Math.Max(iy, ey);
 
-			// Build extremum matrices.
+			var r = radius;
+
 			var xMax = new[,] { { maxX, r, r, r }, { maxX, maxX, r, r }, { maxX, maxX, maxX, r }, { maxX, maxX, maxX, maxX } };
 			var yMax = new[,] { { maxY, maxY, maxY, maxY }, { r, maxY, r, r }, { r, maxY, maxY, r }, { r, maxY, maxY, maxY } };
 			var xMin = new[,] { { minX, -r, minX, minX }, { minX, minX, minX, minX }, { -r, -r, minX, -r }, { -r, -r, minX, minX } };
 			var yMin = new[,] { { minY, -r, -r, minY }, { minY, minY, -r, minY }, { minY, minY, minY, minY }, { -r, -r, -r, minY } };
 
-			// Select desired values
-			var startPt = new Point3D((float)xMin[endQuad, startQuad], (float)yMin[endQuad, startQuad]);
-			var endPt = new Point3D((float)xMax[endQuad, startQuad], (float)yMax[endQuad, startQuad]);
-			return new Bounds(startPt, endPt);
+			var x1 = xMin[endQuad, iniQuad];
+			var y1 = yMin[endQuad, iniQuad];
+			var x2 = xMax[endQuad, iniQuad];
+			var y2 = yMax[endQuad, iniQuad];
+
+			var x = x1 - margin;
+			var y = y1 - margin;
+			var w = x2 - x1 + margin * 2;
+			var h = y2 - y1 + margin * 2;
+
+			return new Rect((float)x, (float)y, (float)w, (float)h);
 		}
 	}
 }

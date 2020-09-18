@@ -104,6 +104,7 @@ namespace GCode
 		CWArc = 2,
 		CCWArc = 3,
 		Dwell = 4,
+		ProbeTarget = 10,
 		Other = 99
 	}
 
@@ -419,6 +420,9 @@ namespace GCode
 						return "Set Units to Inches";
 					case "G21":
 						return "Set Units to Millimeters";
+					case "G38.2":
+					case "G38.3":
+						return "Probe target";
 				}
 				return "Unknown " + Command;
 			}
@@ -445,6 +449,9 @@ namespace GCode
 					case "G4":
 					case "G04":
 						return CommandType.Dwell;
+					case "G38.2":
+					case "G38.3":
+						return CommandType.ProbeTarget;
 				}
 				return CommandType.Other;
 			}

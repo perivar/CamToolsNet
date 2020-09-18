@@ -630,278 +630,293 @@ namespace CAMToolsNet.Models
 
 		public DrawModel(string gcode, string fileName) : this()
 		{
+			bool doReadUsingBlocks = false; // note! block reading doesn't support native arc, only arcs as polylines
+			var doRenderArcAsPolyline = false;
+
 			FileName = fileName;
 
 			if (gcode != null)
 			{
 				var parsedInstructions = SimpleGCodeParser.ParseText(gcode);
 
-				/*
-				// turn the instructions into blocks
-				var myBlocks = GCodeUtils.GetBlocks(parsedInstructions);
-
-				if (myBlocks != null && myBlocks.Count > 0)
+				if (doReadUsingBlocks)
 				{
-					foreach (Block blockItem in myBlocks)
+					// turn the instructions into blocks
+					var myBlocks = GCodeUtils.GetBlocks(parsedInstructions);
+
+					if (myBlocks != null && myBlocks.Count > 0)
 					{
-						// cache if this is a drill point
-						blockItem.CheckIfDrillOrProbePoint();
-
-						if (blockItem.PlotPoints != null)
+						foreach (Block blockItem in myBlocks)
 						{
-							// add each block as polyline
-							var vertexes = new List<Point3D>();
-							var curP2 = Point3D.Empty;
-							foreach (var linePlots in blockItem.PlotPoints)
-							{
-								var p1 = new Point3D(linePlots.X1, linePlots.Y1, linePlots.Z1);
-								var p2 = new Point3D(linePlots.X2, linePlots.Y2, linePlots.Z2);
+							// cache if this is a drill point
+							blockItem.CheckIfDrillOrProbePoint();
 
-								if (linePlots.Pen == PenColorList.RapidMove)
+							if (blockItem.PlotPoints != null)
+							{
+								// add each block as polyline
+								var vertexes = new List<Point3D>();
+								var curP2 = new Point3D();
+								foreach (var linePlots in blockItem.PlotPoints)
 								{
-									// we represent rapid movements as invisible lines
-									var line = new DrawLine(p1.PointF, p2.PointF);
-									if (blockItem.Name != null) line.LayerName = blockItem.Name;
-									line.IsVisible = false;
-									Lines.Add(line);
-								}
-								else
-								{
-									if (!blockItem.IsDrillPoint)
+									var p1 = new Point3D(linePlots.X1, linePlots.Y1, linePlots.Z1);
+									var p2 = new Point3D(linePlots.X2, linePlots.Y2, linePlots.Z2);
+
+									if (linePlots.Pen == PenColorList.RapidMove)
 									{
-										if (p1.PointF == p2.PointF)
+										// we represent rapid movements as invisible lines
+										var line = new DrawLine(p1.PointF, p2.PointF);
+										if (blockItem.Name != null) line.LayerName = blockItem.Name;
+										line.IsVisible = false;
+										Lines.Add(line);
+									}
+									else
+									{
+										if (!blockItem.IsDrillPoint)
 										{
-											// if these are the same, we are only moving in z direction
-											// ignore
-										}
-										else
-										{
-											// a closed polyline has the same first and last point
-											// but a line plot contains from and to points
-											// solve this by only adding p1, and make sure to add p2 as the very last point
-											vertexes.Add(p1);
-											curP2 = p2; // store p2 for later
+											if (p1.PointF == p2.PointF)
+											{
+												// if these are the same, we are only moving in z direction
+												// ignore
+											}
+											else
+											{
+												// a closed polyline has the same first and last point
+												// but a line plot contains from and to points
+												// solve this by only adding p1, and make sure to add p2 as the very last point
+												vertexes.Add(p1);
+												curP2 = p2; // store p2 for later
+											}
 										}
 									}
 								}
-							}
-							// make sure to add the last p2
-							if (!blockItem.IsDrillPoint)
-							{
-								vertexes.Add(curP2);
-							}
+								// make sure to add the last p2
+								if (!blockItem.IsDrillPoint)
+								{
+									vertexes.Add(curP2);
+								}
 
-							if (vertexes.Count > 0)
-							{
-								// add information
-								var poly = new DrawPolyline();
-								poly.Vertexes = vertexes;
-								if (blockItem.Name != null) poly.LayerName = blockItem.Name;
-								poly.IsVisible = true;
-								Polylines.Add(poly);
-							}
+								if (vertexes.Count > 0)
+								{
+									// add information
+									var poly = new DrawPolyline();
+									poly.Vertexes = vertexes;
+									if (blockItem.Name != null) poly.LayerName = blockItem.Name;
+									poly.IsVisible = true;
+									Polylines.Add(poly);
+								}
 
-							// if this is a drillblock, paint a circle at the point
-							if (blockItem.IsDrillPoint)
-							{
-								var x = blockItem.PlotPoints[1].X1;
-								var y = blockItem.PlotPoints[1].Y1;
-								var radius = 4;
-								AddCircle(new PointF(x, y), radius);
+								// if this is a drillblock, paint a circle at the point
+								if (blockItem.IsDrillPoint)
+								{
+									var x = blockItem.PlotPoints[1].X1;
+									var y = blockItem.PlotPoints[1].Y1;
+									var radius = 4;
+									AddCircle(new PointF(x, y), radius);
+								}
 							}
 						}
 					}
-
-					CalculateBounds();
 				}
-				*/
-
-				bool AbsoluteMode = true;
-				bool AbsoluteArcCenterMode = false;
-				bool Metric = true;
-				var currentPosition = Point3D.Empty;
-				foreach (var currentInstruction in parsedInstructions)
+				else
 				{
-					// var linePointsCollection = currentInstruction.RenderCode(ref currentPoint);
-					var CommandType = currentInstruction.CommandType;
-					var Command = currentInstruction.Command;
-					var X = currentInstruction.X;
-					var Y = currentInstruction.Y;
-					var Z = currentInstruction.Z;
-					var I = currentInstruction.I;
-					var J = currentInstruction.J;
+					// set default arc parameters
+					bool AbsoluteMode = true;
+					bool AbsoluteArcCenterMode = false;
+					bool Metric = true;
 
-					if (CommandType == CommandType.Other)
+					var currentPosition = new Point3D();
+					foreach (var currentInstruction in parsedInstructions)
 					{
-						if (Command == "G90") { AbsoluteMode = true; }
-						if (Command == "G90.1") { AbsoluteArcCenterMode = true; }
-						if (Command == "G91") { AbsoluteMode = false; }
-						if (Command == "G91.1") { AbsoluteArcCenterMode = false; }
-						if (Command == "G21") { Metric = true; }
-						if (Command == "G20") { Metric = false; }
-						continue;
-					}
-					if (CommandType == CommandType.Dwell)
-					{
-						// ignore
-						continue;
-					}
+						var CommandType = currentInstruction.CommandType;
+						var Command = currentInstruction.Command;
+						var X = currentInstruction.X;
+						var Y = currentInstruction.Y;
+						var Z = currentInstruction.Z;
+						var I = currentInstruction.I;
+						var J = currentInstruction.J;
 
-					var pos = new Point3D(currentPosition.X, currentPosition.Y, currentPosition.Z);
-					if (AbsoluteMode)
-					{
-						if (X.HasValue)
-							pos.X = X.Value;
-						if (Y.HasValue)
-							pos.Y = Y.Value;
-						if (Z.HasValue)
-							pos.Z = Z.Value;
-					}
-					else
-					{
-						// relative specifies a delta
-						if (X.HasValue)
-							pos.X += X.Value;
-						if (Y.HasValue)
-							pos.Y += Y.Value;
-						if (Z.HasValue)
-							pos.Z += Z.Value;
-					}
-
-					if (!Metric)
-					{
-						pos.X *= 25.4f;
-						pos.Y *= 25.4f;
-						pos.Z *= 25.4f;
-					}
-
-					if (CommandType == CommandType.RapidMove || CommandType == CommandType.NormalMove)
-					{
-						var line = new LinePoints(currentPosition, pos, CommandType == CommandType.RapidMove ? PenColorList.RapidMove : PenColorList.NormalMove);
-						currentPosition.X = pos.X;
-						currentPosition.Y = pos.Y;
-						currentPosition.Z = pos.Z;
-
-						if (line.Pen == PenColorList.RapidMove)
+						if (CommandType == CommandType.Other)
 						{
-							// we represent rapid movements as invisible lines
-							var rapidLine = new DrawLine(new PointF(line.X1, line.Y1), new PointF(line.X2, line.Y2));
-							rapidLine.IsVisible = false;
-							Lines.Add(rapidLine);
+							if (Command == "G90") { AbsoluteMode = true; }
+							if (Command == "G90.1") { AbsoluteArcCenterMode = true; }
+							if (Command == "G91") { AbsoluteMode = false; }
+							if (Command == "G91.1") { AbsoluteArcCenterMode = false; }
+							if (Command == "G21") { Metric = true; }
+							if (Command == "G20") { Metric = false; }
+							continue;
+						}
+						if (CommandType == CommandType.Dwell)
+						{
+							// ignore
+							continue;
+						}
+
+						var pos = new Point3D(currentPosition.X, currentPosition.Y, currentPosition.Z);
+
+						if (CommandType == CommandType.ProbeTarget)
+						{
+							// if this is a probe, paint a circle at the point
+							var radius = 4;
+							AddCircle(pos.PointF, radius);
+						}
+
+						if (AbsoluteMode)
+						{
+							if (X.HasValue)
+								pos.X = X.Value;
+							if (Y.HasValue)
+								pos.Y = Y.Value;
+							if (Z.HasValue)
+								pos.Z = Z.Value;
 						}
 						else
 						{
-							AddLine(new PointF(line.X1, line.Y1), new PointF(line.X2, line.Y2));
-						}
-						continue;
-					}
-
-					if (CommandType == CommandType.CWArc || CommandType == CommandType.CCWArc)
-					{
-						var center = new Point3D(0f, 0f, 0f);
-						var current = new Point3D(currentPosition.X, currentPosition.Y, currentPosition.Z);
-
-						if (AbsoluteArcCenterMode)
-						{
-							center.X = I ?? 0;
-							center.Y = J ?? 0;
-						}
-						else
-						{
-							center.X = current.X + I ?? 0;
-							center.Y = current.Y + J ?? 0;
+							// relative specifies a delta
+							if (X.HasValue)
+								pos.X += X.Value;
+							if (Y.HasValue)
+								pos.Y += Y.Value;
+							if (Z.HasValue)
+								pos.Z += Z.Value;
 						}
 
-						var doRenderArcAsPolyline = false;
-						if (doRenderArcAsPolyline)
+						if (!Metric)
 						{
-							var arcPoints = currentInstruction.RenderArc(center, pos, (CommandType == CommandType.CWArc), ref currentPosition);
-
-							// add arcs as polylines
-							var vertexes = new List<Point3D>();
-							var curP2 = Point3D.Empty;
-
-							foreach (var arcPoint in arcPoints)
-							{
-								var p1 = new Point3D(arcPoint.X1, arcPoint.Y1, arcPoint.Z1);
-								var p2 = new Point3D(arcPoint.X2, arcPoint.Y2, arcPoint.Z2);
-
-								if (p1.PointF == p2.PointF)
-								{
-									// if these are the same, we are only moving in z direction
-									// ignore
-								}
-								else
-								{
-									// a closed polyline has the same first and last point
-									// but a line plot contains from and to points
-									// solve this by only adding p1, and make sure to add p2 as the very last point
-									vertexes.Add(p1);
-									curP2 = p2; // store p2 for later
-								}
-							}
-							// make sure to add the last p2
-							// if (!blockItem.IsDrillPoint)
-							// {
-							vertexes.Add(curP2);
-							// }
-
-							if (vertexes.Count > 0)
-							{
-								// add information
-								var poly = new DrawPolyline();
-								poly.Vertexes = vertexes;
-								poly.IsVisible = true;
-								Polylines.Add(poly);
-							}
+							pos.X *= 25.4f;
+							pos.Y *= 25.4f;
+							pos.Z *= 25.4f;
 						}
-						else
+
+						if (CommandType == CommandType.RapidMove || CommandType == CommandType.NormalMove)
 						{
-							// figure out our deltas
-							var endpoint = pos;
-							double aX = current.X - center.X;
-							double aY = current.Y - center.Y;
-							double bX = endpoint.X - center.X;
-							double bY = endpoint.Y - center.Y;
-
-							// angle variables.
-							var clockwise = (CommandType == CommandType.CWArc);
-							double angleA;
-							double angleB;
-							if (clockwise)
-							{
-								// Clockwise
-								angleA = Math.Atan2(bY, bX);
-								angleB = Math.Atan2(aY, aX);
-							}
-							else
-							{
-								// Counterclockwise
-								angleA = Math.Atan2(aY, aX);
-								angleB = Math.Atan2(bY, bX);
-							}
-
-							// Make sure angleB is always greater than angleA
-							// and if not add 2PI so that it is (this also takes
-							// care of the special case of angleA == angleB,
-							// ie we want a complete circle)
-							if (angleB <= angleA)
-							{
-								angleB += 2 * Math.PI;
-							}
-
-							// calculate a couple useful things.
-							double radius = Math.Sqrt(aX * aX + aY * aY);
-
-							AddArc(new PointF(center.X, center.Y), (float)radius, (float)(angleA * 180 / Math.PI), (float)(angleB * 180 / Math.PI));
-
-							// store the last position
+							var line = new LinePoints(currentPosition, pos, CommandType == CommandType.RapidMove ? PenColorList.RapidMove : PenColorList.NormalMove);
 							currentPosition.X = pos.X;
 							currentPosition.Y = pos.Y;
 							currentPosition.Z = pos.Z;
+
+							if (line.Pen == PenColorList.RapidMove)
+							{
+								// we represent rapid movements as invisible lines
+								var rapidLine = new DrawLine(new PointF(line.X1, line.Y1), new PointF(line.X2, line.Y2));
+								rapidLine.IsVisible = false;
+								Lines.Add(rapidLine);
+							}
+							else
+							{
+								AddLine(new PointF(line.X1, line.Y1), new PointF(line.X2, line.Y2));
+							}
+							continue;
+						}
+
+						if (CommandType == CommandType.CWArc || CommandType == CommandType.CCWArc)
+						{
+							var current = new Point3D(currentPosition.X, currentPosition.Y, currentPosition.Z);
+
+							// set center
+							var center = new Point3D(0f, 0f, 0f);
+							if (AbsoluteArcCenterMode)
+							{
+								center.X = I ?? 0;
+								center.Y = J ?? 0;
+							}
+							else
+							{
+								center.X = current.X + I ?? 0;
+								center.Y = current.Y + J ?? 0;
+							}
+
+							if (doRenderArcAsPolyline)
+							{
+								// render arcs as polylines instead of real arcs
+
+								var arcPoints = currentInstruction.RenderArc(center, pos, (CommandType == CommandType.CWArc), ref currentPosition);
+
+								// add arcs as polylines
+								var vertexes = new List<Point3D>();
+								var curP2 = new Point3D();
+
+								foreach (var arcPoint in arcPoints)
+								{
+									var p1 = new Point3D(arcPoint.X1, arcPoint.Y1, arcPoint.Z1);
+									var p2 = new Point3D(arcPoint.X2, arcPoint.Y2, arcPoint.Z2);
+
+									if (p1.PointF == p2.PointF)
+									{
+										// if these are the same, we are only moving in z direction
+										// ignore
+									}
+									else
+									{
+										// a closed polyline has the same first and last point
+										// but a line plot contains from and to points
+										// solve this by only adding p1, and make sure to add p2 as the very last point
+										vertexes.Add(p1);
+										curP2 = p2; // store p2 for later
+									}
+								}
+								vertexes.Add(curP2);
+
+								if (vertexes.Count > 0)
+								{
+									// add information
+									var poly = new DrawPolyline();
+									poly.Vertexes = vertexes;
+									poly.IsVisible = true;
+									Polylines.Add(poly);
+								}
+							}
+							else
+							{
+								// do not render arcs as polyline
+								// use real arc's instead
+
+								// figure out our deltas
+								var endpoint = pos;
+								double aX = current.X - center.X;
+								double aY = current.Y - center.Y;
+								double bX = endpoint.X - center.X;
+								double bY = endpoint.Y - center.Y;
+
+								// angle variables.
+								var clockwise = (CommandType == CommandType.CWArc);
+								double angleA;
+								double angleB;
+								if (clockwise)
+								{
+									// Clockwise
+									angleA = Math.Atan2(bY, bX);
+									angleB = Math.Atan2(aY, aX);
+								}
+								else
+								{
+									// Counterclockwise
+									angleA = Math.Atan2(aY, aX);
+									angleB = Math.Atan2(bY, bX);
+								}
+
+								// Make sure angleB is always greater than angleA
+								// and if not add 2PI so that it is (this also takes
+								// care of the special case of angleA == angleB,
+								// ie we want a complete circle)
+								if (angleB <= angleA)
+								{
+									angleB += 2 * Math.PI;
+								}
+
+								// calculate a couple useful things.
+								double radius = Math.Sqrt(aX * aX + aY * aY);
+
+								AddArc(new PointF(center.X, center.Y), (float)radius, (float)Transformation.RadianToDegree(angleA), (float)Transformation.RadianToDegree(angleB));
+
+								// store the last position
+								currentPosition.X = pos.X;
+								currentPosition.Y = pos.Y;
+								currentPosition.Z = pos.Z;
+							}
 						}
 					}
 				}
+
 				CalculateBounds();
 			}
 		}
@@ -1015,20 +1030,12 @@ namespace CAMToolsNet.Models
 					var centerX = a.Center.X;
 					var centerY = a.Center.Y;
 					var centerZ = a.Center.Z;
-					var radius = a.Radius;
-					var startAngle = a.StartAngle;
-					var endAngle = a.EndAngle;
 
-					// var startX = centerX + Math.Cos((startAngle * Math.PI) / 180) * radius;
-					// var startY = centerY + Math.Sin((startAngle * Math.PI) / 180) * radius;
-					// var endX = centerX + Math.Cos((endAngle * Math.PI) / 180) * radius;
-					// var endY = centerY + Math.Sin((endAngle * Math.PI) / 180) * radius;
-
-					var b = Transformation.GetArcBounds((double)startAngle, (double)endAngle, (double)radius);
-					var startX = b.Min.X + centerX;
-					var startY = b.Min.Y + centerY;
-					var endX = b.Max.X + centerX + (b.Max.X - b.Min.X);
-					var endY = b.Max.Y + centerY + (b.Max.Y - b.Min.Y);
+					var box = Transformation.GetArcBounds(Transformation.DegreeToRadian(a.StartAngle), Transformation.DegreeToRadian(a.EndAngle), a.Radius);
+					var startX = box.X + centerX;
+					var startY = box.Y + centerY;
+					var endX = box.X + centerX + box.Width;
+					var endY = box.Y + centerY + box.Height;
 
 					curX = startX;
 					curY = startY;

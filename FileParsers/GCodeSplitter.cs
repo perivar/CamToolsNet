@@ -50,19 +50,19 @@ namespace GCode
 
 			float currentFeedrate = 0.0f;
 
-			var currentPos = Point3D.Empty;     // current position as read
-			var previousPos = Point3D.Empty;    // current position as read
-			var centerPos = Point3D.Empty;      // center position as read
+			var currentPos = new Point3D();     // current position as read
+			var previousPos = new Point3D();    // current position as read
+			var centerPos = new Point3D();      // center position as read
 
-			var currentPosAtOrigin = Point3D.Empty;     // current position, shifted
-			var previousPosAtOrigin = Point3D.Empty;    // last position, shifted
-			var centerPosAtOrigin = Point3D.Empty;      // center position, shifted
+			var currentPosAtOrigin = new Point3D();     // current position, shifted
+			var previousPosAtOrigin = new Point3D();    // last position, shifted
+			var centerPosAtOrigin = new Point3D();      // center position, shifted
 
-			var A = Point3D.Empty;
-			var B = Point3D.Empty;
-			var C = Point3D.Empty;
-			var D = Point3D.Empty;
-			var E = Point3D.Empty;
+			var A = new Point3D();
+			var B = new Point3D();
+			var C = new Point3D();
+			var D = new Point3D();
+			var E = new Point3D();
 
 			var cross = new List<Point3D>();    // number of intersections found
 
@@ -328,7 +328,7 @@ namespace GCode
 		/// <returns>previous point as a Point3D or Empty</returns>
 		private static Point3D GetPreviousPoint(IList<GCodeInstruction> instructions)
 		{
-			var prevPoint = Point3D.Empty;
+			var prevPoint = new Point3D();
 
 			if (instructions.Count == 0) return prevPoint;
 

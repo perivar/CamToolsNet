@@ -151,10 +151,10 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
       this.ctx.save();
       this.ctx.scale(devicePixelRatio, devicePixelRatio);
       this.ctx.fillStyle = 'white';
-      this.ctx.fillRect(10, 42, 120, 10);
+      this.ctx.fillRect(10, 52, 200, 10);
       this.ctx.font = '10px sans-serif';
       this.ctx.fillStyle = 'black';
-      this.ctx.fillText(`pos: ${round2TwoDecimal(mousePos.x)} , ${round2TwoDecimal(mousePos.y)}`, 10, 50);
+      this.ctx.fillText(`Pos: ${round2TwoDecimal(mousePos.x)} , ${round2TwoDecimal(mousePos.y)}`, 10, 60);
       this.ctx.restore();
     }
 
@@ -363,11 +363,6 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
         const { radius } = a;
         const { startAngle } = a;
         const { endAngle } = a;
-
-        // const startX = centerX + Math.cos((startAngle * Math.PI) / 180) * radius;
-        // const startY = centerY + Math.sin((startAngle * Math.PI) / 180) * radius;
-        // const endX = centerX + Math.cos((endAngle * Math.PI) / 180) * radius;
-        // const endY = centerY + Math.sin((endAngle * Math.PI) / 180) * radius;
 
         const box = this.getArcBoundingBox(startAngle * DEG_TO_RAD, endAngle * DEG_TO_RAD, radius);
         const startX = box.x + centerX;
@@ -783,35 +778,26 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
       this.ctx.save();
       this.ctx.scale(devicePixelRatio, devicePixelRatio);
       this.ctx.font = '10px sans-serif';
-      this.ctx.fillText(`scale: ${round2TwoDecimal(scale)}`, 10, 10);
-      this.ctx.fillText(`panning: ${round2TwoDecimal(translatePos.x)} , ${round2TwoDecimal(translatePos.y)}`, 10, 20);
+      this.ctx.fillText(`Filename: ${this.drawModel.fileName}`, 10, 10);
+      this.ctx.fillText(`Scale: ${round2TwoDecimal(scale)}`, 10, 20);
+      this.ctx.fillText(`Panning: ${round2TwoDecimal(translatePos.x)} , ${round2TwoDecimal(translatePos.y)}`, 10, 30);
 
       // get locally calculated bounds
       this.ctx.fillText(
-        `local bounds X: ${round2TwoDecimal(this.bounds.min.x)} to ${round2TwoDecimal(this.bounds.max.x)}`,
-        10,
-        30
-      );
-      this.ctx.fillText(
-        `local bounds Y: ${round2TwoDecimal(this.bounds.min.y)} to ${round2TwoDecimal(this.bounds.max.y)}`,
+        `Local Bounds: ${round2TwoDecimal(this.bounds.min.x)}:${round2TwoDecimal(
+          this.bounds.min.y
+        )} - ${round2TwoDecimal(this.bounds.max.x)}:${round2TwoDecimal(this.bounds.max.y)}`,
         10,
         40
       );
 
       // get bounds from the fetched model
       this.ctx.fillText(
-        `remote bounds X: ${round2TwoDecimal(this.drawModel.bounds.min.x)} to ${round2TwoDecimal(
-          this.drawModel.bounds.max.x
-        )}`,
+        `Model Bounds: ${round2TwoDecimal(this.drawModel.bounds.min.x)}:${round2TwoDecimal(
+          this.drawModel.bounds.min.y
+        )} - ${round2TwoDecimal(this.drawModel.bounds.max.x)}:${round2TwoDecimal(this.drawModel.bounds.max.y)}`,
         10,
-        60
-      );
-      this.ctx.fillText(
-        `remote bounds Y: ${round2TwoDecimal(this.drawModel.bounds.min.y)} to ${round2TwoDecimal(
-          this.drawModel.bounds.max.y
-        )}`,
-        10,
-        70
+        50
       );
 
       this.ctx.restore();

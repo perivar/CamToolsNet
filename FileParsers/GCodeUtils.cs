@@ -497,7 +497,7 @@ namespace GCode
 		public static List<GCodeInstruction> GetMinimizeGCode(List<GCodeInstruction> instructions)
 		{
 			var cleanedList = new List<GCodeInstruction>();
-			var prevInstruction = new GCodeInstruction(CommandType.RapidMove, Point3D.Empty, 0);
+			var prevInstruction = new GCodeInstruction(CommandType.RapidMove, new Point3D(), 0);
 
 			CommandType mvtype = CommandType.Other;
 
@@ -802,7 +802,7 @@ namespace GCode
 		public static List<Block> GetBlocks(List<GCodeInstruction> instructions)
 		{
 			var blocks = new List<Block>();
-			var currentPoint = Point3D.Empty;
+			var currentPoint = new Point3D();
 
 			// convert instructions into splitted gcode instructions
 			var gcodeGroupObject = GCodeUtils.GroupGCodeInstructions(instructions);

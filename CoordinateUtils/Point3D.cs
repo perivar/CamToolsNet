@@ -13,12 +13,12 @@ namespace CoordinateUtils
 		public float Y { get; set; }
 		public float Z { get; set; }
 
-		public static readonly Point3D Empty = new Point3D(0, 0, 0);
-
 		// parameter-less constructor needed for de-serialization
 		public Point3D()
 		{
-
+			X = 0;
+			Y = 0;
+			Z = 0;
 		}
 
 		public Point3D(float x, float y, float z)

@@ -10,7 +10,7 @@ namespace GCode
 	/// </summary>
 	public class Point3DBlock : IPoint2D
 	{
-		private Point3D point = Point3D.Empty;
+		private Point3D point = new Point3D();
 
 		private List<GCodeInstruction> gcodeInstructions = new List<GCodeInstruction>();
 		public List<GCodeInstruction> GCodeInstructions { get { return gcodeInstructions; } }
