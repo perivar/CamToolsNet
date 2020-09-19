@@ -27,14 +27,14 @@ namespace GCode
 		/// </summary>
 		/// <param name="instructions">list of gcode instructions</param>
 		/// <param name="splitPoint">Point3D describing the split coordinates</param>
-		/// <param name="angle">Whether the split should happen in an angle</param>
+		/// <param name="angleDegrees">Whether the split should happen in an angle (as degrees)</param>
 		/// <param name="zClearance">z-height (clearance) to use in added rapid moves</param>
 		/// <returns>List of tiles</returns>
 		/// <remarks>
 		/// Ported from the G-Code_Ripper-0.14 Python App
 		/// Method: def split_code(self,code2split,shift=[0,0,0],angle=0.0)
 		/// </remarks>
-		public static List<List<GCodeInstruction>> Split(List<GCodeInstruction> instructions, Point3D splitPoint, float angle, float zClearance)
+		public static List<List<GCodeInstruction>> Split(List<GCodeInstruction> instructions, Point3D splitPoint, float angleDegrees, float zClearance)
 		{
 			// G0 (Rapid), G1 (linear), G2 (clockwise arc) or G3 (counterclockwise arc).
 			CommandType command = CommandType.Other;
@@ -66,9 +66,9 @@ namespace GCode
 
 			var cross = new List<Point3D>();    // number of intersections found
 
-#if DEBUG
-			Debug.WriteLine("Split point: {0}, angle: {1} z-clearance: {2}", splitPoint, angle, zClearance);
-#endif
+			// #if DEBUG
+			// 			Debug.WriteLine("Split point: {0}, angle: {1} z-clearance: {2}", splitPoint, angle, zClearance);
+			// #endif
 			int numInstructions = 1;
 			foreach (var currentInstruction in instructions)
 			{
@@ -103,8 +103,8 @@ namespace GCode
 				{
 
 					// shift and rotate so that we can work with the coordinate system at origin (0, 0)
-					currentPosAtOrigin = SetOffsetAndRotation(currentPos, splitPoint, angle);
-					previousPosAtOrigin = SetOffsetAndRotation(previousPos, splitPoint, angle);
+					currentPosAtOrigin = SetOffsetAndRotation(currentPos, splitPoint, angleDegrees);
+					previousPosAtOrigin = SetOffsetAndRotation(previousPos, splitPoint, angleDegrees);
 
 					// store center point
 					if (currentInstruction.I.HasValue && currentInstruction.J.HasValue)
@@ -113,7 +113,7 @@ namespace GCode
 												previousPos.Y + currentInstruction.J.Value,
 												currentPos.Z);
 
-						centerPosAtOrigin = SetOffsetAndRotation(centerPos, splitPoint, angle);
+						centerPosAtOrigin = SetOffsetAndRotation(centerPos, splitPoint, angleDegrees);
 					}
 
 					// determine what side the move belongs to
@@ -204,14 +204,14 @@ namespace GCode
 					// Handle normal moves
 					if (command == CommandType.NormalMove)
 					{
-						A = UnsetOffsetAndRotation(previousPosAtOrigin, splitPoint, angle);
-						C = UnsetOffsetAndRotation(currentPosAtOrigin, splitPoint, angle);
+						A = UnsetOffsetAndRotation(previousPosAtOrigin, splitPoint, angleDegrees);
+						C = UnsetOffsetAndRotation(currentPosAtOrigin, splitPoint, angleDegrees);
 						cross = GetLineIntersect(previousPosAtOrigin, currentPosAtOrigin, xsplit);
 
 						if (cross.Count > 0)
 						{
 							// Line crosses boundary
-							B = UnsetOffsetAndRotation(cross[0], splitPoint, angle);
+							B = UnsetOffsetAndRotation(cross[0], splitPoint, angleDegrees);
 							app[thisSide].AddRange(GCodeInstruction.GetInstructions(command, A, B, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
 							app[otherSide].AddRange(GCodeInstruction.GetInstructions(command, B, C, currentFeedrate, splitPoint, otherSide, GetPreviousPoint(app[otherSide]), zClearance));
 						}
@@ -237,15 +237,15 @@ namespace GCode
 					// Handle Arc moves
 					if (command == CommandType.CWArc || command == CommandType.CCWArc)
 					{
-						A = UnsetOffsetAndRotation(previousPosAtOrigin, splitPoint, angle);
-						C = UnsetOffsetAndRotation(currentPosAtOrigin, splitPoint, angle);
-						D = UnsetOffsetAndRotation(centerPosAtOrigin, splitPoint, angle);
+						A = UnsetOffsetAndRotation(previousPosAtOrigin, splitPoint, angleDegrees);
+						C = UnsetOffsetAndRotation(currentPosAtOrigin, splitPoint, angleDegrees);
+						D = UnsetOffsetAndRotation(centerPosAtOrigin, splitPoint, angleDegrees);
 						cross = GetArcIntersects(previousPosAtOrigin, currentPosAtOrigin, centerPosAtOrigin, xsplit, command);
 
 						if (cross.Count > 0)
 						{
 							// Arc crosses boundary at least once
-							B = UnsetOffsetAndRotation(cross[0], splitPoint, angle);
+							B = UnsetOffsetAndRotation(cross[0], splitPoint, angleDegrees);
 
 							// Check length of arc before writing
 							if (Transformation.Distance(B, A) > SELF_ACCURACY)
@@ -264,7 +264,7 @@ namespace GCode
 
 							if (cross.Count == 2)
 							{ // Arc crosses boundary twice
-								E = UnsetOffsetAndRotation(cross[1], splitPoint, angle);
+								E = UnsetOffsetAndRotation(cross[1], splitPoint, angleDegrees);
 
 								// Check length of arc before writing
 								if (Transformation.Distance(E, B) > SELF_ACCURACY)
@@ -297,12 +297,12 @@ namespace GCode
 					}
 				}
 
-#if DEBUG
-				if (command == CommandType.RapidMove) Debug.WriteLine("{0} [{1}={2}], [{3}={4}]", command, previousPos, previousPosAtOrigin, currentPos, currentPosAtOrigin);
-				if (command == CommandType.NormalMove) Debug.WriteLine("{0} [{1}={2}], [{3}={4}] {5}", command, previousPos, previousPosAtOrigin, currentPos, currentPosAtOrigin, currentFeedrate);
-				if (command == CommandType.CWArc || command == CommandType.CCWArc)
-					Debug.WriteLine("{0} [{1}={2}], [{3}={4}] [{5}={6}] {7}", command, previousPos, previousPosAtOrigin, currentPos, currentPosAtOrigin, centerPos, centerPosAtOrigin, currentFeedrate);
-#endif
+				// #if DEBUG
+				// 				if (command == CommandType.RapidMove) Debug.WriteLine("{0} [{1}={2}], [{3}={4}]", command, previousPos, previousPosAtOrigin, currentPos, currentPosAtOrigin);
+				// 				if (command == CommandType.NormalMove) Debug.WriteLine("{0} [{1}={2}], [{3}={4}] {5}", command, previousPos, previousPosAtOrigin, currentPos, currentPosAtOrigin, currentFeedrate);
+				// 				if (command == CommandType.CWArc || command == CommandType.CCWArc)
+				// 					Debug.WriteLine("{0} [{1}={2}], [{3}={4}] [{5}={6}] {7}", command, previousPos, previousPosAtOrigin, currentPos, currentPosAtOrigin, centerPos, centerPosAtOrigin, currentFeedrate);
+				// #endif
 
 				// store current position
 				previousPos = new Point3D(currentPos);
@@ -583,21 +583,21 @@ namespace GCode
 				output.Add(new Point3D(xcross2, ycross2, zcross2));
 			}
 
-#if DEBUG
-			Debug.WriteLine(" start: x1 ={0:0.####} y1={1:0.####} z1={2:0.####}", p1.X, p1.Y, p1.Z);
-			Debug.WriteLine("   end: x2 ={0:0.####} y2={1:0.####} z2={2:0.####}", p2.X, p2.Y, p2.Z);
-			Debug.WriteLine("center: xc ={0:0.####} yc={1:0.####} xsplit={2:0.####} code={3}", cent.X, cent.Y, xsplit, code);
-			Debug.WriteLine("R = {0:0.####}", R);
-			Debug.WriteLine("theta ={0:0.####}", theta1);
-			Debug.WriteLine("beta  ={0:0.####} gamma1={1:0.####} gamma2={2:0.####}", beta, gamma1, gamma2);
-			int cnt = 1;
-			foreach (var line in output)
-			{
-				Debug.WriteLine("arc cross {0}: {1:0.####}, {2:0.####}, {3:0.####}", cnt, line.X, line.Y, line.Z);
-				cnt++;
-			}
-			Debug.WriteLine("----------------------------------------------");
-#endif
+			// #if DEBUG
+			// 			Debug.WriteLine(" start: x1 ={0:0.####} y1={1:0.####} z1={2:0.####}", p1.X, p1.Y, p1.Z);
+			// 			Debug.WriteLine("   end: x2 ={0:0.####} y2={1:0.####} z2={2:0.####}", p2.X, p2.Y, p2.Z);
+			// 			Debug.WriteLine("center: xc ={0:0.####} yc={1:0.####} xsplit={2:0.####} code={3}", cent.X, cent.Y, xsplit, code);
+			// 			Debug.WriteLine("R = {0:0.####}", R);
+			// 			Debug.WriteLine("theta ={0:0.####}", theta1);
+			// 			Debug.WriteLine("beta  ={0:0.####} gamma1={1:0.####} gamma2={2:0.####}", beta, gamma1, gamma2);
+			// 			int cnt = 1;
+			// 			foreach (var line in output)
+			// 			{
+			// 				Debug.WriteLine("arc cross {0}: {1:0.####}, {2:0.####}, {3:0.####}", cnt, line.X, line.Y, line.Z);
+			// 				cnt++;
+			// 			}
+			// 			Debug.WriteLine("----------------------------------------------");
+			// #endif
 
 			return output;
 		}
@@ -643,7 +643,6 @@ namespace GCode
 
 		private static Point3D SetOffsetAndRotation(Point3D point, Point3D center, float degrees)
 		{
-
 			// How to properly rotate point around another point
 			// 1. A translation that brings point 1 to the origin (0,0)
 			// 2. Rotation around the origin by the required angle

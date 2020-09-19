@@ -820,19 +820,29 @@ namespace CAMToolsNet.Models
 									angleB = Math.Atan2(bY, bX);
 								}
 
-								// Make sure angleB is always greater than angleA
-								// and if not add 2PI so that it is (this also takes
-								// care of the special case of angleA == angleB,
-								// ie we want a complete circle)
-								if (angleB <= angleA)
-								{
-									angleB += 2 * Math.PI;
-								}
-
 								// calculate a couple useful things.
 								double radius = Math.Sqrt(aX * aX + aY * aY);
 
-								AddArc(new PointF(center.X, center.Y), (float)radius, (float)Transformation.RadianToDegree(angleA), (float)Transformation.RadianToDegree(angleB));
+								// check if this is a full circle
+								if (angleA == angleB)
+								{
+									// full circle
+									AddCircle(new PointF(center.X, center.Y), (float)radius);
+								}
+								else
+								{
+									// Make sure angleB is always greater than angleA
+									// and if not add 2PI so that it is (this also takes
+									// care of the special case of angleA == angleB,
+									// ie we want a complete circle)
+									if (angleB < angleA)
+									{
+										angleB += 2 * Math.PI;
+									}
+
+									AddArc(new PointF(center.X, center.Y), (float)radius, (float)Transformation.RadianToDegree(angleA), (float)Transformation.RadianToDegree(angleB));
+								}
+
 
 								// store the last position
 								currentPosition.X = pos.X;

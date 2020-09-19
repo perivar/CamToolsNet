@@ -756,27 +756,25 @@ namespace GCode
 
 			foreach (var instruction in instructions)
 			{
-				if (instruction.HasXY)
+				// I, J are relative to current position so translate before rotating
+				if (instruction.I.HasValue && instruction.J.HasValue)
 				{
-					// I, J are relative to current position so translate before rotating
-					if (instruction.I.HasValue && instruction.J.HasValue)
-					{
-						i = instruction.I.Value + ox;
-						j = instruction.J.Value + oy;
+					i = instruction.I.Value + ox;
+					j = instruction.J.Value + oy;
 
-						var rotatedIJPoint = Transformation.Rotate(i, j, center.X, center.Y, degrees);
-						instruction.I = rotatedIJPoint.X - nx;
-						instruction.J = rotatedIJPoint.Y - ny;
-					}
-
-					// Do the X, Y co-ordinates
-					if (instruction.X.HasValue && instruction.Y.HasValue)
-					{
-						var rotatedXYPoint = Transformation.Rotate(instruction.X.Value, instruction.Y.Value, center.X, center.Y, degrees);
-						instruction.X = rotatedXYPoint.X;
-						instruction.Y = rotatedXYPoint.Y;
-					}
+					var rotatedIJPoint = Transformation.Rotate(i, j, center.X, center.Y, degrees);
+					instruction.I = rotatedIJPoint.X - nx;
+					instruction.J = rotatedIJPoint.Y - ny;
 				}
+
+				// Do the X, Y co-ordinates
+				if (instruction.X.HasValue && instruction.Y.HasValue)
+				{
+					var rotatedXYPoint = Transformation.Rotate(instruction.X.Value, instruction.Y.Value, center.X, center.Y, degrees);
+					instruction.X = rotatedXYPoint.X;
+					instruction.Y = rotatedXYPoint.Y;
+				}
+
 				transformed.Add(instruction);
 
 				// Save position

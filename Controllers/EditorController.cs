@@ -304,17 +304,20 @@ namespace CAMToolsNet.Controllers
 			return Ok();
 		}
 
-		[HttpGet("Rotate/{angle:float}")]  // GET /api/Editor/Rotate/20
-		public IActionResult Rotate(float angle)
+		[HttpGet("Rotate/{degrees:float}")]  // GET /api/Editor/Rotate/20
+		public IActionResult Rotate(float degrees)
 		{
 			var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
 			var gCode = DrawModel.ToGCode(drawModel);
+			SaveToFile("before_rotate.txt", gCode);
+
 			var parsedInstructions = SimpleGCodeParser.ParseText(gCode);
 
 			var center = new PointF(0, 0);
-			if (angle == 0) angle = 90;
-			var gcodeInstructions = GCodeUtils.GetRotatedGCode(parsedInstructions, center, angle);
+			if (degrees == 0) degrees = 90;
+			var gcodeInstructions = GCodeUtils.GetRotatedGCode(parsedInstructions, center, degrees);
 			var gCodeResult = GCodeUtils.GetGCode(gcodeInstructions);
+			SaveToFile("after_rotate.txt", gCodeResult);
 
 			// convert gcode to draw model
 			var newDrawModel = DrawModel.FromGCode(gCodeResult, drawModel.FileName);
@@ -323,8 +326,8 @@ namespace CAMToolsNet.Controllers
 			return Ok();
 		}
 
-		[HttpGet("Split/{xSplit:float}/{xSplitAngle:float}/{zClearance:float}")]  // GET /api/Editor/Split/20/10/20
-		public IActionResult Split(float xSplit, float xSplitAngle, float zClearance)
+		[HttpGet("Split/{xSplit:float}/{splitDegrees:float}/{zClearance:float}")]  // GET /api/Editor/Split/20/10/20
+		public IActionResult Split(float xSplit, float splitDegrees, float zClearance)
 		{
 			int index = 0; // which side to get back
 			if (xSplit != 0)
@@ -335,7 +338,7 @@ namespace CAMToolsNet.Controllers
 				SaveToFile("before_split.txt", gCode);
 
 				var parsedInstructions = SimpleGCodeParser.ParseText(gCode);
-				var gCodeArray = GCodeSplitter.Split(parsedInstructions, splitPoint, xSplitAngle, zClearance);
+				var gCodeArray = GCodeSplitter.Split(parsedInstructions, splitPoint, splitDegrees, zClearance);
 				SaveToFile("after_split_1.txt", GCodeUtils.GetGCode(gCodeArray[0]));
 				SaveToFile("after_split_2.txt", GCodeUtils.GetGCode(gCodeArray[1]));
 
@@ -344,7 +347,6 @@ namespace CAMToolsNet.Controllers
 				SaveToFile("after_clean.txt", GCodeUtils.GetGCode(cleanedGCode));
 
 				var gCodeResult = Block.BuildGCodeOutput("Block_1", cleanedGCode, false);
-				// var gCodeResult = GCodeUtils.GetGCode(gCodeArray[index]);
 				SaveToFile("after_build_output.txt", gCodeResult);
 
 				// convert gcode to draw model
