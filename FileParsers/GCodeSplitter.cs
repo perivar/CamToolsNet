@@ -70,30 +70,30 @@ namespace GCode
 			Debug.WriteLine("Split point: {0}, angle: {1} z-clearance: {2}", splitPoint, angle, zClearance);
 #endif
 			int numInstructions = 1;
-			foreach (var instruction in instructions)
+			foreach (var currentInstruction in instructions)
 			{
 				// store move type
-				command = instruction.CommandType;
+				command = currentInstruction.CommandType;
 
 				// merge previous coordinates with newer ones to maintain correct point coordinates
-				if ((instruction.X.HasValue || instruction.Y.HasValue || instruction.Z.HasValue
-					 || instruction.F.HasValue))
+				if ((currentInstruction.X.HasValue || currentInstruction.Y.HasValue || currentInstruction.Z.HasValue
+					 || currentInstruction.F.HasValue))
 				{
-					if (instruction.X.HasValue && instruction.X.Value != currentPos.X)
+					if (currentInstruction.X.HasValue && currentInstruction.X.Value != currentPos.X)
 					{
-						currentPos.X = instruction.X.Value;
+						currentPos.X = currentInstruction.X.Value;
 					}
-					if (instruction.Y.HasValue && instruction.Y.Value != currentPos.Y)
+					if (currentInstruction.Y.HasValue && currentInstruction.Y.Value != currentPos.Y)
 					{
-						currentPos.Y = instruction.Y.Value;
+						currentPos.Y = currentInstruction.Y.Value;
 					}
-					if (instruction.Z.HasValue && instruction.Z.Value != currentPos.Z)
+					if (currentInstruction.Z.HasValue && currentInstruction.Z.Value != currentPos.Z)
 					{
-						currentPos.Z = instruction.Z.Value;
+						currentPos.Z = currentInstruction.Z.Value;
 					}
-					if (instruction.F.HasValue && instruction.F.Value != currentFeedrate)
+					if (currentInstruction.F.HasValue && currentInstruction.F.Value != currentFeedrate)
 					{
-						currentFeedrate = instruction.F.Value;
+						currentFeedrate = currentInstruction.F.Value;
 					}
 				}
 
@@ -107,10 +107,10 @@ namespace GCode
 					previousPosAtOrigin = SetOffsetAndRotation(previousPos, splitPoint, angle);
 
 					// store center point
-					if (instruction.I.HasValue && instruction.J.HasValue)
+					if (currentInstruction.I.HasValue && currentInstruction.J.HasValue)
 					{
-						centerPos = new Point3D(previousPos.X + instruction.I.Value,
-												previousPos.Y + instruction.J.Value,
+						centerPos = new Point3D(previousPos.X + currentInstruction.I.Value,
+												previousPos.Y + currentInstruction.J.Value,
 												currentPos.Z);
 
 						centerPosAtOrigin = SetOffsetAndRotation(centerPos, splitPoint, angle);
@@ -290,10 +290,10 @@ namespace GCode
 				{
 					// if not any normal or arc moves, store the instruction in both lists
 					// rapid moves are also handled here
-					if (instruction.CommandType != CommandType.RapidMove)
+					if (currentInstruction.CommandType != CommandType.RapidMove)
 					{
-						app[0].Add(instruction);
-						app[1].Add(instruction);
+						app[0].Add(currentInstruction);
+						app[1].Add(currentInstruction);
 					}
 				}
 
@@ -305,7 +305,7 @@ namespace GCode
 #endif
 
 				// store current position
-				previousPos = currentPos;
+				previousPos = new Point3D(currentPos);
 
 				// count number of instructions processed
 				numInstructions++;
@@ -387,7 +387,6 @@ namespace GCode
 		/// <returns>a list with at most one intersect point</returns>
 		public static List<Point3D> GetLineIntersect(Point3D p1, Point3D p2, float xsplit)
 		{
-
 			var output = new List<Point3D>();
 
 			// the coordinate system is shifted so that X is 0
@@ -452,7 +451,6 @@ namespace GCode
 		/// <returns>a list of intersect points</returns>
 		public static List<Point3D> GetArcIntersects(Point3D p1, Point3D p2, Point3D cent, float xsplit, CommandType code)
 		{
-
 			var output = new List<Point3D>();
 
 			// the coordinate system is shifted so that X is 0
@@ -576,10 +574,14 @@ namespace GCode
 			// angles of the beta point and the X-axis.
 			// if not the cross points are outside the arc and shouldn't be included
 			if (gamma1 < beta && gamma1 > SELF_ZERO && gamma1 < beta - SELF_ZERO)
+			{
 				output.Add(new Point3D(xcross1, ycross1, zcross1));
+			}
 
 			if (gamma2 < beta && gamma1 > SELF_ZERO && gamma2 < beta - SELF_ZERO)
+			{
 				output.Add(new Point3D(xcross2, ycross2, zcross2));
+			}
 
 #if DEBUG
 			Debug.WriteLine(" start: x1 ={0:0.####} y1={1:0.####} z1={2:0.####}", p1.X, p1.Y, p1.Z);

@@ -208,12 +208,12 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
             <Button className="mb-1" title="Trim" variant="info" onClick={this.onTrim} size="sm">
               Trim X and Y
             </Button>
-            {/* <Button className="mb-1" title="Rotate" variant="info" onClick={this.onRotate} size="sm">
+            <Button className="mb-1" title="Rotate" variant="info" onClick={this.onRotate} size="sm">
               Rotate 45 degrees
-            </Button> */}
-            {/* <Button className="mb-1" title="Split" variant="info" onClick={this.onSplit} size="sm">
-              Split
-            </Button> */}
+            </Button>
+            <Button className="mb-1" title="Split" variant="info" onClick={this.onSplit} size="sm">
+              Split @ X100
+            </Button>
             <Button className="mb-1" title="ConvertToCircles" variant="info" onClick={this.onPolyToCircle} size="sm">
               Poly to Circle
             </Button>

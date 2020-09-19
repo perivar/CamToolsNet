@@ -326,31 +326,31 @@ namespace CAMToolsNet.Controllers
 		[HttpGet("Split/{xSplit:float}/{xSplitAngle:float}/{zClearance:float}")]  // GET /api/Editor/Split/20/10/20
 		public IActionResult Split(float xSplit, float xSplitAngle, float zClearance)
 		{
-			// int index = 0; // which side to get back
-			// if (xSplit != 0)
-			// {
-			// 	var splitPoint = new Point3D(xSplit, 0, 0);
-			// 	var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
-			// 	var gCode = DrawModel.ToGCode(drawModel);
-			// 	SaveToFile("before_split.txt", gCode);
+			int index = 0; // which side to get back
+			if (xSplit != 0)
+			{
+				var splitPoint = new Point3D(xSplit, 0, 0);
+				var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
+				var gCode = DrawModel.ToGCode(drawModel);
+				SaveToFile("before_split.txt", gCode);
 
-			// 	var parsedInstructions = SimpleGCodeParser.ParseText(gCode);
-			// 	var gCodeArray = GCodeSplitter.Split(parsedInstructions, splitPoint, xSplitAngle, zClearance);
-			// 	SaveToFile("after_split_1.txt", GCodeUtils.GetGCode(gCodeArray[0]));
-			// 	SaveToFile("after_split_2.txt", GCodeUtils.GetGCode(gCodeArray[1]));
+				var parsedInstructions = SimpleGCodeParser.ParseText(gCode);
+				var gCodeArray = GCodeSplitter.Split(parsedInstructions, splitPoint, xSplitAngle, zClearance);
+				SaveToFile("after_split_1.txt", GCodeUtils.GetGCode(gCodeArray[0]));
+				SaveToFile("after_split_2.txt", GCodeUtils.GetGCode(gCodeArray[1]));
 
-			// 	// clean up the mess with too many G0 commands
-			// 	var cleanedGCode = GCodeUtils.GetMinimizeGCode(gCodeArray[index]);
-			// 	SaveToFile("after_clean.txt", GCodeUtils.GetGCode(cleanedGCode));
+				// clean up the mess with too many G0 commands
+				var cleanedGCode = GCodeUtils.GetMinimizeGCode(gCodeArray[index]);
+				SaveToFile("after_clean.txt", GCodeUtils.GetGCode(cleanedGCode));
 
-			// 	// var gCodeResult = Block.BuildGCodeOutput("Block_1", cleanedGCode, false);
-			// 	var gCodeResult = GCodeUtils.GetGCode(gCodeArray[index]);
-			// 	SaveToFile("after_build_output.txt", gCodeResult);
+				var gCodeResult = Block.BuildGCodeOutput("Block_1", cleanedGCode, false);
+				// var gCodeResult = GCodeUtils.GetGCode(gCodeArray[index]);
+				SaveToFile("after_build_output.txt", gCodeResult);
 
-			// 	// convert gcode to draw model
-			// 	var newDrawModel = DrawModel.FromGCode(gCodeResult, drawModel.FileName);
-			// 	HttpContext.Session.SetObjectAsJson("DrawModel", newDrawModel);
-			// }
+				// convert gcode to draw model
+				var newDrawModel = DrawModel.FromGCode(gCodeResult, drawModel.FileName);
+				HttpContext.Session.SetObjectAsJson("DrawModel", newDrawModel);
+			}
 			return Ok();
 		}
 

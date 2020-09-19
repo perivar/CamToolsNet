@@ -41,6 +41,13 @@ namespace CoordinateUtils
 			Y = point.Y;
 			Z = 0;
 		}
+		public Point3D(Point3D oldPoint)
+		{
+			X = oldPoint.X;
+			Y = oldPoint.Y;
+			Z = oldPoint.Z;
+		}
+
 
 		[JsonIgnore]
 		public PointF PointF
