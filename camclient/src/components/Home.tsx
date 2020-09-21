@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Spinner, Button, Card, Col, Container, Row } from 'react-bootstrap';
+import { Alert, Spinner, Button, Card, Col, Container, Row, Form } from 'react-bootstrap';
 import Dropzone from 'react-dropzone';
 import axios from 'axios';
 import './Home.scss';
@@ -12,6 +12,9 @@ const config = { apiUrl: process.env.REACT_APP_API };
 export interface IHomeState {
   isLoading: boolean;
   isError: boolean;
+  xSplit: number;
+  splitIndex: number;
+  rotateDegrees: number;
   drawModel: DrawingModel;
 }
 
@@ -30,7 +33,10 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
         arcs: [],
         polylines: [],
         polylinesLW: []
-      }
+      },
+      xSplit: 100,
+      splitIndex: 0,
+      rotateDegrees: 45
     };
   }
 
@@ -72,6 +78,24 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
     }
   };
 
+  private onXSplitChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const { value } = e.currentTarget;
+    const splitValue = parseInt(value, 10);
+    this.setState({ xSplit: splitValue });
+  };
+
+  private onSplitIndexChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const { value } = e.currentTarget;
+    const splitSideValue = parseInt(value, 10);
+    this.setState({ splitIndex: splitSideValue });
+  };
+
+  private onRotateDegressChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const { value } = e.currentTarget;
+    const degreeValue = parseInt(value, 10);
+    this.setState({ rotateDegrees: degreeValue });
+  };
+
   private onPolyToCircle = () => {
     axios
       .get(`${config.apiUrl}/PolylineToCircles`, { withCredentials: true })
@@ -98,7 +122,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
 
   private onRotate = () => {
     axios
-      .get(`${config.apiUrl}/Rotate/45`, { withCredentials: true })
+      .get(`${config.apiUrl}/Rotate/${this.state.rotateDegrees}`, { withCredentials: true })
       .then((response) => {
         console.log(response);
         this.getDrawModel();
@@ -110,7 +134,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
 
   private onSplit = () => {
     axios
-      .get(`${config.apiUrl}/Split/100/0/5`, { withCredentials: true })
+      .get(`${config.apiUrl}/Split/${this.state.xSplit}/0/5/${this.state.splitIndex}`, { withCredentials: true })
       .then((response) => {
         console.log(response);
         this.getDrawModel();
@@ -175,7 +199,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
     return (
       <Container fluid>
         <Row className="my-2">
-          <Col xs={3} className="px-0 py-0 mx-1">
+          <Col xs={2} className="px-0 py-0 mx-1">
             <Card className="mb-2">
               <Card.Header>
                 <b>CAM tools</b> - read dxf, svg and gcode
@@ -205,21 +229,112 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
             )}
           </Col>
           <Col className="px-0 py-0 mx-1">
-            <Button className="mb-1" title="Trim" variant="info" onClick={this.onTrim} size="sm">
-              Trim X and Y
-            </Button>
-            <Button className="mb-1" title="Rotate" variant="info" onClick={this.onRotate} size="sm">
-              Rotate 45 degrees
-            </Button>
-            <Button className="mb-1" title="Split" variant="info" onClick={this.onSplit} size="sm">
-              Split @ X100
-            </Button>
-            <Button className="mb-1" title="ConvertToCircles" variant="info" onClick={this.onPolyToCircle} size="sm">
-              Poly to Circle
-            </Button>
-            <a className="btn btn-info btn-sm" href={`${config.apiUrl}/CirclesToLayers/false`}>
-              Circles to Layers
-            </a>
+            <Card className="mb-1">
+              <Card.Header className="px-2 py-1">Split</Card.Header>
+              <Card.Body className="px-1 py-1">
+                <Form className="align-items-center">
+                  <Form.Row>
+                    <Col>
+                      <Form.Label column="sm">X:</Form.Label>
+                    </Col>
+                    <Col>
+                      <Form.Control
+                        size="sm"
+                        type="number"
+                        defaultValue={this.state.xSplit}
+                        onChange={this.onXSplitChange}
+                      />
+                    </Col>
+                  </Form.Row>
+                  <Form.Row>
+                    <Col>
+                      <Form.Label column="sm">Page:</Form.Label>
+                    </Col>
+                    <Col>
+                      <Form.Check
+                        id="split-page-1"
+                        inline
+                        type="radio"
+                        value="0"
+                        label="1"
+                        checked={this.state.splitIndex === 0}
+                        onChange={this.onSplitIndexChange}
+                      />
+                      <Form.Check
+                        id="split-page-2"
+                        inline
+                        type="radio"
+                        value="1"
+                        label="2"
+                        checked={this.state.splitIndex === 1}
+                        onChange={this.onSplitIndexChange}
+                      />
+                    </Col>
+                  </Form.Row>
+                  <Form.Row>
+                    <Col sm={{ span: 10, offset: 2 }}>
+                      <Button className="mb-1" title="Split" variant="info" onClick={this.onSplit} size="sm">
+                        Split @ X{`${this.state.xSplit}`}
+                      </Button>
+                    </Col>
+                  </Form.Row>
+                </Form>
+              </Card.Body>
+            </Card>
+
+            <Card className="mb-1">
+              <Card.Header className="px-2 py-1">Rotate</Card.Header>
+              <Card.Body className="px-1 py-1">
+                <Form className="align-items-center">
+                  <Form.Row>
+                    <Col>
+                      <Form.Label column="sm">Degrees:</Form.Label>
+                    </Col>
+                    <Col>
+                      <Form.Control
+                        size="sm"
+                        type="number"
+                        defaultValue={this.state.rotateDegrees}
+                        onChange={this.onRotateDegressChange}
+                      />
+                    </Col>
+                  </Form.Row>
+                  <Form.Row>
+                    <Col sm={{ span: 10, offset: 2 }}>
+                      <Button className="mb-1" title="Rotate" variant="info" onClick={this.onRotate} size="sm">
+                        Rotate {`${this.state.rotateDegrees}`} degrees
+                      </Button>
+                    </Col>
+                  </Form.Row>
+                </Form>
+              </Card.Body>
+            </Card>
+
+            <Card className="mb-1">
+              <Card.Header className="px-2 py-1">Other</Card.Header>
+              <Card.Body className="px-1 py-1">
+                <Form className="align-items-center">
+                  <Form.Row>
+                    <Col sm={{ span: 10, offset: 2 }}>
+                      <Button className="mb-1" title="Trim" variant="info" onClick={this.onTrim} size="sm">
+                        Trim X and Y
+                      </Button>
+                      <Button
+                        className="mb-1"
+                        title="ConvertToCircles"
+                        variant="info"
+                        onClick={this.onPolyToCircle}
+                        size="sm">
+                        Poly to Circle
+                      </Button>
+                      <a className="btn btn-info btn-sm" href={`${config.apiUrl}/CirclesToLayers/false`}>
+                        Circles to Layers
+                      </a>
+                    </Col>
+                  </Form.Row>
+                </Form>
+              </Card.Body>
+            </Card>
           </Col>
         </Row>
       </Container>

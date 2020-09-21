@@ -308,52 +308,66 @@ namespace CAMToolsNet.Controllers
 		public IActionResult Rotate(float degrees)
 		{
 			var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
-			var gCode = DrawModel.ToGCode(drawModel);
-			SaveToFile("before_rotate.txt", gCode);
-
-			var parsedInstructions = SimpleGCodeParser.ParseText(gCode);
-
-			var center = new PointF(0, 0);
-			if (degrees == 0) degrees = 90;
-			var gcodeInstructions = GCodeUtils.GetRotatedGCode(parsedInstructions, center, degrees);
-			var gCodeResult = GCodeUtils.GetGCode(gcodeInstructions);
-			SaveToFile("after_rotate.txt", gCodeResult);
-
-			// convert gcode to draw model
-			var newDrawModel = DrawModel.FromGCode(gCodeResult, drawModel.FileName);
-			HttpContext.Session.SetObjectAsJson("DrawModel", newDrawModel);
-
-			return Ok();
-		}
-
-		[HttpGet("Split/{xSplit:float}/{splitDegrees:float}/{zClearance:float}")]  // GET /api/Editor/Split/20/10/20
-		public IActionResult Split(float xSplit, float splitDegrees, float zClearance)
-		{
-			int index = 0; // which side to get back
-			if (xSplit != 0)
+			if (drawModel != null)
 			{
-				var splitPoint = new Point3D(xSplit, 0, 0);
-				var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
 				var gCode = DrawModel.ToGCode(drawModel);
-				SaveToFile("before_split.txt", gCode);
+				SaveToFile("before_rotate.txt", gCode);
 
 				var parsedInstructions = SimpleGCodeParser.ParseText(gCode);
-				var gCodeArray = GCodeSplitter.Split(parsedInstructions, splitPoint, splitDegrees, zClearance);
-				SaveToFile("after_split_1.txt", GCodeUtils.GetGCode(gCodeArray[0]));
-				SaveToFile("after_split_2.txt", GCodeUtils.GetGCode(gCodeArray[1]));
+
+				var center = new PointF(0, 0);
+				if (degrees == 0) degrees = 90;
+				var gcodeInstructions = GCodeUtils.GetRotatedGCode(parsedInstructions, center, degrees);
+				SaveToFile("after_rotate.txt", GCodeUtils.GetGCode(gcodeInstructions));
 
 				// clean up the mess with too many G0 commands
-				var cleanedGCode = GCodeUtils.GetMinimizeGCode(gCodeArray[index]);
-				SaveToFile("after_clean.txt", GCodeUtils.GetGCode(cleanedGCode));
+				var cleanedGCode = GCodeUtils.GetMinimizeGCode(gcodeInstructions);
+				SaveToFile("after_rotate_clean.txt", GCodeUtils.GetGCode(cleanedGCode));
 
 				var gCodeResult = Block.BuildGCodeOutput("Block_1", cleanedGCode, false);
-				SaveToFile("after_build_output.txt", gCodeResult);
+				SaveToFile("after_rotate_build_output.txt", gCodeResult);
 
 				// convert gcode to draw model
 				var newDrawModel = DrawModel.FromGCode(gCodeResult, drawModel.FileName);
 				HttpContext.Session.SetObjectAsJson("DrawModel", newDrawModel);
+
+				return Ok();
 			}
-			return Ok();
+			return BadRequest();
+		}
+
+		[HttpGet("Split/{xSplit:float}/{splitDegrees:float}/{zClearance:float}/{index:int}")]  // GET /api/Editor/Split/20/10/20/0
+		public IActionResult Split(float xSplit, float splitDegrees, float zClearance, int index)
+		{
+			// index means which side to get back
+			if (xSplit != 0)
+			{
+				var splitPoint = new Point3D(xSplit, 0, 0);
+				var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
+				if (drawModel != null)
+				{
+					var gCode = DrawModel.ToGCode(drawModel);
+					SaveToFile("before_split.txt", gCode);
+
+					var parsedInstructions = SimpleGCodeParser.ParseText(gCode);
+					var gCodeArray = GCodeSplitter.Split(parsedInstructions, splitPoint, splitDegrees, zClearance);
+					SaveToFile("after_split_1.txt", GCodeUtils.GetGCode(gCodeArray[0]));
+					SaveToFile("after_split_2.txt", GCodeUtils.GetGCode(gCodeArray[1]));
+
+					// clean up the mess with too many G0 commands
+					var cleanedGCode = GCodeUtils.GetMinimizeGCode(gCodeArray[index]);
+					SaveToFile("after_split_clean.txt", GCodeUtils.GetGCode(cleanedGCode));
+
+					var gCodeResult = Block.BuildGCodeOutput("Block_1", cleanedGCode, false);
+					SaveToFile("after_split_build_output.txt", gCodeResult);
+
+					// convert gcode to draw model
+					var newDrawModel = DrawModel.FromGCode(gCodeResult, drawModel.FileName);
+					HttpContext.Session.SetObjectAsJson("DrawModel", newDrawModel);
+				}
+				return Ok();
+			}
+			return BadRequest();
 		}
 
 		private static void SaveToFile(string fileName, string content)

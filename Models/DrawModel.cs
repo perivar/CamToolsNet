@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Globalization;
 using System.Linq;
@@ -134,7 +135,7 @@ namespace CAMToolsNet.Models
 			}
 		}
 
-		public class DrawLine : DrawElement
+		public class DrawLine : DrawElement, IEquatable<DrawLine>
 		{
 			public Point3D StartPoint { get; set; }
 			public Point3D EndPoint { get; set; }
@@ -156,6 +157,24 @@ namespace CAMToolsNet.Models
 				StartPoint = new Point3D((float)l.StartPoint.X, (float)l.StartPoint.Y, (float)l.StartPoint.Z);
 				EndPoint = new Point3D((float)l.EndPoint.X, (float)l.EndPoint.Y, (float)l.EndPoint.Z);
 				IsVisible = true;
+			}
+
+			public bool Equals([AllowNull] DrawLine other)
+			{
+				return null != other
+				&& this.StartPoint == other.StartPoint
+				&& this.EndPoint == other.EndPoint
+				&& this.IsVisible == other.IsVisible;
+			}
+
+			public override bool Equals(object obj)
+			{
+				return Equals(obj as DrawLine);
+			}
+
+			public override int GetHashCode()
+			{
+				return base.GetHashCode();
 			}
 		}
 
@@ -723,13 +742,16 @@ namespace CAMToolsNet.Models
 							if (line.Pen == PenColorList.RapidMove)
 							{
 								// we represent rapid movements as invisible lines
-								var rapidLine = new DrawLine(new PointF(line.X1, line.Y1), new PointF(line.X2, line.Y2));
-								rapidLine.IsVisible = false;
-								Lines.Add(rapidLine);
+								// disable since these generate too many lines
+								// var rapidLine = new DrawLine(new PointF(line.X1, line.Y1), new PointF(line.X2, line.Y2));
+								// rapidLine.IsVisible = false;
+								// if (!Lines.Contains(rapidLine)) Lines.Add(rapidLine);
 							}
 							else
 							{
-								AddLine(new PointF(line.X1, line.Y1), new PointF(line.X2, line.Y2));
+								var normalLine = new DrawLine(new PointF(line.X1, line.Y1), new PointF(line.X2, line.Y2));
+								normalLine.IsVisible = true;
+								if (!Lines.Contains(normalLine)) Lines.Add(normalLine);
 							}
 							continue;
 						}
