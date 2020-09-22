@@ -15,6 +15,7 @@ export interface IHomeState {
   xSplit: number;
   splitIndex: number;
   rotateDegrees: number;
+  showArrows: boolean;
   drawModel: DrawingModel;
 }
 
@@ -36,7 +37,8 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
       },
       xSplit: 100,
       splitIndex: 0,
-      rotateDegrees: 45
+      rotateDegrees: 45,
+      showArrows: false
     };
   }
 
@@ -88,6 +90,12 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
     const { value } = e.currentTarget;
     const splitSideValue = parseInt(value, 10);
     this.setState({ splitIndex: splitSideValue });
+  };
+
+  private onShowArrowsChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const { value } = e.currentTarget;
+    const flipArrowSet = value === 'false';
+    this.setState({ showArrows: flipArrowSet });
   };
 
   private onRotateDegressChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
@@ -195,7 +203,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
   };
 
   render() {
-    const { isLoading, isError, drawModel } = this.state;
+    const { isLoading, isError, drawModel, showArrows } = this.state;
     return (
       <Container fluid>
         <Row className="my-2">
@@ -225,7 +233,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
                 <div>Loading drawing ...</div>
               </Alert>
             ) : (
-              <DrawingCanvas drawModel={drawModel} />
+              <DrawingCanvas drawModel={drawModel} showArrows={showArrows} />
             )}
           </Col>
           <Col className="px-0 py-0 mx-1">
@@ -316,6 +324,13 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
                 <Form className="align-items-center">
                   <Form.Row>
                     <Col sm={{ span: 10, offset: 2 }}>
+                      <Form.Check
+                        type="checkbox"
+                        label="Show arrows"
+                        value={`${this.state.showArrows}`}
+                        checked={this.state.showArrows === true}
+                        onChange={this.onShowArrowsChange}
+                      />
                       <Button className="mb-1" title="Trim" variant="info" onClick={this.onTrim} size="sm">
                         Trim X and Y
                       </Button>
@@ -327,8 +342,20 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
                         size="sm">
                         Poly to Circle
                       </Button>
+                    </Col>
+                  </Form.Row>
+                </Form>
+              </Card.Body>
+            </Card>
+
+            <Card className="mb-1">
+              <Card.Header className="px-2 py-1">Save</Card.Header>
+              <Card.Body className="px-1 py-1">
+                <Form className="align-items-center">
+                  <Form.Row>
+                    <Col sm={{ span: 10, offset: 2 }}>
                       <a className="btn btn-info btn-sm" href={`${config.apiUrl}/CirclesToLayers/false`}>
-                        Circles to Layers
+                        DXF Circles to Layers
                       </a>
                     </Col>
                   </Form.Row>
