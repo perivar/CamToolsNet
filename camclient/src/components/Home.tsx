@@ -4,7 +4,8 @@ import Dropzone from 'react-dropzone';
 import axios from 'axios';
 import './Home.scss';
 import DrawingCanvas from './DrawingCanvas';
-import { Arc, Circle, DrawingModel, Line, Polyline, PolylineLW } from '../types/DrawingModel';
+import { DrawArc, DrawCircle, DrawingModel, DrawLine, DrawPolyline, DrawPolylineLW } from '../types/DrawingModel';
+import { KonvaCanvas } from './KonvaCanvas';
 
 // read from .env files
 const config = { apiUrl: process.env.REACT_APP_API };
@@ -155,14 +156,14 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
   private onTrimDisabled = () => {
     const { drawModel } = this.state;
 
-    drawModel.circles.forEach((circle: Circle) => {
+    drawModel.circles.forEach((circle: DrawCircle) => {
       if (circle.isVisible) {
         circle.center.x -= drawModel.bounds.min.x;
         circle.center.y -= drawModel.bounds.min.y;
       }
     });
 
-    drawModel.lines.forEach((line: Line) => {
+    drawModel.lines.forEach((line: DrawLine) => {
       if (line.isVisible) {
         line.startPoint.x -= drawModel.bounds.min.x;
         line.startPoint.y -= drawModel.bounds.min.y;
@@ -171,14 +172,14 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
       }
     });
 
-    drawModel.arcs.forEach((a: Arc) => {
+    drawModel.arcs.forEach((a: DrawArc) => {
       if (a.isVisible) {
         a.center.x -= drawModel.bounds.min.x;
         a.center.y -= drawModel.bounds.min.y;
       }
     });
 
-    drawModel.polylines.forEach((p: Polyline) => {
+    drawModel.polylines.forEach((p: DrawPolyline) => {
       if (p.isVisible && p.vertexes.length >= 2) {
         for (let i = 0; i < p.vertexes.length; i++) {
           const vertex = p.vertexes[i];
@@ -188,7 +189,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
       }
     });
 
-    drawModel.polylinesLW.forEach((p: PolylineLW) => {
+    drawModel.polylinesLW.forEach((p: DrawPolylineLW) => {
       if (p.isVisible && p.vertexes.length >= 2) {
         for (let i = 0; i < p.vertexes.length; i++) {
           const vertex = p.vertexes[i];
@@ -234,6 +235,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
               </Alert>
             ) : (
               <DrawingCanvas drawModel={drawModel} showArrows={showArrows} />
+              // <KonvaCanvas drawModel={drawModel} showArrows={showArrows} />
             )}
           </Col>
           <Col className="px-0 py-0 mx-1">

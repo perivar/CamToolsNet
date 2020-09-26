@@ -1,6 +1,15 @@
 import React from 'react';
 import './DrawingCanvas.scss';
-import { Bounds, PointF, DrawingModel, Circle, Line, Arc, Polyline, PolylineLW } from '../types/DrawingModel';
+import {
+  Bounds,
+  PointF,
+  DrawingModel,
+  DrawCircle,
+  DrawLine,
+  DrawArc,
+  DrawPolyline,
+  DrawPolylineLW
+} from '../types/DrawingModel';
 
 function round2TwoDecimal(number: number): number {
   return Math.round((number + Number.EPSILON) * 100) / 100;
@@ -302,7 +311,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     let curX = 0;
     let curY = 0;
 
-    this.props.drawModel.circles.forEach((circle: Circle) => {
+    this.props.drawModel.circles.forEach((circle: DrawCircle) => {
       if (circle.isVisible) {
         const { x } = circle.center;
         const { y } = circle.center;
@@ -324,7 +333,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
       }
     });
 
-    this.props.drawModel.lines.forEach((line: Line) => {
+    this.props.drawModel.lines.forEach((line: DrawLine) => {
       if (line.isVisible) {
         const startX = line.startPoint.x;
         const startY = line.startPoint.y;
@@ -347,7 +356,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
       }
     });
 
-    this.props.drawModel.arcs.forEach((a: Arc) => {
+    this.props.drawModel.arcs.forEach((a: DrawArc) => {
       if (a.isVisible) {
         const centerX = a.center.x;
         const centerY = a.center.y;
@@ -385,7 +394,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
       }
     });
 
-    this.props.drawModel.polylines.forEach((p: Polyline) => {
+    this.props.drawModel.polylines.forEach((p: DrawPolyline) => {
       if (p.isVisible && p.vertexes.length >= 2) {
         for (let i = 0; i < p.vertexes.length; i++) {
           const vertex = p.vertexes[i];
@@ -402,7 +411,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
       }
     });
 
-    this.props.drawModel.polylinesLW.forEach((p: PolylineLW) => {
+    this.props.drawModel.polylinesLW.forEach((p: DrawPolylineLW) => {
       if (p.isVisible && p.vertexes.length >= 2) {
         for (let i = 0; i < p.vertexes.length; i++) {
           const vertex = p.vertexes[i];
@@ -545,7 +554,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
 
     // drawing circles
     context.beginPath(); // begin
-    this.props.drawModel.circles.forEach((circle: Circle) => {
+    this.props.drawModel.circles.forEach((circle: DrawCircle) => {
       const startAngle = 0;
       const endAngle = 2 * Math.PI;
       const { x } = circle.center;
@@ -574,7 +583,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
 
     // drawing lines
     let lineColor = '#44cc44';
-    this.props.drawModel.lines.forEach((line: Line) => {
+    this.props.drawModel.lines.forEach((line: DrawLine) => {
       const startX = line.startPoint.x;
       const startY = line.startPoint.y;
       const endX = line.endPoint.x;
@@ -609,7 +618,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     // done drawing lines
 
     // drawing arcs
-    this.props.drawModel.arcs.forEach((a: Arc) => {
+    this.props.drawModel.arcs.forEach((a: DrawArc) => {
       const centerX = a.center.x;
       const centerY = a.center.y;
       const { radius } = a;

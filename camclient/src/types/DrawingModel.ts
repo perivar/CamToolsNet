@@ -24,7 +24,7 @@ export interface VertexLW {
   bulge: number;
 }
 
-export interface Color {
+export interface DrawColor {
   r: number;
   g: number;
   b: number;
@@ -38,23 +38,23 @@ export interface Color {
 
 export interface BaseElement {
   codeName?: string;
-  color: Color;
+  color: DrawColor;
   isVisible: boolean;
   layerName?: string;
 }
 
-export interface Circle extends BaseElement {
+export interface DrawCircle extends BaseElement {
   center: Point3D;
   radius: number;
   thickness: number;
 }
 
-export interface Line extends BaseElement {
+export interface DrawLine extends BaseElement {
   startPoint: Point3D;
   endPoint: Point3D;
 }
 
-export interface Arc extends BaseElement {
+export interface DrawArc extends BaseElement {
   center: Point3D;
   radius: number;
   thickness: number;
@@ -62,12 +62,12 @@ export interface Arc extends BaseElement {
   endAngle: number;
 }
 
-export interface Polyline extends BaseElement {
+export interface DrawPolyline extends BaseElement {
   isClosed: boolean;
   vertexes: Vertex[];
 }
 
-export interface PolylineLW extends BaseElement {
+export interface DrawPolylineLW extends BaseElement {
   isClosed: boolean;
   vertexes: VertexLW[];
 }
@@ -75,9 +75,9 @@ export interface PolylineLW extends BaseElement {
 export interface DrawingModel {
   fileName: string;
   bounds: Bounds;
-  circles: Circle[];
-  lines: Line[];
-  arcs: Arc[];
-  polylines: Polyline[];
+  circles: DrawCircle[];
+  lines: DrawLine[];
+  arcs: DrawArc[];
+  polylines: DrawPolyline[];
   polylinesLW: any[];
 }

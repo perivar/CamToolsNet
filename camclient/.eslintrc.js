@@ -46,12 +46,12 @@ module.exports = {
     '@typescript-eslint/no-non-null-assertion': 'off',
     '@typescript-eslint/ban-ts-ignore': 'off',
     '@typescript-eslint/ban-ts-comment': ['warn', { 'ts-ignore': 'allow-with-description' }],
+    '@typescript-eslint/ban-types': 'off',
     '@typescript-eslint/no-empty-interface': 'warn',
     '@typescript-eslint/no-empty-function': 'warn',
 
-    'no-use-before-define': 'off', // this was too strict for the hooks
-    '@typescript-eslint/no-use-before-define': 'off',
-    '@typescript-eslint/ban-types': 'off', // this was too strict for the hooks
+		'no-use-before-define': 'off', // note you must disable the base rule as it can report incorrect errors
+    '@typescript-eslint/no-use-before-define': ['error'], 
 
     // note you must disable the base rule as it can report incorrect errors
     camelcase: 'off',
