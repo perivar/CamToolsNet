@@ -5,7 +5,7 @@ import axios from 'axios';
 import './Home.scss';
 import DrawingCanvas from './DrawingCanvas';
 import { DrawArc, DrawCircle, DrawingModel, DrawLine, DrawPolyline, DrawPolylineLW } from '../types/DrawingModel';
-import { KonvaCanvas } from './KonvaCanvas';
+// import { KonvaCanvas } from './KonvaCanvas';
 
 // read from .env files
 const config = { apiUrl: process.env.REACT_APP_API };
