@@ -275,13 +275,16 @@ namespace CAMToolsNet.Controllers
 			return Ok();
 		}
 
-		[HttpGet("PolylineToCircles")]  // GET /api/Editor/PolylineToCircles
-		public IActionResult PolylineToCircles()
+		[HttpGet("PolylineToCircles/{doConvertLines:bool}")]  // GET /api/Editor/PolylineToCircles/false
+		public IActionResult PolylineToCircles(bool doConvertLines)
 		{
 			// traverse through all polylines and convert those that are circles to circles
 			var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
 			if (drawModel != null)
 			{
+				// convert connected visible lines to polylines first
+				if (doConvertLines) drawModel.ConvertLinesToPolylines();
+
 				// Iterate the list in reverse with a for loop to be able to remove while iterating
 				for (int i = drawModel.Polylines.Count - 1; i >= 0; i--)
 				{

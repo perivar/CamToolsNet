@@ -1,4 +1,5 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Drawing;
 using System.Globalization;
 using System.Text.Json.Serialization;
 
@@ -75,6 +76,17 @@ namespace CoordinateUtils
 		public static bool operator !=(Point3D left, Point3D right)
 		{
 			return !(left == right);
+		}
+
+		public bool NearlyEquals(Point3D other)
+		{
+			if (this.X.AlmostEquals(other.X)
+			&& this.Y.AlmostEquals(other.Y)
+			&& this.Z.AlmostEquals(other.Z))
+			{
+				return true;
+			}
+			return false;
 		}
 
 		public override bool Equals(object obj)

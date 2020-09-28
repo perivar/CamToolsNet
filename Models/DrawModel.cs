@@ -968,6 +968,87 @@ namespace CAMToolsNet.Models
 			}
 		}
 
+		public void ConvertLinesToPolylines()
+		{
+			// lines
+			var firstStartPoint = new Point3D();
+			var firstEndPoint = new Point3D();
+
+			var prevLine = new DrawLine();
+			prevLine.StartPoint = new Point3D();
+			prevLine.EndPoint = new Point3D();
+
+			var vertexes = new List<PointF>();
+
+			var drawLines2Remove = new List<DrawLine>();
+			foreach (var line in Lines)
+			{
+				if (line.IsVisible)
+				{
+					if (prevLine.EndPoint == line.StartPoint)
+					{
+						// found connected lines - add to polyline
+
+						// if we have a closed polyline
+						if (line.EndPoint.NearlyEquals(firstStartPoint))
+						{
+							// Console.WriteLine("Found closed polyline:" + line.EndPoint + " = " + firstStartPoint);
+
+							// add last end point
+							vertexes.Add(line.EndPoint.PointF);
+
+							// and add to model 
+							AddPolyline(vertexes);
+
+							// remember to remove this line as well
+							if (!drawLines2Remove.Contains(line)) drawLines2Remove.Add(line);
+
+							// add reset vertex list
+							vertexes = new List<PointF>();
+						}
+						else
+						{
+							// Console.WriteLine("Found connected point: " + line.StartPoint + " -> " + line.EndPoint);
+
+							// add both first and this to polyline
+							if (!vertexes.Contains(prevLine.StartPoint.PointF)) vertexes.Add(prevLine.StartPoint.PointF);
+							if (!vertexes.Contains(prevLine.EndPoint.PointF)) vertexes.Add(prevLine.EndPoint.PointF);
+							if (!vertexes.Contains(line.StartPoint.PointF)) vertexes.Add(line.StartPoint.PointF);
+							if (!vertexes.Contains(line.EndPoint.PointF)) vertexes.Add(line.EndPoint.PointF);
+
+							// remember to remove these lines as well
+							if (!drawLines2Remove.Contains(prevLine)) drawLines2Remove.Add(prevLine);
+							if (!drawLines2Remove.Contains(line)) drawLines2Remove.Add(line);
+						}
+					}
+					else
+					{
+						// first point or not a connected polyline anylonger
+						// reset first points
+						firstStartPoint = line.StartPoint;
+						firstEndPoint = line.EndPoint;
+
+						// Console.WriteLine("Found potential new start point: " + firstStartPoint + " -> " + firstEndPoint);
+
+						// in case this is not a closed polygon, make sure to add existing vertexes
+						if (vertexes.Count > 0)
+						{
+							// Console.WriteLine("Adding non-closed polyline. Vertex count: " + vertexes.Count);
+							AddPolyline(vertexes);
+						}
+
+						// add reset vertex list
+						vertexes = new List<PointF>();
+					}
+
+					prevLine = line;
+				}
+			}
+
+			// remove the lines that are now redundant
+			Lines = Lines.Except(drawLines2Remove).ToList();
+		}
+
 		public void AddPolyline(List<PointF> vertexes, bool isVisible = true)
 		{
 			var poly = new DrawPolyline(vertexes, isVisible);

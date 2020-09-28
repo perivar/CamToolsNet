@@ -876,5 +876,11 @@ namespace CoordinateUtils
 
 			return new Rect((float)x, (float)y, (float)w, (float)h);
 		}
+
+		public static bool AlmostEquals(this float float1, float float2, int precision = 2)
+		{
+			double epsilon = Math.Pow(10.0, -precision);
+			return (Math.Abs(float1 - float2) <= epsilon);
+		}
 	}
 }

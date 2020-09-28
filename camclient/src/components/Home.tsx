@@ -125,7 +125,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
 
   private onPolyToCircle = () => {
     axios
-      .get(`${config.apiUrl}/PolylineToCircles`, { withCredentials: true })
+      .get(`${config.apiUrl}/PolylineToCircles/true`, { withCredentials: true })
       .then((response) => {
         console.log(response);
         this.getDrawModel();
