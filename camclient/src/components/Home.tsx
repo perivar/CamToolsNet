@@ -143,7 +143,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
         this.getDrawModel();
       })
       .catch((error) => {
-        console.error('Unable to perform Trim.', error);
+        console.error('Unable to perform trim.', error);
       });
   };
 
@@ -155,7 +155,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
         this.getDrawModel();
       })
       .catch((error) => {
-        console.error('Unable to perform Rotate.', error);
+        console.error('Unable to perform rotate.', error);
       });
   };
 
@@ -167,8 +167,24 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
         this.getDrawModelSplit();
       })
       .catch((error) => {
-        console.error('Unable to perform Split.', error);
+        console.error('Unable to perform split.', error);
       });
+  };
+
+  private onSaveSplit = () => {
+    axios
+      .get(`${config.apiUrl}/SaveSplit/${this.state.splitIndex}`, { withCredentials: true })
+      .then((response) => {
+        console.log(response);
+        this.getDrawModel();
+      })
+      .catch((error) => {
+        console.error('Unable to save split model.', error);
+      });
+  };
+
+  private onGetSplit = () => {
+    this.getDrawModelSplit();
   };
 
   private onTrimDisabled = () => {
@@ -300,9 +316,20 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
                     </Col>
                   </Form.Row>
                   <Form.Row>
-                    <Col sm={{ span: 10, offset: 2 }}>
-                      <Button className="mb-1" title="Split" variant="info" onClick={this.onSplit} size="sm">
-                        Split @ X{`${this.state.xSplit}`}
+                    <Col sm={{ offset: 1 }}>
+                      <Button className="mb-1 mr-1" title="Split" variant="info" onClick={this.onSplit} size="sm">
+                        Split
+                      </Button>
+                      <Button
+                        className="mb-1 mr-1"
+                        title="LoadSplit"
+                        variant="info"
+                        onClick={this.onGetSplit}
+                        size="sm">
+                        Load
+                      </Button>
+                      <Button className="mb-1" title="SaveSplit" variant="info" onClick={this.onSaveSplit} size="sm">
+                        Save
                       </Button>
                     </Col>
                   </Form.Row>

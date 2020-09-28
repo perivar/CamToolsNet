@@ -230,18 +230,20 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
       return;
     }
 
-    const dataWidth = this.bounds.max.x - this.bounds.min.x;
-    const dataHeight = this.bounds.max.y - this.bounds.min.y;
+    // add 40 to try to zoom in a little less
+    const dataWidth = 40 + this.bounds.max.x - this.bounds.min.x;
+    const dataHeight = 40 + this.bounds.max.y - this.bounds.min.y;
 
     const scaleY = this.canvasHeight / dataHeight;
     const scaleX = this.canvasWidth / dataWidth;
     this.scale = Math.min(scaleX, scaleY);
 
     // move the origin
-    this.translatePos.x = this.canvasWidth / 2 - (dataWidth / 2 + this.bounds.min.x) * this.scale;
+    // add and subtract 20 to pan more in the middle
+    this.translatePos.x = 20 + this.canvasWidth / 2 - (dataWidth / 2 + this.bounds.min.x) * this.scale;
     // offset with 'canvasHeight -¨' since we are flipping around y axis
     this.translatePos.y =
-      this.canvasHeight - (this.canvasHeight / 2 - (dataHeight / 2 + this.bounds.min.y) * this.scale);
+      -20 + this.canvasHeight - (this.canvasHeight / 2 - (dataHeight / 2 + this.bounds.min.y) * this.scale);
   };
 
   getQuadrant = (_angle: number) => {

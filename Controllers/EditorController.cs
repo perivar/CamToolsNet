@@ -58,6 +58,23 @@ namespace CAMToolsNet.Controllers
 			}
 		}
 
+		[HttpGet("SaveSplit/{index:int}")]  // GET /api/Editor/SaveSplit/1
+		public DrawModel SaveSplit(int index)
+		{
+			var drawModelSplit = HttpContext.Session.GetObjectFromJson<DrawModel>("Split-" + index);
+			if (drawModelSplit == null)
+			{
+				_logger.LogError("Could not read drawmodel from session!");
+				return new DrawModel();
+			}
+			else
+			{
+				// save to model
+				HttpContext.Session.SetObjectAsJson("DrawModel", drawModelSplit);
+				return drawModelSplit;
+			}
+		}
+
 		[HttpPost("Upload")] // POST /api/Editor/Upload
 		public async Task<IActionResult> Upload(List<IFormFile> files, [FromForm] string description)
 		{
@@ -332,7 +349,7 @@ namespace CAMToolsNet.Controllers
 				foreach (var circle in drawModel.Circles)
 				{
 					var newCenterPoint = Transformation.Rotate(circle.Center.PointF, degrees);
-					newDrawModel.AddCircle(newCenterPoint, circle.Radius);
+					newDrawModel.AddCircle(newCenterPoint, circle.Radius, circle.IsVisible);
 				}
 
 				// lines
@@ -340,7 +357,7 @@ namespace CAMToolsNet.Controllers
 				{
 					var newStartPoint = Transformation.Rotate(line.StartPoint.PointF, degrees);
 					var newEndPoint = Transformation.Rotate(line.EndPoint.PointF, degrees);
-					newDrawModel.AddLine(newStartPoint, newEndPoint);
+					newDrawModel.AddLine(newStartPoint, newEndPoint, line.IsVisible);
 				}
 
 				// arcs
@@ -362,7 +379,7 @@ namespace CAMToolsNet.Controllers
 					// "startAngle": 45.00003
 					// "endAngle": 134.99957
 
-					newDrawModel.AddArc(newCenterPoint, a.Radius, a.StartAngle + degrees, a.EndAngle + degrees);
+					newDrawModel.AddArc(newCenterPoint, a.Radius, a.StartAngle + degrees, a.EndAngle + degrees, a.IsVisible);
 				}
 
 				// polylines
@@ -375,7 +392,7 @@ namespace CAMToolsNet.Controllers
 						var newVertex = Transformation.Rotate(vertex.PointF, degrees);
 						newVertexes.Add(newVertex);
 					}
-					newDrawModel.AddPolyline(newVertexes);
+					newDrawModel.AddPolyline(newVertexes, p.IsVisible);
 				}
 
 				// polylines light weight
@@ -388,8 +405,11 @@ namespace CAMToolsNet.Controllers
 						var newVertex = Transformation.Rotate(vertex.Position.PointF, degrees);
 						newVertexes.Add(newVertex);
 					}
-					newDrawModel.AddPolylineLW(newVertexes);
+					newDrawModel.AddPolylineLW(newVertexes, plw.IsVisible);
 				}
+
+				// make sure to recalculate the bounds
+				newDrawModel.CalculateBounds();
 
 				HttpContext.Session.SetObjectAsJson("DrawModel", newDrawModel);
 
@@ -405,21 +425,21 @@ namespace CAMToolsNet.Controllers
 			if (drawModel != null)
 			{
 				var gCode = DrawModel.ToGCode(drawModel);
-				SaveToFile("before_rotate.txt", gCode);
+				// SaveToFile("before_rotate.txt", gCode);
 
 				var parsedInstructions = SimpleGCodeParser.ParseText(gCode);
 
 				var center = new PointF(0, 0);
 				if (degrees == 0) degrees = 90;
 				var gcodeInstructions = GCodeUtils.GetRotatedGCode(parsedInstructions, center, degrees);
-				SaveToFile("after_rotate.txt", GCodeUtils.GetGCode(gcodeInstructions));
+				// SaveToFile("after_rotate.txt", GCodeUtils.GetGCode(gcodeInstructions));
 
 				// clean up the mess with too many G0 commands
 				var cleanedGCode = GCodeUtils.GetMinimizeGCode(gcodeInstructions);
-				SaveToFile("after_rotate_clean.txt", GCodeUtils.GetGCode(cleanedGCode));
+				// SaveToFile("after_rotate_clean.txt", GCodeUtils.GetGCode(cleanedGCode));
 
 				var gCodeResult = Block.BuildGCodeOutput("Block_1", cleanedGCode, false);
-				SaveToFile("after_rotate_build_output.txt", gCodeResult);
+				// SaveToFile("after_rotate_build_output.txt", gCodeResult);
 
 				// convert gcode to draw model
 				var newDrawModel = DrawModel.FromGCode(gCodeResult, drawModel.FileName);

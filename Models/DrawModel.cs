@@ -119,11 +119,11 @@ namespace CAMToolsNet.Models
 
 
 			// note! don't call base() since we might not support the base properties
-			public DrawCircle(PointF center, float radius)
+			public DrawCircle(PointF center, float radius, bool isVisible = true)
 			{
 				Center = new Point3D(center.X, center.Y);
 				Radius = radius;
-				IsVisible = true;
+				IsVisible = isVisible;
 			}
 
 			public DrawCircle(netDxf.Entities.Circle c) : base(c)
@@ -145,11 +145,11 @@ namespace CAMToolsNet.Models
 			public DrawLine() { }
 
 			// note! don't call base() since we might not support the base properties
-			public DrawLine(PointF startPoint, PointF endPoint)
+			public DrawLine(PointF startPoint, PointF endPoint, bool isVisible = true)
 			{
 				StartPoint = new Point3D(startPoint.X, startPoint.Y, 0);
 				EndPoint = new Point3D(endPoint.X, endPoint.Y, 0);
-				IsVisible = true;
+				IsVisible = isVisible;
 			}
 
 			public DrawLine(netDxf.Entities.Line l) : base(l)
@@ -190,13 +190,13 @@ namespace CAMToolsNet.Models
 			public DrawArc() { }
 
 			// note! don't call base() since we might not support the base properties
-			public DrawArc(PointF center, float radius, float startAngle, float endAngle)
+			public DrawArc(PointF center, float radius, float startAngle, float endAngle, bool isVisible = true)
 			{
 				Center = new Point3D(center.X, center.Y, 0);
 				Radius = radius;
 				StartAngle = startAngle;
 				EndAngle = endAngle;
-				IsVisible = true;
+				IsVisible = isVisible;
 			}
 
 			public DrawArc(netDxf.Entities.Arc a) : base(a)
@@ -220,7 +220,7 @@ namespace CAMToolsNet.Models
 			public DrawPolyline() { }
 
 			// note! don't call base() since we might not support the base properties
-			public DrawPolyline(List<PointF> vertexes)
+			public DrawPolyline(List<PointF> vertexes, bool isVisible = true)
 			{
 				Vertexes = new List<Point3D>();
 
@@ -229,13 +229,14 @@ namespace CAMToolsNet.Models
 					var Point3D = new Point3D(v.X, v.Y, 0);
 					Vertexes.Add(Point3D);
 				}
-				IsVisible = true;
+				IsVisible = isVisible;
 			}
 
-			public DrawPolyline(List<Point3D> vertexes)
+			// note! don't call base() since we might not support the base properties
+			public DrawPolyline(List<Point3D> vertexes, bool isVisible = true)
 			{
 				Vertexes = vertexes;
-				IsVisible = true;
+				IsVisible = isVisible;
 			}
 
 			public DrawPolyline(netDxf.Entities.Polyline p) : base(p)
@@ -261,10 +262,11 @@ namespace CAMToolsNet.Models
 			// parameter-less constructor needed for de-serialization
 			public DrawPolylineLW() { }
 
-			public DrawPolylineLW(List<VertexLW> vertexes)
+			// note! don't call base() since we might not support the base properties
+			public DrawPolylineLW(List<VertexLW> vertexes, bool isVisible = true)
 			{
 				Vertexes = vertexes;
-				IsVisible = true;
+				IsVisible = isVisible;
 			}
 
 			public DrawPolylineLW(netDxf.Entities.LwPolyline p) : base(p)
@@ -745,13 +747,15 @@ namespace CAMToolsNet.Models
 							currentPosition.Y = pos.Y;
 							currentPosition.Z = pos.Z;
 
+							// ignore points that don't move in X or Y direction
+							if (line.X1 == line.X2 && line.Y1 == line.Y2) continue;
+
 							if (line.Pen == PenColorList.RapidMove)
 							{
 								// we represent rapid movements as invisible lines
-								// disable since these generate too many lines
-								// var rapidLine = new DrawLine(new PointF(line.X1, line.Y1), new PointF(line.X2, line.Y2));
-								// rapidLine.IsVisible = false;
-								// if (!Lines.Contains(rapidLine)) Lines.Add(rapidLine);
+								var rapidLine = new DrawLine(new PointF(line.X1, line.Y1), new PointF(line.X2, line.Y2));
+								rapidLine.IsVisible = false;
+								if (!Lines.Contains(rapidLine)) Lines.Add(rapidLine);
 							}
 							else
 							{
@@ -964,34 +968,34 @@ namespace CAMToolsNet.Models
 			}
 		}
 
-		public void AddPolyline(List<PointF> vertexes)
+		public void AddPolyline(List<PointF> vertexes, bool isVisible = true)
 		{
-			var poly = new DrawPolyline(vertexes);
+			var poly = new DrawPolyline(vertexes, isVisible);
 			Polylines.Add(poly);
 		}
 
-		public void AddPolylineLW(List<PointF> vertexes)
+		public void AddPolylineLW(List<PointF> vertexes, bool isVisible = true)
 		{
 			var vertexesLW = vertexes.Select(a => new VertexLW(a.X, a.Y, 0)).ToList();
-			var polyLW = new DrawPolylineLW(vertexesLW);
+			var polyLW = new DrawPolylineLW(vertexesLW, isVisible);
 			PolylinesLW.Add(polyLW);
 		}
 
-		public void AddLine(PointF startPoint, PointF endPoint)
+		public void AddLine(PointF startPoint, PointF endPoint, bool isVisible = true)
 		{
-			var line = new DrawLine(startPoint, endPoint);
+			var line = new DrawLine(startPoint, endPoint, isVisible);
 			Lines.Add(line);
 		}
 
-		public void AddCircle(PointF center, float radius)
+		public void AddCircle(PointF center, float radius, bool isVisible = true)
 		{
-			var circle = new DrawCircle(center, radius);
+			var circle = new DrawCircle(center, radius, isVisible);
 			Circles.Add(circle);
 		}
 
-		public void AddArc(PointF center, float radius, float startAngle, float endAngle)
+		public void AddArc(PointF center, float radius, float startAngle, float endAngle, bool isVisible = true)
 		{
-			var arc = new DrawArc(center, radius, startAngle, endAngle);
+			var arc = new DrawArc(center, radius, startAngle, endAngle, isVisible);
 			Arcs.Add(arc);
 		}
 
@@ -1188,16 +1192,29 @@ namespace CAMToolsNet.Models
 			{
 				if (doIncludeInvisible || line.IsVisible)
 				{
-					line.StartPoint.X -= Bounds.Min.X;
-					line.StartPoint.Y -= Bounds.Min.Y;
-					line.EndPoint.X -= Bounds.Min.X;
-					line.EndPoint.Y -= Bounds.Min.Y;
-
-					// none of these are likely less than 0
-					line.StartPoint.X = Math.Max(line.StartPoint.X, 0);
-					line.StartPoint.Y = Math.Max(line.StartPoint.Y, 0);
-					line.EndPoint.X = Math.Max(line.EndPoint.X, 0);
-					line.EndPoint.Y = Math.Max(line.EndPoint.Y, 0);
+					// if this is a invisible line (like rapid moves)
+					// and the start point or end point is 0
+					// keep the one that starts at 0,0 (start)
+					if (!line.IsVisible && line.StartPoint.X == 0 && line.StartPoint.Y == 0)
+					{
+						// change end point
+						line.EndPoint.X -= Bounds.Min.X;
+						line.EndPoint.Y -= Bounds.Min.Y;
+					}
+					else if (!line.IsVisible && line.EndPoint.X == 0 && line.EndPoint.Y == 0)
+					{
+						// change start point
+						line.StartPoint.X -= Bounds.Min.X;
+						line.StartPoint.Y -= Bounds.Min.Y;
+					}
+					else
+					{
+						// change both
+						line.StartPoint.X -= Bounds.Min.X;
+						line.StartPoint.Y -= Bounds.Min.Y;
+						line.EndPoint.X -= Bounds.Min.X;
+						line.EndPoint.Y -= Bounds.Min.Y;
+					}
 				}
 			}
 
