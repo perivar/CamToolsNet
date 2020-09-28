@@ -61,6 +61,20 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
       });
   };
 
+  private getDrawModelSplit = () => {
+    axios
+      .get(`${config.apiUrl}/GetSplit/${this.state.splitIndex}`, { withCredentials: true })
+      .then((response) => {
+        const { data } = response;
+        this.setState({ isLoading: false, drawModel: data });
+        console.log(`Succesfully retrieved the split model: ${data.fileName} - ${this.state.splitIndex}`);
+      })
+      .catch((error) => {
+        this.setState({ isError: true, isLoading: false });
+        console.error('Unable to retrieve split model.', error);
+      });
+  };
+
   private onDrop = (acceptedFiles: any) => {
     console.log(acceptedFiles);
 
@@ -91,6 +105,10 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
     const { value } = e.currentTarget;
     const splitSideValue = parseInt(value, 10);
     this.setState({ splitIndex: splitSideValue });
+  };
+
+  private onReload = (): void => {
+    this.getDrawModel();
   };
 
   private onShowArrowsChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
@@ -143,10 +161,10 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
 
   private onSplit = () => {
     axios
-      .get(`${config.apiUrl}/Split/${this.state.xSplit}/0/5/${this.state.splitIndex}`, { withCredentials: true })
+      .get(`${config.apiUrl}/Split/${this.state.xSplit}/0/5`, { withCredentials: true })
       .then((response) => {
         console.log(response);
-        this.getDrawModel();
+        this.getDrawModelSplit();
       })
       .catch((error) => {
         console.error('Unable to perform Split.', error);
@@ -234,7 +252,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
                 <div>Loading drawing ...</div>
               </Alert>
             ) : (
-              <DrawingCanvas drawModel={drawModel} showArrows={showArrows} />
+              <DrawingCanvas drawModel={drawModel} showArrows={showArrows} xSplit={this.state.xSplit} />
               // <KonvaCanvas drawModel={drawModel} showArrows={showArrows} />
             )}
           </Col>
@@ -343,6 +361,9 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
                         onClick={this.onPolyToCircle}
                         size="sm">
                         Poly to Circle
+                      </Button>
+                      <Button className="mb-1" title="Reload" variant="info" onClick={this.onReload} size="sm">
+                        Reload Model
                       </Button>
                     </Col>
                   </Form.Row>

@@ -18,6 +18,7 @@ function round2TwoDecimal(number: number): number {
 interface IDrawingCanvasProps {
   drawModel: DrawingModel;
   showArrows: boolean;
+  xSplit: number;
 }
 
 const { PI } = Math;
@@ -96,6 +97,9 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
 
   componentDidUpdate(prevProps: IDrawingCanvasProps) {
     if (prevProps.showArrows !== this.props.showArrows) {
+      this.draw(this.scale, this.translatePos);
+    }
+    if (prevProps.xSplit !== this.props.xSplit) {
       this.draw(this.scale, this.translatePos);
     }
     if (prevProps.drawModel !== this.props.drawModel) {
@@ -551,6 +555,18 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     const arrowLen = 0.8; // length of head in pixels
 
     this.drawGrid(context, 10, '#999999', '#F2F2F2', 100, this.bounds.max.x + 20, this.bounds.max.y + 20);
+
+    // draw xSplit
+    if (this.props.xSplit !== 0) {
+      // draw line
+      context.beginPath(); // begin
+      context.moveTo(this.props.xSplit, -5);
+      context.lineTo(this.props.xSplit, this.bounds.max.y + 20);
+      context.closePath(); // end
+      context.lineWidth = 0.3;
+      context.strokeStyle = '#ffff00';
+      context.stroke();
+    }
 
     // drawing circles
     context.beginPath(); // begin

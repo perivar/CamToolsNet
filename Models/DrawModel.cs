@@ -261,6 +261,12 @@ namespace CAMToolsNet.Models
 			// parameter-less constructor needed for de-serialization
 			public DrawPolylineLW() { }
 
+			public DrawPolylineLW(List<VertexLW> vertexes)
+			{
+				Vertexes = vertexes;
+				IsVisible = true;
+			}
+
 			public DrawPolylineLW(netDxf.Entities.LwPolyline p) : base(p)
 			{
 				IsClosed = p.IsClosed;
@@ -962,6 +968,13 @@ namespace CAMToolsNet.Models
 		{
 			var poly = new DrawPolyline(vertexes);
 			Polylines.Add(poly);
+		}
+
+		public void AddPolylineLW(List<PointF> vertexes)
+		{
+			var vertexesLW = vertexes.Select(a => new VertexLW(a.X, a.Y, 0)).ToList();
+			var polyLW = new DrawPolylineLW(vertexesLW);
+			PolylinesLW.Add(polyLW);
 		}
 
 		public void AddLine(PointF startPoint, PointF endPoint)

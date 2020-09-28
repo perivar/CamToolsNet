@@ -277,6 +277,35 @@ namespace CoordinateUtils
 		}
 
 		/// <summary>
+		/// Rotate points around a center point by a certain angle in degrees
+		/// (note that angle is negative for clockwise rotation)
+		/// </summary>
+		/// <param name="points"></param>
+		/// <param name="center">center point</param>
+		/// <param name="angle">angle in degrees is negative for clockwise rotation</param>
+		/// <returns>rotated points</returns>
+		public static PointF[] Rotate(PointF[] points, PointF center, float angle)
+		{
+			// setup the rotation matrix
+			using (var matrix = new Matrix())
+			{
+				// Translate point to origin
+				matrix.Translate(-center.X, -center.Y, MatrixOrder.Append);
+
+				// setup the rotation matrix
+				matrix.Rotate(angle, MatrixOrder.Append);
+
+				// Translate back to original point
+				matrix.Translate(center.X, center.Y, MatrixOrder.Append);
+
+				// rotate the points
+				matrix.TransformPoints(points);
+			}
+
+			return points;
+		}
+
+		/// <summary>
 		/// Rotate point around a center point by a certain angle in degrees
 		/// (note that angle is negative for clockwise rotation)
 		/// </summary>

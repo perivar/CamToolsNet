@@ -43,6 +43,21 @@ namespace CAMToolsNet.Controllers
 			}
 		}
 
+		[HttpGet("GetSplit/{index:int}")]  // GET /api/Editor/GetSplit/1
+		public DrawModel GetSplit(int index)
+		{
+			var drawModelSplit = HttpContext.Session.GetObjectFromJson<DrawModel>("Split-" + index);
+			if (drawModelSplit == null)
+			{
+				_logger.LogError("Could not read drawmodel from session!");
+				return new DrawModel();
+			}
+			else
+			{
+				return drawModelSplit;
+			}
+		}
+
 		[HttpPost("Upload")] // POST /api/Editor/Upload
 		public async Task<IActionResult> Upload(List<IFormFile> files, [FromForm] string description)
 		{
@@ -310,6 +325,85 @@ namespace CAMToolsNet.Controllers
 			var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
 			if (drawModel != null)
 			{
+				var newDrawModel = new DrawModel();
+				newDrawModel.FileName = drawModel.FileName;
+
+				// circles
+				foreach (var circle in drawModel.Circles)
+				{
+					var newCenterPoint = Transformation.Rotate(circle.Center.PointF, degrees);
+					newDrawModel.AddCircle(newCenterPoint, circle.Radius);
+				}
+
+				// lines
+				foreach (var line in drawModel.Lines)
+				{
+					var newStartPoint = Transformation.Rotate(line.StartPoint.PointF, degrees);
+					var newEndPoint = Transformation.Rotate(line.EndPoint.PointF, degrees);
+					newDrawModel.AddLine(newStartPoint, newEndPoint);
+				}
+
+				// arcs
+				foreach (var a in drawModel.Arcs)
+				{
+					var newCenterPoint = Transformation.Rotate(a.Center.PointF, degrees);
+
+					// from: 
+					// "center":{"x":74.99847,"y":222.5,"z":0}
+					// "radius":10
+					// "thickness":0
+					// "startAngle":-0
+					// "endAngle":90,"
+
+					// to:
+					// "center":{"x":-104.2983,"y":210.3642,"z":0}
+					// "radius": 10.000049
+					// "thickness": 0
+					// "startAngle": 45.00003
+					// "endAngle": 134.99957
+
+					newDrawModel.AddArc(newCenterPoint, a.Radius, a.StartAngle + degrees, a.EndAngle + degrees);
+				}
+
+				// polylines
+				foreach (var p in drawModel.Polylines)
+				{
+					var newVertexes = new List<PointF>();
+					for (var i = 0; i < p.Vertexes.Count; i++)
+					{
+						var vertex = p.Vertexes[i];
+						var newVertex = Transformation.Rotate(vertex.PointF, degrees);
+						newVertexes.Add(newVertex);
+					}
+					newDrawModel.AddPolyline(newVertexes);
+				}
+
+				// polylines light weight
+				foreach (var plw in drawModel.PolylinesLW)
+				{
+					var newVertexes = new List<PointF>();
+					for (var i = 0; i < plw.Vertexes.Count; i++)
+					{
+						var vertex = plw.Vertexes[i];
+						var newVertex = Transformation.Rotate(vertex.Position.PointF, degrees);
+						newVertexes.Add(newVertex);
+					}
+					newDrawModel.AddPolylineLW(newVertexes);
+				}
+
+				HttpContext.Session.SetObjectAsJson("DrawModel", newDrawModel);
+
+				return Ok();
+			}
+			return BadRequest();
+		}
+
+		[HttpGet("RotateOld/{degrees:float}")]  // GET /api/Editor/RotateOld/20
+		public IActionResult RotateOld(float degrees)
+		{
+			var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
+			if (drawModel != null)
+			{
 				var gCode = DrawModel.ToGCode(drawModel);
 				SaveToFile("before_rotate.txt", gCode);
 
@@ -336,8 +430,8 @@ namespace CAMToolsNet.Controllers
 			return BadRequest();
 		}
 
-		[HttpGet("Split/{xSplit:float}/{splitDegrees:float}/{zClearance:float}/{index:int}")]  // GET /api/Editor/Split/20/10/20/0
-		public IActionResult Split(float xSplit, float splitDegrees, float zClearance, int index)
+		[HttpGet("Split/{xSplit:float}/{splitDegrees:float}/{zClearance:float}")]  // GET /api/Editor/Split/100/0/10
+		public IActionResult Split(float xSplit, float splitDegrees, float zClearance)
 		{
 			// index means which side to get back
 			if (xSplit != 0)
@@ -347,23 +441,34 @@ namespace CAMToolsNet.Controllers
 				if (drawModel != null)
 				{
 					var gCode = DrawModel.ToGCode(drawModel);
-					SaveToFile("before_split.txt", gCode);
+					// SaveToFile("before_split.txt", gCode);
 
 					var parsedInstructions = SimpleGCodeParser.ParseText(gCode);
 					var gCodeArray = GCodeSplitter.Split(parsedInstructions, splitPoint, splitDegrees, zClearance);
-					SaveToFile("after_split_1.txt", GCodeUtils.GetGCode(gCodeArray[0]));
-					SaveToFile("after_split_2.txt", GCodeUtils.GetGCode(gCodeArray[1]));
+					// SaveToFile("after_split_1.txt", GCodeUtils.GetGCode(gCodeArray[0]));
+					// SaveToFile("after_split_2.txt", GCodeUtils.GetGCode(gCodeArray[1]));
 
 					// clean up the mess with too many G0 commands
-					var cleanedGCode = GCodeUtils.GetMinimizeGCode(gCodeArray[index]);
-					SaveToFile("after_split_clean.txt", GCodeUtils.GetGCode(cleanedGCode));
+					var cleanedGCode1 = GCodeUtils.GetMinimizeGCode(gCodeArray[0]);
+					var cleanedGCode2 = GCodeUtils.GetMinimizeGCode(gCodeArray[1]);
+					// SaveToFile("after_split_clean_1.txt", GCodeUtils.GetGCode(cleanedGCode1));
+					// SaveToFile("after_split_clean_2.txt", GCodeUtils.GetGCode(cleanedGCode2));
 
-					var gCodeResult = Block.BuildGCodeOutput("Block_1", cleanedGCode, false);
-					SaveToFile("after_split_build_output.txt", gCodeResult);
+					var gCodeResult1 = Block.BuildGCodeOutput("Block_1", cleanedGCode1, false);
+					var gCodeResult2 = Block.BuildGCodeOutput("Block_1", cleanedGCode2, false);
+					// SaveToFile("after_split_build_output_1.txt", gCodeResult1);
+					// SaveToFile("after_split_build_output_2.txt", gCodeResult2);
 
 					// convert gcode to draw model
-					var newDrawModel = DrawModel.FromGCode(gCodeResult, drawModel.FileName);
-					HttpContext.Session.SetObjectAsJson("DrawModel", newDrawModel);
+					var fileName = Path.GetFileNameWithoutExtension(drawModel.FileName);
+					var extension = Path.GetExtension(drawModel.FileName);
+
+					var newDrawModel1 = DrawModel.FromGCode(gCodeResult1, fileName + "_split_1" + extension);
+					var newDrawModel2 = DrawModel.FromGCode(gCodeResult2, fileName + "_split_2" + extension);
+
+					// store with index
+					HttpContext.Session.SetObjectAsJson("Split-0", newDrawModel1);
+					HttpContext.Session.SetObjectAsJson("Split-1", newDrawModel2);
 				}
 				return Ok();
 			}
