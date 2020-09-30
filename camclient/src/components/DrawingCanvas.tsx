@@ -8,12 +8,9 @@ import {
   DrawLine,
   DrawArc,
   DrawPolyline,
-  DrawPolylineLW
+  DrawPolylineLW,
+  DrawShape
 } from '../types/DrawingModel';
-
-function round2TwoDecimal(number: number): number {
-  return Math.round((number + Number.EPSILON) * 100) / 100;
-}
 
 interface IDrawingCanvasProps {
   drawModel: DrawingModel;
@@ -21,11 +18,246 @@ interface IDrawingCanvasProps {
   xSplit: number;
 }
 
+export interface IHash {
+  [key: string]: DrawShape;
+}
+
 const { PI } = Math;
 const HALF_PI = Math.PI / 2;
 const TWO_PI = Math.PI * 2;
 const DEG_TO_RAD = Math.PI / 180;
 const RAD_TO_DEG = 180 / Math.PI;
+
+const round2TwoDecimal = (number: number): number => {
+  return Math.round((number + Number.EPSILON) * 100) / 100;
+};
+
+// const getRandomColor = (): string => {
+//   const r = Math.round(Math.random() * 255);
+//   const g = Math.round(Math.random() * 255);
+//   const b = Math.round(Math.random() * 255);
+//   return `rgb(${r},${g},${b})`;
+// };
+
+// const hasSameColorHitKey = (colorHitKey: string, shape: BaseElement): boolean => {
+//   return shape.colorHitKey === colorHitKey;
+// };
+
+const drawArrowHead = (
+  context: CanvasRenderingContext2D,
+  endX: number,
+  endY: number,
+  angle: number,
+  arrowLen: number,
+  color: string
+) => {
+  // draw arrow head as filled triangle
+  context.beginPath();
+  context.moveTo(endX, endY);
+  context.lineTo(endX - arrowLen * Math.cos(angle - Math.PI / 6), endY - arrowLen * Math.sin(angle - Math.PI / 6));
+  context.lineTo(endX - arrowLen * Math.cos(angle + Math.PI / 6), endY - arrowLen * Math.sin(angle + Math.PI / 6));
+  context.lineTo(endX, endY);
+  context.closePath();
+  context.fillStyle = color;
+  context.fill();
+};
+
+const drawCircle = (context: CanvasRenderingContext2D, circle: DrawCircle, canvasHeight: number) => {
+  const startAngle = 0;
+  const endAngle = 2 * Math.PI;
+  const { x } = circle.center;
+  const { y } = circle.center;
+  const { radius } = circle;
+
+  context.beginPath(); // begin
+  context.moveTo(x + radius, y);
+  context.arc(x, y, radius, startAngle, endAngle, false);
+  context.closePath(); // end
+
+  // draw diameter and center (need to flip y axis back first)
+  context.save();
+  context.scale(1, -1); // flip back
+  context.translate(0, -canvasHeight); // and translate so that we draw the text the right way up
+  context.fillRect(x - 0.2, canvasHeight - y - 0.2, 0.4, 0.4); // fill in the pixel
+
+  const dia = round2TwoDecimal(radius * 2);
+  context.font = '3px sans-serif';
+  context.fillText(`${dia}`, x - 2, canvasHeight - y - radius - 1);
+  context.restore();
+};
+
+const drawArc = (context: CanvasRenderingContext2D, arc: DrawArc, showArrows: boolean, arrowLen: number) => {
+  const centerX = arc.center.x;
+  const centerY = arc.center.y;
+  const { radius } = arc;
+  const { startAngle } = arc;
+  const { endAngle } = arc;
+
+  // since we have flipped the y orgin, we have to draw counter clockwise
+  const isCounterClockwise = false;
+
+  let startX = 0;
+  let startY = 0;
+  let endX = 0;
+  let endY = 0;
+  if (isCounterClockwise) {
+    endX = centerX + Math.cos((startAngle * Math.PI) / 180) * radius;
+    endY = centerY + Math.sin((startAngle * Math.PI) / 180) * radius;
+    startX = centerX + Math.cos((endAngle * Math.PI) / 180) * radius;
+    startY = centerY + Math.sin((endAngle * Math.PI) / 180) * radius;
+  } else {
+    startX = centerX + Math.cos((startAngle * Math.PI) / 180) * radius;
+    startY = centerY + Math.sin((startAngle * Math.PI) / 180) * radius;
+    endX = centerX + Math.cos((endAngle * Math.PI) / 180) * radius;
+    endY = centerY + Math.sin((endAngle * Math.PI) / 180) * radius;
+  }
+
+  // don't draw if the start end points for x and y are the same
+  // likely a z only move
+  if (startX !== endX || startY !== endY) {
+    const dx = endX - centerX;
+    const dy = endY - centerY;
+
+    let arrowAngle = 0;
+    let sAngle = 0;
+    let eAngle = 0;
+    if (isCounterClockwise) {
+      arrowAngle = Math.atan2(dy, dx) - Math.PI / 2; // counter clockwise
+      sAngle = (endAngle * Math.PI) / 180;
+      eAngle = (startAngle * Math.PI) / 180;
+    } else {
+      arrowAngle = Math.atan2(dy, dx) + Math.PI / 2; // clockwise
+      sAngle = (startAngle * Math.PI) / 180;
+      eAngle = (endAngle * Math.PI) / 180;
+    }
+
+    // draw arrow head
+    if (showArrows) drawArrowHead(context, endX, endY, arrowAngle, arrowLen, '#000000');
+
+    // draw arc
+    context.beginPath(); // begin
+    context.moveTo(startX, startY);
+    context.arc(centerX, centerY, radius, sAngle, eAngle, isCounterClockwise);
+    context.moveTo(endX, endY);
+    context.closePath(); // end
+  }
+};
+
+const drawLine = (
+  context: CanvasRenderingContext2D,
+  line: DrawLine,
+  showArrows: boolean,
+  arrowLen: number,
+  lineColor = '#000000'
+) => {
+  const startX = line.startPoint.x;
+  const startY = line.startPoint.y;
+  const endX = line.endPoint.x;
+  const endY = line.endPoint.y;
+
+  // don't draw if the start end points for x and y are the same
+  // likely a z only move
+  if (startX !== endX || startY !== endY) {
+    const dx = endX - startX;
+    const dy = endY - startY;
+    const angle = Math.atan2(dy, dx);
+
+    // draw arrow head
+    if (showArrows) drawArrowHead(context, endX, endY, angle, arrowLen, lineColor);
+
+    // draw line
+    context.beginPath(); // begin
+    context.moveTo(startX, startY);
+    context.lineTo(endX, endY);
+    context.closePath(); // end
+  }
+};
+
+const defineIrregularPath = (context: CanvasRenderingContext2D, shape: DrawShape) => {
+  if (shape.kind === 'polyline') {
+    context.beginPath(); // begin
+    for (let i = 0; i < shape.vertexes.length; i++) {
+      const vertex = shape.vertexes[i];
+      const pointX = vertex.x;
+      const pointY = vertex.y;
+
+      // context.lineTo(pointX, pointY);
+      if (i === 0) {
+        context.moveTo(pointX, pointY);
+      } else {
+        context.lineTo(pointX, pointY);
+      }
+    }
+    context.closePath(); // end
+  } else if (shape.kind === 'polylinelw') {
+    context.beginPath(); // begin
+    for (let i = 0; i < shape.vertexes.length; i++) {
+      const vertex = shape.vertexes[i];
+      const pointX = vertex.position.x;
+      const pointY = vertex.position.y;
+      const { bulge } = vertex;
+      let prePointX = 0;
+      let prePointY = 0;
+
+      if (i === 0) {
+        context.moveTo(pointX, pointY);
+      } else {
+        const angle = 4 * Math.atan(Math.abs(bulge)) * RAD_TO_DEG;
+        const length = Math.sqrt(
+          (pointX - prePointX) * (pointX - prePointX) + (pointY - prePointY) * (pointY - prePointY)
+        );
+        const radius = Math.abs(length / (2 * Math.sin((angle / 360) * Math.PI)));
+        context.arc(pointX, pointY, radius, 0, (angle * Math.PI) / 180, false);
+
+        prePointX = pointX;
+        prePointY = pointY;
+      }
+    }
+    context.closePath(); // end
+  }
+};
+
+// given mouse X & Y (mx & my) and shape object
+// return true/false whether mouse is inside the shape
+// https://riptutorial.com/html5-canvas/example/18918/dragging-circles---rectangles-around-the-canvas
+const isMouseInShape = (context: CanvasRenderingContext2D, mx: number, my: number, shape: DrawShape) => {
+  if (shape.kind === 'circle') {
+    const circle = shape as DrawCircle;
+    const dx = mx - circle.center.x;
+    const dy = my - circle.center.y;
+    // math test to see if mouse is inside circle
+    if (dx * dx + dy * dy < circle.radius * circle.radius) {
+      // yes, mouse is inside this circle
+      return true;
+    }
+  } else if (shape.kind === 'arc') {
+    const a = shape as DrawArc;
+    drawArc(context, a, false, 0);
+
+    // Then hit-test with isPointInStroke
+    if (context.isPointInStroke(mx, my)) {
+      return true;
+    }
+  } else if (shape.kind === 'line') {
+    const line = shape as DrawLine;
+    drawLine(context, line, false, 0);
+
+    // Then hit-test with isPointInStroke
+    if (context.isPointInStroke(mx, my)) {
+      return true;
+    }
+  } else if (shape.kind === 'polyline' || shape.kind === 'polylinelw') {
+    // First redefine the path again (no need to stroke/fill!)
+    defineIrregularPath(context, shape);
+
+    // Then hit-test with isPointInPath
+    if (context.isPointInPath(mx, my)) {
+      return true;
+    }
+  }
+  // the mouse isn't in any of the shapes
+  return false;
+};
 
 export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasProps> {
   // instance variables
@@ -46,6 +278,12 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
 
   private canvasWidth: number;
   private canvasHeight: number;
+
+  // colorsHash for saving references of all created shapes
+  // private colorHitHash: IHash = {};
+
+  // save all shapes in an array
+  private shapes: DrawShape[] = [];
 
   constructor(props: IDrawingCanvasProps) {
     super(props);
@@ -137,6 +375,27 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     }
   };
 
+  /*
+  private setShapeHitDetection = (shape: DrawShape, id: number) => {
+    // repeat until we find trully unique colour
+    while (true) {
+      const colorHitKey = getRandomColor();
+
+      // if color is unique
+      if (!this.colorHitHash[colorHitKey]) {
+        shape.id = `${id}`;
+
+        // set color for hit canvas
+        shape.colorHitKey = colorHitKey;
+
+        // save reference
+        this.colorHitHash[colorHitKey] = shape;
+        return;
+      }
+		}
+  };
+	*/
+
   private onMouseDown = (evt: React.MouseEvent<HTMLCanvasElement, MouseEvent>) => {
     this.mouseDown = true;
     this.startDragOffset.x = evt.clientX - this.translatePos.x;
@@ -149,6 +408,54 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
 
   private onMouseMove = (evt: React.MouseEvent<HTMLCanvasElement, MouseEvent>) => {
     const mousePos = this.getTransformRelativeMousePosition(evt);
+
+    // hit detection
+    if (this.ctx) {
+      // test mouse position against all shapes
+      // post result if mouse is in a shape
+      for (let i = 0; i < this.shapes.length; i++) {
+        if (isMouseInShape(this.ctx, mousePos.x, mousePos.y, this.shapes[i])) {
+          // the mouse is inside this shape
+          // select this shape
+          // selectedShapeIndex = i;
+          // and return (==stop looking for
+          //     further shapes under the mouse)
+          console.log(i);
+          return;
+        }
+      }
+
+      /*
+      // https://lavrton.com/hit-region-detection-for-html5-canvas-and-how-to-listen-to-click-events-on-canvas-shapes-815034d7e9f8/
+      const pos = this.getCanvasRelativeMousePosition(evt);
+			const hitPos = new DOMPoint(...pos);
+			
+      // get pixel under cursor
+      const pixel = this.ctx.getImageData(hitPos.x, hitPos.y, 1, 1).data;
+
+      // create rgb color for that pixel
+      const color = `rgb(${pixel[0]},${pixel[1]},${pixel[2]})`;
+
+      this.ctx.save();
+      this.ctx.fillStyle = 'black';
+      this.ctx.fillRect(hitPos.x, hitPos.y, 1, 1); // fill in the pixel
+
+      this.ctx.scale(devicePixelRatio, devicePixelRatio);
+      this.ctx.fillStyle = 'white';
+      this.ctx.fillRect(10, 72, 200, 20);
+
+      this.ctx.fillStyle = 'black';
+      this.ctx.font = '10px sans-serif';
+      this.ctx.fillText(`color: ${color}`, 10, 80);
+
+      // find shape with same color
+      const shape = this.colorHitHash[color];
+      if (shape) {
+        this.ctx.fillText(`shape: ${shape.id}`, 10, 90);
+      }
+			this.ctx.restore();
+			*/
+    }
 
     // clear small area where the mouse pos is plotted
     if (this.ctx) {
@@ -317,6 +624,11 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     let curX = 0;
     let curY = 0;
 
+    // const idCounter = 0;
+
+    // reset shapes
+    this.shapes = [];
+
     this.props.drawModel.circles.forEach((circle: DrawCircle) => {
       if (circle.isVisible) {
         const { x } = circle.center;
@@ -336,6 +648,11 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
         minX = curX < minX ? curX : minX;
         maxY = curY > maxY ? curY : maxY;
         minY = curY < minY ? curY : minY;
+
+        circle.kind = 'circle';
+        this.shapes.push(circle);
+        // set unique color for each shape and use as hit detection
+        // this.setShapeHitDetection(circle, idCounter++);
       }
     });
 
@@ -359,6 +676,11 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
         minX = curX < minX ? curX : minX;
         maxY = curY > maxY ? curY : maxY;
         minY = curY < minY ? curY : minY;
+
+        line.kind = 'line';
+        this.shapes.push(line);
+        // set unique color for each shape and use as hit detection
+        // this.setShapeHitDetection(line, idCounter++);
       }
     });
 
@@ -397,6 +719,11 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
         // minX = curX < minX ? curX : minX;
         // maxY = curY > maxY ? curY : maxY;
         // minY = curY < minY ? curY : minY;
+
+        a.kind = 'arc';
+        this.shapes.push(a);
+        // set unique color for each shape and use as hit detection
+        // this.setShapeHitDetection(a, idCounter++);
       }
     });
 
@@ -414,6 +741,11 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
           maxY = curY > maxY ? curY : maxY;
           minY = curY < minY ? curY : minY;
         }
+
+        p.kind = 'polyline';
+        this.shapes.push(p);
+        // set unique color for each shape and use as hit detection
+        // this.setShapeHitDetection(p, idCounter++);
       }
     });
 
@@ -431,6 +763,11 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
           maxY = curY > maxY ? curY : maxY;
           minY = curY < minY ? curY : minY;
         }
+
+        p.kind = 'polylinelw';
+        this.shapes.push(p);
+        // set unique color for each shape and use as hit detection
+        // this.setShapeHitDetection(p, idCounter++);
       }
     });
 
@@ -534,25 +871,6 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     context.restore();
   };
 
-  private drawArrowHead = (
-    context: CanvasRenderingContext2D,
-    endX: number,
-    endY: number,
-    angle: number,
-    arrowLen: number,
-    color: string
-  ) => {
-    // draw arrow head as filled triangle
-    context.beginPath();
-    context.moveTo(endX, endY);
-    context.lineTo(endX - arrowLen * Math.cos(angle - Math.PI / 6), endY - arrowLen * Math.sin(angle - Math.PI / 6));
-    context.lineTo(endX - arrowLen * Math.cos(angle + Math.PI / 6), endY - arrowLen * Math.sin(angle + Math.PI / 6));
-    context.lineTo(endX, endY);
-    context.closePath();
-    context.fillStyle = color;
-    context.fill();
-  };
-
   private drawFile = (context: CanvasRenderingContext2D) => {
     const arrowLen = 0.8; // length of head in pixels
 
@@ -565,143 +883,54 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
       context.moveTo(this.props.xSplit, -5);
       context.lineTo(this.props.xSplit, this.bounds.max.y + 20);
       context.closePath(); // end
+
       context.lineWidth = 0.3;
-      context.strokeStyle = '#ffff00';
+      context.strokeStyle = '#0099cc';
       context.stroke();
     }
 
     // drawing circles
-    context.beginPath(); // begin
     this.props.drawModel.circles.forEach((circle: DrawCircle) => {
-      const startAngle = 0;
-      const endAngle = 2 * Math.PI;
-      const { x } = circle.center;
-      const { y } = circle.center;
-      const { radius } = circle;
+      drawCircle(context, circle, this.canvasHeight);
 
-      context.moveTo(x + radius, y);
-      context.arc(x, y, radius, startAngle, endAngle, false);
-
-      // draw diameter and center (need to flip y axis back first)
-      context.save();
-      context.scale(1, -1); // flip back
-      context.translate(0, -this.canvasHeight); // and translate so that we draw the text the right way up
-      context.fillRect(x - 0.2, this.canvasHeight - y - 0.2, 0.4, 0.4); // fill in the pixel
-
-      const dia = round2TwoDecimal(radius * 2);
-      context.font = '4px sans-serif';
-      context.fillText(`${dia}`, x + 4, this.canvasHeight - y);
-      context.restore();
+      context.lineWidth = 0.3;
+      context.strokeStyle = '#0000ff';
+      context.stroke();
     });
-    context.closePath(); // end
-    context.lineWidth = 0.3;
-    context.strokeStyle = '#0000ff';
-    context.stroke();
     // done drawing circles
 
     // drawing lines
     let lineColor = '#44cc44';
     this.props.drawModel.lines.forEach((line: DrawLine) => {
-      const startX = line.startPoint.x;
-      const startY = line.startPoint.y;
-      const endX = line.endPoint.x;
-      const endY = line.endPoint.y;
-
-      // don't draw if the start end points for x and y are the same
-      // likely a z only move
-      if (startX !== endX || startY !== endY) {
-        const dx = endX - startX;
-        const dy = endY - startY;
-        const angle = Math.atan2(dy, dx);
-
-        if (line.isVisible) {
-          lineColor = '#44cc44';
-        } else {
-          lineColor = '#44ccff';
-        }
-
-        // draw arrow head
-        if (this.props.showArrows) this.drawArrowHead(context, endX, endY, angle, arrowLen, lineColor);
-
-        // draw line
-        context.beginPath(); // begin
-        context.moveTo(startX, startY);
-        context.lineTo(endX, endY);
-        context.closePath(); // end
-        context.lineWidth = 0.3;
-        context.strokeStyle = lineColor;
-        context.stroke();
+      if (line.isVisible) {
+        lineColor = '#44cc44';
+      } else {
+        lineColor = '#44ccff';
       }
+
+      drawLine(context, line, this.props.showArrows, arrowLen, lineColor);
+
+      context.lineWidth = 0.3;
+      context.strokeStyle = lineColor;
+      context.stroke();
     });
     // done drawing lines
 
     // drawing arcs
     this.props.drawModel.arcs.forEach((a: DrawArc) => {
-      const centerX = a.center.x;
-      const centerY = a.center.y;
-      const { radius } = a;
-      const { startAngle } = a;
-      const { endAngle } = a;
+      drawArc(context, a, this.props.showArrows, arrowLen);
 
-      // since we have flipped the y orgin, we have to draw counter clockwise
-      const isCounterClockwise = false;
-
-      let startX = 0;
-      let startY = 0;
-      let endX = 0;
-      let endY = 0;
-      if (isCounterClockwise) {
-        endX = centerX + Math.cos((startAngle * Math.PI) / 180) * radius;
-        endY = centerY + Math.sin((startAngle * Math.PI) / 180) * radius;
-        startX = centerX + Math.cos((endAngle * Math.PI) / 180) * radius;
-        startY = centerY + Math.sin((endAngle * Math.PI) / 180) * radius;
-      } else {
-        startX = centerX + Math.cos((startAngle * Math.PI) / 180) * radius;
-        startY = centerY + Math.sin((startAngle * Math.PI) / 180) * radius;
-        endX = centerX + Math.cos((endAngle * Math.PI) / 180) * radius;
-        endY = centerY + Math.sin((endAngle * Math.PI) / 180) * radius;
-      }
-
-      // don't draw if the start end points for x and y are the same
-      // likely a z only move
-      if (startX !== endX || startY !== endY) {
-        const dx = endX - centerX;
-        const dy = endY - centerY;
-
-        let arrowAngle = 0;
-        let sAngle = 0;
-        let eAngle = 0;
-        if (isCounterClockwise) {
-          arrowAngle = Math.atan2(dy, dx) - Math.PI / 2; // counter clockwise
-          sAngle = (endAngle * Math.PI) / 180;
-          eAngle = (startAngle * Math.PI) / 180;
-        } else {
-          arrowAngle = Math.atan2(dy, dx) + Math.PI / 2; // clockwise
-          sAngle = (startAngle * Math.PI) / 180;
-          eAngle = (endAngle * Math.PI) / 180;
-        }
-
-        // draw arrow head
-        if (this.props.showArrows) this.drawArrowHead(context, endX, endY, arrowAngle, arrowLen, '#000000');
-
-        // draw arc
-        context.beginPath(); // begin
-        context.moveTo(startX, startY);
-        context.arc(centerX, centerY, radius, sAngle, eAngle, isCounterClockwise);
-        context.moveTo(endX, endY);
-        context.closePath(); // end
-        context.lineWidth = 0.3;
-        context.strokeStyle = '#000000';
-        context.stroke();
-      }
+      context.lineWidth = 0.3;
+      context.strokeStyle = '#000000';
+      context.stroke();
     });
     // done drawing arcs
 
     // drawing polylines
     // drawing them backwards seem to get rid of some strange bugs
-    context.beginPath(); // begin
     for (let j = this.props.drawModel.polylines.length - 1; j >= 0; j--) {
       const p = this.props.drawModel.polylines[j];
+      context.beginPath(); // begin
       for (let i = 0; i < p.vertexes.length; i++) {
         const vertex = p.vertexes[i];
         const pointX = vertex.x;
@@ -714,18 +943,21 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
           context.lineTo(pointX, pointY);
         }
       }
+
+      // dont close the paths since these might not be polygons
+      // context.closePath(); // end
+
+      context.lineWidth = 0.3;
+      context.strokeStyle = '#ff00ff';
+      context.stroke();
     }
-    context.closePath(); // end
-    context.lineWidth = 0.3;
-    context.strokeStyle = '#ff00ff';
-    context.stroke();
     // done drawing polylines
 
     // drawing polylines light weight
     // drawing them backwards seem to get rid of some strange bugs
-    context.beginPath(); // begin
     for (let j = this.props.drawModel.polylinesLW.length - 1; j >= 0; j--) {
       const p = this.props.drawModel.polylinesLW[j];
+      context.beginPath(); // begin
       for (let i = 0; i < p.vertexes.length; i++) {
         const vertex = p.vertexes[i];
         const pointX = vertex.position.x;
@@ -737,7 +969,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
         if (i === 0) {
           context.moveTo(pointX, pointY);
         } else {
-          const angle = ((4 * Math.atan(Math.abs(bulge))) / Math.PI) * 180;
+          const angle = 4 * Math.atan(Math.abs(bulge)) * RAD_TO_DEG;
           const length = Math.sqrt(
             (pointX - prePointX) * (pointX - prePointX) + (pointY - prePointY) * (pointY - prePointY)
           );
@@ -748,11 +980,13 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
           prePointY = pointY;
         }
       }
+      // dont close the paths since these might not be polygons
+      // context.closePath(); // end
+
+      context.lineWidth = 0.3;
+      context.strokeStyle = '#002266';
+      context.stroke();
     }
-    context.closePath(); // end
-    context.lineWidth = 0.3;
-    context.strokeStyle = '#002266';
-    context.stroke();
     // done drawing polylines light weight
   };
 

@@ -101,7 +101,8 @@ module.exports = {
     /**
      * @description rules of eslint
      */
-    'no-underscore-dangle': 'off',
+		'no-constant-condition': ['error', { 'checkLoops': false }],
+		'no-underscore-dangle': 'off',
     'no-console': 'off',
     'no-nested-ternary': 'off',
     'no-return-assign': 'off',
