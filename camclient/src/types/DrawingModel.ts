@@ -41,8 +41,7 @@ export interface BaseElement {
   color: DrawColor;
   isVisible: boolean;
   layerName?: string;
-  colorHitKey?: string;
-  id?: string;
+  infoText?: string;
 }
 
 export interface DrawCircle extends BaseElement {
