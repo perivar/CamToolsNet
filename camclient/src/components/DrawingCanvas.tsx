@@ -205,7 +205,14 @@ const drawGrid = (
   context.strokeStyle = colorAxis;
 };
 
-const drawCircle = (context: CanvasRenderingContext2D, circle: DrawCircle, canvasHeight: number, doInfo = false) => {
+const drawCircle = (
+  context: CanvasRenderingContext2D,
+  circle: DrawCircle,
+  canvasHeight: number,
+  doInfo = false,
+  lineColor = '#000000',
+  lineWidth = 0.5
+) => {
   const startAngle = 0;
   const endAngle = 2 * Math.PI;
   const { x } = circle.center;
@@ -229,6 +236,10 @@ const drawCircle = (context: CanvasRenderingContext2D, circle: DrawCircle, canva
     context.fillText(`${dia}`, x - 2, canvasHeight - y - radius - 1);
     context.restore();
   }
+
+  context.lineWidth = lineWidth;
+  context.strokeStyle = lineColor;
+  context.stroke();
 };
 
 const drawArc = (
@@ -236,7 +247,9 @@ const drawArc = (
   arc: DrawArc,
   showArrows: boolean,
   arrowLen: number,
-  lineColor = '#000000'
+  doInfo = false,
+  lineColor = '#000000',
+  lineWidth = 0.5
 ) => {
   const centerX = arc.center.x;
   const centerY = arc.center.y;
@@ -291,21 +304,28 @@ const drawArc = (
     context.arc(centerX, centerY, radius, sAngle, eAngle, isCounterClockwise);
     context.moveTo(endX, endY);
     context.closePath(); // end
+
+    // if (doInfo && showArrows) {
+    //   context.fillRect(centerX - 0.2, centerY - 0.2, 0.4, 0.4); // fill in the pixel
+    // }
+
+    context.lineWidth = lineWidth;
+    context.strokeStyle = lineColor;
+    context.stroke();
   }
 };
 
-const drawLine = (
+const drawSingleLine = (
   context: CanvasRenderingContext2D,
-  line: DrawLine,
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number,
   showArrows: boolean,
   arrowLen: number,
-  lineColor = '#000000'
+  lineColor = '#000000',
+  lineWidth = 0.5
 ) => {
-  const startX = line.startPoint.x;
-  const startY = line.startPoint.y;
-  const endX = line.endPoint.x;
-  const endY = line.endPoint.y;
-
   // don't draw if the start end points for x and y are the same
   // likely a z only move
   if (startX !== endX || startY !== endY) {
@@ -321,31 +341,71 @@ const drawLine = (
     context.moveTo(startX, startY);
     context.lineTo(endX, endY);
     context.closePath(); // end
+
+    context.lineWidth = lineWidth;
+    context.strokeStyle = lineColor;
+    context.stroke();
   }
 };
 
-const drawPolyline = (context: CanvasRenderingContext2D, p: DrawPolyline, doClosePath = false) => {
-  context.beginPath(); // begin
+const drawLine = (
+  context: CanvasRenderingContext2D,
+  line: DrawLine,
+  showArrows: boolean,
+  arrowLen: number,
+  lineColor = '#000000',
+  lineWidth = 0.5
+) => {
+  const startX = line.startPoint.x;
+  const startY = line.startPoint.y;
+  const endX = line.endPoint.x;
+  const endY = line.endPoint.y;
+
+  drawSingleLine(context, startX, startY, endX, endY, showArrows, arrowLen, lineColor, lineWidth);
+};
+
+const drawPolyline = (
+  context: CanvasRenderingContext2D,
+  p: DrawPolyline,
+  showArrows: boolean,
+  arrowLen: number,
+  lineColor = '#000000',
+  lineWidth = 0.5
+) => {
+  let startX = 0;
+  let startY = 0;
+  let endX = 0;
+  let endY = 0;
+
   for (let i = 0; i < p.vertexes.length; i++) {
     const vertex = p.vertexes[i];
-    const pointX = vertex.x;
-    const pointY = vertex.y;
+    const posX = vertex.x;
+    const posY = vertex.y;
 
-    // context.lineTo(pointX, pointY);
     if (i === 0) {
-      context.moveTo(pointX, pointY);
+      startX = posX;
+      startY = posY;
     } else {
-      context.lineTo(pointX, pointY);
-    }
-  }
+      endX = posX;
+      endY = posY;
 
-  if (doClosePath) {
-    // dont close the paths since these might not be polygons
-    context.closePath(); // end
+      drawSingleLine(context, startX, startY, endX, endY, showArrows, arrowLen, lineColor, lineWidth);
+
+      // store new start pos
+      startX = posX;
+      startY = posY;
+    }
   }
 };
 
-const drawPolylineLW = (context: CanvasRenderingContext2D, p: DrawPolylineLW, doClosePath = false) => {
+const drawPolylineLW = (
+  context: CanvasRenderingContext2D,
+  p: DrawPolylineLW,
+  showArrows: boolean,
+  arrowLen: number,
+  lineColor = '#000000',
+  lineWidth = 0.5
+) => {
   context.beginPath(); // begin
   for (let i = 0; i < p.vertexes.length; i++) {
     const vertex = p.vertexes[i];
@@ -370,23 +430,30 @@ const drawPolylineLW = (context: CanvasRenderingContext2D, p: DrawPolylineLW, do
     }
   }
 
-  if (doClosePath) {
-    // dont close the paths since these might not be polygons
-    context.closePath(); // end
-  }
+  context.lineWidth = lineWidth;
+  context.strokeStyle = lineColor;
+  context.stroke();
 };
 
-const definePolyline = (context: CanvasRenderingContext2D, shape: DrawShape) => {
+const defineIrregularPath = (context: CanvasRenderingContext2D, shape: DrawShape) => {
+  let points: PointF[] = [{ x: 0, y: 0 }];
   if (shape.kind === 'polyline') {
-    drawPolyline(context, shape, true);
+    points = shape.vertexes;
   } else if (shape.kind === 'polylinelw') {
-    drawPolylineLW(context, shape, true);
+    points = Array.from(shape.vertexes, (p) => p.position);
   }
+
+  context.beginPath();
+  context.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i++) {
+    context.lineTo(points[i].x, points[i].y);
+  }
+  context.closePath();
 };
 
 // given mouse X & Y (mx & my) and shape object
 // return true/false whether mouse is inside the shape
-// https://riptutorial.com/html5-canvas/example/18918/dragging-circles---rectangles-around-the-canvas
+// https://riptutorial.com/html5-canvas/example/18919/dragging-irregular-shapes-around-the-canvas
 const isMouseInShape = (context: CanvasRenderingContext2D, mx: number, my: number, shape: DrawShape) => {
   if (shape.kind === 'circle') {
     const circle = shape as DrawCircle;
@@ -415,7 +482,7 @@ const isMouseInShape = (context: CanvasRenderingContext2D, mx: number, my: numbe
     }
   } else if (shape.kind === 'polyline' || shape.kind === 'polylinelw') {
     // First redefine the path again (no need to stroke/fill!)
-    definePolyline(context, shape);
+    defineIrregularPath(context, shape);
 
     // Then hit-test with isPointInPath
     if (context.isPointInPath(mx, my)) {
@@ -778,7 +845,9 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
         a.kind = 'arc';
         a.infoText = `Arc: [${round2TwoDecimal(startX)} : ${round2TwoDecimal(startY)}] - [${round2TwoDecimal(
           endX
-        )} : ${round2TwoDecimal(endY)}] , Center: [${round2TwoDecimal(centerX)} : ${round2TwoDecimal(centerY)}]`;
+        )} : ${round2TwoDecimal(endY)}] , Center: [${round2TwoDecimal(centerX)} : ${round2TwoDecimal(
+          centerY
+        )}], Radius: ${round2TwoDecimal(radius)}`;
         this.shapes.push(a);
       }
     });
@@ -842,11 +911,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     // drawing circles
     lineColor = '#0000ff';
     this.props.drawModel.circles.forEach((circle: DrawCircle) => {
-      drawCircle(context, circle, this.canvasHeight);
-
-      context.lineWidth = lineWidth;
-      context.strokeStyle = lineColor;
-      context.stroke();
+      drawCircle(context, circle, this.canvasHeight, true, lineColor, lineWidth);
     });
     // done drawing circles
 
@@ -857,45 +922,28 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
       } else {
         lineColor = '#44ccff';
       }
-
-      drawLine(context, line, this.props.showArrows, arrowLen, lineColor);
-
-      context.lineWidth = lineWidth;
-      context.strokeStyle = lineColor;
-      context.stroke();
+      drawLine(context, line, this.props.showArrows, arrowLen, lineColor, lineWidth);
     });
     // done drawing lines
 
     // drawing arcs
     lineColor = '#000000';
     this.props.drawModel.arcs.forEach((a: DrawArc) => {
-      drawArc(context, a, this.props.showArrows, arrowLen);
-
-      context.lineWidth = lineWidth;
-      context.strokeStyle = lineColor;
-      context.stroke();
+      drawArc(context, a, this.props.showArrows, arrowLen, true, lineColor, lineWidth);
     });
     // done drawing arcs
 
     // drawing polylines
     lineColor = '#ff00ff';
     this.props.drawModel.polylines.forEach((p: DrawPolyline) => {
-      drawPolyline(context, p, false);
-
-      context.lineWidth = lineWidth;
-      context.strokeStyle = lineColor;
-      context.stroke();
+      drawPolyline(context, p, this.props.showArrows, arrowLen, lineColor, lineWidth);
     });
     // done drawing polylines
 
     // drawing polylines light weight
     lineColor = '#002266';
     this.props.drawModel.polylinesLW.forEach((p: DrawPolylineLW) => {
-      drawPolylineLW(context, p, false);
-
-      context.lineWidth = lineWidth;
-      context.strokeStyle = lineColor;
-      context.stroke();
+      drawPolylineLW(context, p, this.props.showArrows, arrowLen, lineColor, lineWidth);
     });
     // done drawing polylines light weight
   };
@@ -932,6 +980,14 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     // draw all the shapes
     for (let i = 0; i < this.shapes.length; i++) {
       const shape = this.shapes[i];
+
+      if (this.selectedShapeIndex === i) {
+        lineWidth = defaultLineWidth * 2;
+        this.selectedShapeInfo = shape.infoText || '';
+      } else {
+        lineWidth = defaultLineWidth;
+      }
+
       switch (shape.kind) {
         case 'circle':
           if (this.selectedShapeIndex === i) {
@@ -939,7 +995,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
           } else {
             lineColor = '#0000ff';
           }
-          drawCircle(context, shape, this.canvasHeight, true);
+          drawCircle(context, shape, this.canvasHeight, true, lineColor, lineWidth);
           break;
         case 'line':
           if (this.selectedShapeIndex === i) {
@@ -949,7 +1005,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
           } else {
             lineColor = '#44ccff';
           }
-          drawLine(context, shape, this.props.showArrows, arrowLen, lineColor);
+          drawLine(context, shape, this.props.showArrows, arrowLen, lineColor, lineWidth);
           break;
         case 'arc':
           if (this.selectedShapeIndex === i) {
@@ -957,7 +1013,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
           } else {
             lineColor = '#000000';
           }
-          drawArc(context, shape, this.props.showArrows, arrowLen, lineColor);
+          drawArc(context, shape, this.props.showArrows, arrowLen, true, lineColor, lineWidth);
           break;
         case 'polyline':
           if (this.selectedShapeIndex === i) {
@@ -965,7 +1021,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
           } else {
             lineColor = '#ff00ff';
           }
-          drawPolyline(context, shape, false);
+          drawPolyline(context, shape, this.props.showArrows, arrowLen, lineColor, lineWidth);
           break;
         case 'polylinelw':
           if (this.selectedShapeIndex === i) {
@@ -973,20 +1029,11 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
           } else {
             lineColor = '#002266';
           }
-          drawPolylineLW(context, shape, false);
+          drawPolylineLW(context, shape, this.props.showArrows, arrowLen, lineColor, lineWidth);
           break;
         default:
           break;
       }
-      if (this.selectedShapeIndex === i) {
-        lineWidth = defaultLineWidth * 2;
-        this.selectedShapeInfo = shape.infoText || '';
-      } else {
-        lineWidth = defaultLineWidth;
-      }
-      context.lineWidth = lineWidth;
-      context.strokeStyle = lineColor;
-      context.stroke();
     }
   };
 
