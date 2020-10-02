@@ -236,7 +236,7 @@ const drawCircle = (
     context.save();
     context.scale(1, -1); // flip back
     context.translate(0, -canvasHeight); // and translate so that we draw the text the right way up
-    context.fillRect(x - lineWidth / 2, canvasHeight - y - lineWidth / 2, lineWidth, lineWidth); // fill in the pixel
+    context.fillRect(x - lineWidth / 2, canvasHeight - y - lineWidth / 2, lineWidth, lineWidth); // fill in the center pixel
 
     const dia = round2TwoDecimal(radius * 2);
     context.font = '3px sans-serif';
@@ -264,7 +264,6 @@ const drawArc = (
   const { startAngle } = arc;
   const { endAngle } = arc;
 
-  // since we have flipped the y orgin, we have to draw counter clockwise
   const isCounterClockwise = false;
 
   let startX = 0;
@@ -313,7 +312,7 @@ const drawArc = (
     context.closePath(); // end
 
     if (showInfo) {
-      context.fillRect(centerX - lineWidth / 2, centerY - lineWidth / 2, lineWidth, lineWidth); // fill in the pixel
+      context.fillRect(centerX - lineWidth / 2, centerY - lineWidth / 2, lineWidth, lineWidth); // fill in the center pixel
     }
 
     context.lineWidth = lineWidth;
@@ -774,8 +773,6 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     let minY = 1000000;
     let curX = 0;
     let curY = 0;
-
-    // const idCounter = 0;
 
     // reset shapes
     this.shapes = [];
