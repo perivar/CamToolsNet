@@ -17,6 +17,7 @@ export interface IHomeState {
   splitIndex: number;
   rotateDegrees: number;
   showArrows: boolean;
+  showInfo: boolean;
   drawModel: DrawingModel;
 }
 
@@ -39,7 +40,8 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
       xSplit: 100,
       splitIndex: 0,
       rotateDegrees: 45,
-      showArrows: false
+      showArrows: false,
+      showInfo: false
     };
   }
 
@@ -115,6 +117,12 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
     const { value } = e.currentTarget;
     const flipArrowSet = value === 'false';
     this.setState({ showArrows: flipArrowSet });
+  };
+
+  private onShowInfoChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const { value } = e.currentTarget;
+    const flipInfoSet = value === 'false';
+    this.setState({ showInfo: flipInfoSet });
   };
 
   private onRotateDegressChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
@@ -238,7 +246,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
   };
 
   render() {
-    const { isLoading, isError, drawModel, showArrows } = this.state;
+    const { isLoading, isError, drawModel, showArrows, showInfo } = this.state;
     return (
       <Container fluid>
         <Row className="my-2">
@@ -268,7 +276,12 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
                 <div>Loading drawing ...</div>
               </Alert>
             ) : (
-              <DrawingCanvas drawModel={drawModel} showArrows={showArrows} xSplit={this.state.xSplit} />
+              <DrawingCanvas
+                drawModel={drawModel}
+                showArrows={showArrows}
+                showInfo={showInfo}
+                xSplit={this.state.xSplit}
+              />
               // <KonvaCanvas drawModel={drawModel} showArrows={showArrows} />
             )}
           </Col>
@@ -377,6 +390,13 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
                         value={`${this.state.showArrows}`}
                         checked={this.state.showArrows === true}
                         onChange={this.onShowArrowsChange}
+                      />
+                      <Form.Check
+                        type="checkbox"
+                        label="Show info"
+                        value={`${this.state.showInfo}`}
+                        checked={this.state.showInfo === true}
+                        onChange={this.onShowInfoChange}
                       />
                       <Button className="mb-1" title="Trim" variant="info" onClick={this.onTrim} size="sm">
                         Trim X and Y

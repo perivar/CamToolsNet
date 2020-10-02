@@ -15,6 +15,7 @@ import {
 interface IDrawingCanvasProps {
   drawModel: DrawingModel;
   showArrows: boolean;
+  showInfo: boolean;
   xSplit: number;
 }
 
@@ -101,7 +102,8 @@ const drawArrowHead = (
   endY: number,
   angle: number,
   arrowLen: number,
-  color: string
+  lineColor: string,
+  lineWidth: number
 ) => {
   // draw arrow head as filled triangle
   context.beginPath();
@@ -110,7 +112,12 @@ const drawArrowHead = (
   context.lineTo(endX - arrowLen * Math.cos(angle + Math.PI / 6), endY - arrowLen * Math.sin(angle + Math.PI / 6));
   context.lineTo(endX, endY);
   context.closePath();
-  context.fillStyle = color;
+
+  context.lineWidth = lineWidth;
+  context.strokeStyle = lineColor;
+  context.stroke();
+
+  context.fillStyle = lineColor;
   context.fill();
 };
 
@@ -209,9 +216,9 @@ const drawCircle = (
   context: CanvasRenderingContext2D,
   circle: DrawCircle,
   canvasHeight: number,
-  doInfo = false,
-  lineColor = '#000000',
-  lineWidth = 0.5
+  showInfo = false,
+  lineColor: string,
+  lineWidth: number
 ) => {
   const startAngle = 0;
   const endAngle = 2 * Math.PI;
@@ -224,12 +231,12 @@ const drawCircle = (
   context.arc(x, y, radius, startAngle, endAngle, false);
   context.closePath(); // end
 
-  if (doInfo) {
+  if (showInfo) {
     // draw diameter and center (need to flip y axis back first)
     context.save();
     context.scale(1, -1); // flip back
     context.translate(0, -canvasHeight); // and translate so that we draw the text the right way up
-    context.fillRect(x - 0.2, canvasHeight - y - 0.2, 0.4, 0.4); // fill in the pixel
+    context.fillRect(x - lineWidth / 2, canvasHeight - y - lineWidth / 2, lineWidth, lineWidth); // fill in the pixel
 
     const dia = round2TwoDecimal(radius * 2);
     context.font = '3px sans-serif';
@@ -247,9 +254,9 @@ const drawArc = (
   arc: DrawArc,
   showArrows: boolean,
   arrowLen: number,
-  doInfo = false,
-  lineColor = '#000000',
-  lineWidth = 0.5
+  showInfo = false,
+  lineColor: string,
+  lineWidth: number
 ) => {
   const centerX = arc.center.x;
   const centerY = arc.center.y;
@@ -296,7 +303,7 @@ const drawArc = (
     }
 
     // draw arrow head
-    if (showArrows) drawArrowHead(context, endX, endY, arrowAngle, arrowLen, lineColor);
+    if (showArrows) drawArrowHead(context, endX, endY, arrowAngle, arrowLen, lineColor, lineWidth);
 
     // draw arc
     context.beginPath(); // begin
@@ -305,9 +312,9 @@ const drawArc = (
     context.moveTo(endX, endY);
     context.closePath(); // end
 
-    // if (doInfo && showArrows) {
-    //   context.fillRect(centerX - 0.2, centerY - 0.2, 0.4, 0.4); // fill in the pixel
-    // }
+    if (showInfo) {
+      context.fillRect(centerX - lineWidth / 2, centerY - lineWidth / 2, lineWidth, lineWidth); // fill in the pixel
+    }
 
     context.lineWidth = lineWidth;
     context.strokeStyle = lineColor;
@@ -323,8 +330,8 @@ const drawSingleLine = (
   endY: number,
   showArrows: boolean,
   arrowLen: number,
-  lineColor = '#000000',
-  lineWidth = 0.5
+  lineColor: string,
+  lineWidth: number
 ) => {
   // don't draw if the start end points for x and y are the same
   // likely a z only move
@@ -334,7 +341,7 @@ const drawSingleLine = (
     const angle = Math.atan2(dy, dx);
 
     // draw arrow head
-    if (showArrows) drawArrowHead(context, endX, endY, angle, arrowLen, lineColor);
+    if (showArrows) drawArrowHead(context, endX, endY, angle, arrowLen, lineColor, lineWidth);
 
     // draw line
     context.beginPath(); // begin
@@ -353,8 +360,8 @@ const drawLine = (
   line: DrawLine,
   showArrows: boolean,
   arrowLen: number,
-  lineColor = '#000000',
-  lineWidth = 0.5
+  lineColor: string,
+  lineWidth: number
 ) => {
   const startX = line.startPoint.x;
   const startY = line.startPoint.y;
@@ -369,8 +376,8 @@ const drawPolyline = (
   p: DrawPolyline,
   showArrows: boolean,
   arrowLen: number,
-  lineColor = '#000000',
-  lineWidth = 0.5
+  lineColor: string,
+  lineWidth: number
 ) => {
   let startX = 0;
   let startY = 0;
@@ -403,8 +410,8 @@ const drawPolylineLW = (
   p: DrawPolylineLW,
   showArrows: boolean,
   arrowLen: number,
-  lineColor = '#000000',
-  lineWidth = 0.5
+  lineColor: string,
+  lineWidth: number
 ) => {
   context.beginPath(); // begin
   for (let i = 0; i < p.vertexes.length; i++) {
@@ -448,13 +455,34 @@ const defineIrregularPath = (context: CanvasRenderingContext2D, shape: DrawShape
   for (let i = 1; i < points.length; i++) {
     context.lineTo(points[i].x, points[i].y);
   }
+  // make sure to close the path since we are using isPointInPath as hit detection
+  // this is never drawn so a closed path is only used for hit detection
   context.closePath();
+};
+
+const isOnLine = (xp: number, yp: number, x1: number, y1: number, x2: number, y2: number, maxDistance: number) => {
+  // https://stackoverflow.com/questions/34474336/decide-if-a-point-is-on-or-close-enough-to-a-line-segment
+  const dxL = x2 - x1;
+  const dyL = y2 - y1; // line: vector from (x1,y1) to (x2,y2)
+  const dxP = xp - x1;
+  const dyP = yp - y1; // point: vector from (x1,y1) to (xp,yp)
+
+  const squareLen = dxL * dxL + dyL * dyL; // squared length of line
+  const dotProd = dxP * dxL + dyP * dyL; // squared distance of point from (x1,y1) along line
+  const crossProd = dyP * dxL - dxP * dyL; // area of parallelogram defined by line and point
+
+  // perpendicular distance of point from line
+  const distance = Math.abs(crossProd) / Math.sqrt(squareLen);
+
+  return distance <= maxDistance && dotProd >= 0 && dotProd <= squareLen;
 };
 
 // given mouse X & Y (mx & my) and shape object
 // return true/false whether mouse is inside the shape
 // https://riptutorial.com/html5-canvas/example/18919/dragging-irregular-shapes-around-the-canvas
 const isMouseInShape = (context: CanvasRenderingContext2D, mx: number, my: number, shape: DrawShape) => {
+  const lineWidthTreshold = 3;
+
   if (shape.kind === 'circle') {
     const circle = shape as DrawCircle;
     const dx = mx - circle.center.x;
@@ -466,7 +494,7 @@ const isMouseInShape = (context: CanvasRenderingContext2D, mx: number, my: numbe
     }
   } else if (shape.kind === 'arc') {
     const a = shape as DrawArc;
-    drawArc(context, a, false, 0);
+    drawArc(context, a, false, 0, false, '', lineWidthTreshold);
 
     // Then hit-test with isPointInStroke
     if (context.isPointInStroke(mx, my)) {
@@ -474,8 +502,11 @@ const isMouseInShape = (context: CanvasRenderingContext2D, mx: number, my: numbe
     }
   } else if (shape.kind === 'line') {
     const line = shape as DrawLine;
-    drawLine(context, line, false, 0);
 
+    // hit test line with threshold
+    // return isOnLine(mx, my, line.startPoint.x, line.startPoint.y, line.endPoint.x, line.endPoint.y, lineWidthTreshold);
+
+    drawLine(context, line, false, 0, '', lineWidthTreshold);
     // Then hit-test with isPointInStroke
     if (context.isPointInStroke(mx, my)) {
       return true;
@@ -573,6 +604,9 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
 
   componentDidUpdate(prevProps: IDrawingCanvasProps) {
     if (prevProps.showArrows !== this.props.showArrows) {
+      this.draw(this.scale, this.translatePos);
+    }
+    if (prevProps.showInfo !== this.props.showInfo) {
       this.draw(this.scale, this.translatePos);
     }
     if (prevProps.xSplit !== this.props.xSplit) {
@@ -949,7 +983,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
   };
 
   private drawFile = (context: CanvasRenderingContext2D) => {
-    const arrowLen = 0.8; // length of head in pixels
+    const arrowLen = 1; // length of head in pixels
     const defaultLineWidth = 0.3;
     const defaultHighlightColor = '#ffcc11';
     let lineWidth = defaultLineWidth;
@@ -995,7 +1029,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
           } else {
             lineColor = '#0000ff';
           }
-          drawCircle(context, shape, this.canvasHeight, true, lineColor, lineWidth);
+          drawCircle(context, shape, this.canvasHeight, this.props.showInfo, lineColor, lineWidth);
           break;
         case 'line':
           if (this.selectedShapeIndex === i) {
@@ -1013,7 +1047,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
           } else {
             lineColor = '#000000';
           }
-          drawArc(context, shape, this.props.showArrows, arrowLen, true, lineColor, lineWidth);
+          drawArc(context, shape, this.props.showArrows, arrowLen, this.props.showInfo, lineColor, lineWidth);
           break;
         case 'polyline':
           if (this.selectedShapeIndex === i) {
