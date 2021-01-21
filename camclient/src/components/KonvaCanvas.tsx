@@ -1,28 +1,13 @@
 import React, { FC, ReactElement, useEffect } from 'react';
-import { Stage, Layer, Circle, Line, Arc, Shape } from 'react-konva';
+import { Stage, Layer, Circle, Line, Shape } from 'react-konva';
 import Konva from 'konva';
 import './KonvaCanvas.scss';
-import {
-  Bounds,
-  PointF,
-  DrawingModel,
-  DrawCircle,
-  DrawLine,
-  DrawArc,
-  DrawPolyline,
-  DrawPolylineLW
-} from '../types/DrawingModel';
+import { PointF, DrawingModel, DrawCircle, DrawLine, DrawArc } from '../types/DrawingModel';
 
 interface IKonvaCanvasProps {
   drawModel: DrawingModel;
   showArrows: boolean;
 }
-
-const { PI } = Math;
-const HALF_PI = Math.PI / 2;
-const TWO_PI = Math.PI * 2;
-const DEG_TO_RAD = Math.PI / 180;
-const RAD_TO_DEG = 180 / Math.PI;
 
 interface ArrowHeadProps {
   endX: number;
@@ -238,7 +223,6 @@ const Drawing = (props: IKonvaCanvasProps): ReactElement => {
 // Drawing.displayName = 'Drawing';
 
 export const KonvaCanvas = (props: IKonvaCanvasProps): ReactElement => {
-  const [localPos, setPos] = React.useState({ x: 0, y: 0 });
   const [canvasSize, setCanvasSize] = React.useState({ width: 0, height: 0 });
   const [stageInfo, setStageInfo] = React.useState({ stageScale: 1, stageX: 0, stageY: 0 });
 

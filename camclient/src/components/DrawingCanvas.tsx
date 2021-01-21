@@ -471,9 +471,9 @@ const isOnLine = (xp: number, yp: number, x1: number, y1: number, x2: number, y2
   const crossProd = dyP * dxL - dxP * dyL; // area of parallelogram defined by line and point
 
   // perpendicular distance of point from line
-  const distance = Math.abs(crossProd) / Math.sqrt(squareLen);
+  const dist = Math.abs(crossProd) / Math.sqrt(squareLen);
 
-  return distance <= maxDistance && dotProd >= 0 && dotProd <= squareLen;
+  return dist <= maxDistance && dotProd >= 0 && dotProd <= squareLen;
 };
 
 // given mouse X & Y (mx & my) and shape object
