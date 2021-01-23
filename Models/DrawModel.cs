@@ -10,6 +10,7 @@ using Util;
 using GCode;
 using Svg;
 using Svg.Pathing;
+using System.Text.Json.Serialization;
 
 namespace CAMToolsNet.Models
 {
@@ -22,6 +23,10 @@ namespace CAMToolsNet.Models
 		public List<DrawLine> Lines { get; set; }
 		public List<DrawArc> Arcs { get; set; }
 		public List<DrawPolyline> Polylines { get; set; }
+
+		// used to hold the sorted start end segment list
+		[JsonIgnore]
+		public List<IStartEndPoint> SortedStartEnd { get; set; }
 
 		public class DrawColor
 		{
@@ -50,12 +55,22 @@ namespace CAMToolsNet.Models
 			}
 		}
 
+		public interface IStartEndPoint
+		{
+			Point3D StartPoint { get; }
+			Point3D EndPoint { get; }
+			void SwapStartEnd();
+		}
+
 		public abstract class DrawElement
 		{
 			public string CodeName { get; set; }
 			public DrawColor Color { get; set; }
 			public bool IsVisible { get; set; }
 			public string LayerName { get; set; }
+
+			// force the elements to implement ToString()
+			public abstract override string ToString();
 
 			public DrawElement()
 			{
@@ -96,9 +111,15 @@ namespace CAMToolsNet.Models
 				Thickness = (float)c.Thickness;
 				IsVisible = true;
 			}
+
+			public override string ToString()
+			{
+				return string.Format(CultureInfo.CurrentCulture,
+									 "Center={0}, Radius={1}", Center, Radius);
+			}
 		}
 
-		public class DrawLine : DrawElement, IEquatable<DrawLine>
+		public class DrawLine : DrawElement, IEquatable<DrawLine>, IStartEndPoint
 		{
 			public Point3D StartPoint { get; set; }
 			public Point3D EndPoint { get; set; }
@@ -139,9 +160,24 @@ namespace CAMToolsNet.Models
 			{
 				return base.GetHashCode();
 			}
+
+			public void SwapStartEnd()
+			{
+				var startPoint = StartPoint;
+				var endPoint = EndPoint;
+				CollectionsUtils.Swap(ref startPoint, ref endPoint);
+				StartPoint = startPoint;
+				EndPoint = endPoint;
+			}
+
+			public override string ToString()
+			{
+				return string.Format(CultureInfo.CurrentCulture,
+									 "StartPoint={0}, EndPoint={1}", StartPoint, EndPoint);
+			}
 		}
 
-		public class DrawArc : DrawElement
+		public class DrawArc : DrawElement, IStartEndPoint
 		{
 			public Point3D Center { get; set; }
 			public float Radius { get; set; }
@@ -204,6 +240,22 @@ namespace CAMToolsNet.Models
 				EndAngle = (float)a.EndAngle;
 				IsVisible = true;
 			}
+
+			public void SwapStartEnd()
+			{
+				// ignore the swapping for arcs since the arcs are correct anyway
+				// even if the start and end point isn't really swapped
+				// var startAngle = StartAngle;
+				// var endAngle = EndAngle;
+				// StartAngle = endAngle;
+				// EndAngle = startAngle;
+			}
+
+			public override string ToString()
+			{
+				return string.Format(CultureInfo.CurrentCulture,
+									 "StartPoint={0}, EndPoint={1}", StartPoint, EndPoint);
+			}
 		}
 
 		public class DrawPolyline : DrawElement
@@ -259,6 +311,12 @@ namespace CAMToolsNet.Models
 					Vertexes.Add(Point3D);
 				}
 				IsVisible = true;
+			}
+
+			public override string ToString()
+			{
+				return string.Format(CultureInfo.CurrentCulture,
+									 "StartPoint={0}, EndPoint={1}", Vertexes.First(), Vertexes.Last());
 			}
 		}
 
@@ -1038,27 +1096,32 @@ namespace CAMToolsNet.Models
 			}
 		}
 
-		public void SortLines()
+		public void SortStartStopSegments()
 		{
-			var openList = new List<DrawLine>(Lines);
-			var orderedList = new List<DrawLine>();
+			var openList = new List<IStartEndPoint>();
+			var orderedList = new List<IStartEndPoint>();
+
+			// add Lines and Arcs
+			openList.AddRange(Lines);
+			openList.AddRange(Arcs);
 
 			// https://stackoverflow.com/questions/39546622/sort-my-class-by-two-values
 			// https://forum.unity.com/threads/sorting-line-segments.254411/
 			// https://www.geeksforgeeks.org/cocktail-sort/
 
-			for (int j = 0; j < openList.Count; j++)
+			bool foundNext = true;
+			while (openList.Count > 0)
 			{
-				// Move first entry from open to ordered
-				orderedList.Add(openList.ElementAt(j));
-				openList.RemoveAt(j);
+				// move entry from open to ordered
+				orderedList.Add(openList.ElementAt(0));
+				openList.RemoveAt(0);
 
-				bool foundNext = true;
 				// forward direction
 				do
 				{
 					foundNext = false;
-					for (int i = 0; i < openList.Count; i++)
+					// Iterate the list in reverse with a for loop to be able to remove while iterating
+					for (int i = openList.Count - 1; i >= 0; i--)
 					{
 						var segment = openList.ElementAt(i);
 						if (orderedList.Last().EndPoint == segment.StartPoint)
@@ -1067,20 +1130,18 @@ namespace CAMToolsNet.Models
 							orderedList.Add(segment);
 							openList.RemoveAt(i);
 							foundNext = true;
+							continue;
 						}
 						else if (orderedList.Last().EndPoint == segment.EndPoint)
 						{
 							// swap start and end points
-							var startPoint = segment.StartPoint;
-							var endPoint = segment.EndPoint;
-							CollectionsUtils.Swap(ref startPoint, ref endPoint);
-							segment.StartPoint = startPoint;
-							segment.EndPoint = endPoint;
+							segment.SwapStartEnd();
 
 							// move segment from open to end of ordered
 							orderedList.Add(segment);
 							openList.RemoveAt(i);
 							foundNext = true;
+							continue;
 						}
 					}
 
@@ -1090,6 +1151,7 @@ namespace CAMToolsNet.Models
 				do
 				{
 					foundNext = false;
+					// Iterate the list in reverse with a for loop to be able to remove while iterating
 					for (int i = openList.Count - 1; i >= 0; i--)
 					{
 						var segment = openList.ElementAt(i);
@@ -1099,57 +1161,26 @@ namespace CAMToolsNet.Models
 							orderedList.Insert(0, segment);
 							openList.RemoveAt(i);
 							foundNext = true;
+							continue;
 						}
 						else if (orderedList.First().StartPoint == segment.StartPoint)
 						{
 							// swap start and end points
-							var startPoint = segment.StartPoint;
-							var endPoint = segment.EndPoint;
-							CollectionsUtils.Swap(ref startPoint, ref endPoint);
-							segment.StartPoint = startPoint;
-							segment.EndPoint = endPoint;
+							segment.SwapStartEnd();
 
 							// move segment from open to beginning of ordered
 							orderedList.Insert(0, segment);
 							openList.RemoveAt(i);
 							foundNext = true;
+							continue;
 						}
 					}
 
 				} while (foundNext);
 			}
 
-			// https://stackoverflow.com/questions/25287834/how-to-sort-a-collection-of-points-so-that-they-set-up-one-after-another
-			// while (openList.Count > 0)
-			// {
-			// 	// Find the index of the closest point (using another method)
-			// 	int nearestIndex = FindNearestIndex(orderedList.ElementAt(orderedList.Count - 1), openList);
-
-			// 	// Remove from the unorderedList and add to the ordered one
-			// 	orderedList.Add(openList.ElementAt(nearestIndex));
-			// 	openList.RemoveAt(nearestIndex);
-			// }
-
-			Lines = orderedList.Concat(openList).ToList();
-		}
-
-		int FindNearestIndex(DrawLine thisPoint, List<DrawLine> listToSearch)
-		{
-			double nearestDistSquared = Double.PositiveInfinity;
-			int nearestIndex = 0;
-			for (int i = 0; i < listToSearch.Count; i++)
-			{
-				var otherPoint = listToSearch.ElementAt(i);
-				// this only works one direction - from endpoint to startpoint
-				var distsq = Transformation.Distance(thisPoint.EndPoint.PointF, otherPoint.StartPoint.PointF);
-
-				if (distsq < nearestDistSquared)
-				{
-					nearestDistSquared = distsq;
-					nearestIndex = i;
-				}
-			}
-			return nearestIndex;
+			// open list should be empty at this point
+			SortedStartEnd = orderedList.ToList();
 		}
 
 		public void ConvertLinesToPolylines()
@@ -1165,7 +1196,10 @@ namespace CAMToolsNet.Models
 			var vertexes = new List<PointF>();
 
 			var drawLines2Remove = new List<DrawLine>();
-			foreach (var line in Lines)
+
+			// only care about lines
+			var lineList = SortedStartEnd.OfType<DrawLine>();
+			foreach (var line in lineList)
 			{
 				if (line.IsVisible)
 				{

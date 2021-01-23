@@ -882,5 +882,47 @@ namespace CoordinateUtils
 			double epsilon = Math.Pow(10.0, -precision);
 			return (Math.Abs(float1 - float2) <= epsilon);
 		}
+
+		public static List<Point3D> SortPoints(List<Point3D> points)
+		{
+			// https://stackoverflow.com/questions/25287834/how-to-sort-a-collection-of-points-so-that-they-set-up-one-after-another
+
+			var openList = new List<Point3D>(points);
+			var orderedList = new List<Point3D>();
+
+			// Move first entry from open to ordered
+			orderedList.Add(openList.ElementAt(0));
+			openList.RemoveAt(0);
+
+			while (openList.Count > 0)
+			{
+				// Find the index of the closest point (using another method)
+				int nearestIndex = FindNearestIndex(orderedList.ElementAt(orderedList.Count - 1), openList);
+
+				// Remove from the unorderedList and add to the ordered one
+				orderedList.Add(openList.ElementAt(nearestIndex));
+				openList.RemoveAt(nearestIndex);
+			}
+
+			return orderedList.Concat(openList).ToList();
+		}
+
+		private static int FindNearestIndex(Point3D thisPoint, List<Point3D> listToSearch)
+		{
+			double nearestDistSquared = Double.PositiveInfinity;
+			int nearestIndex = 0;
+			for (int i = 0; i < listToSearch.Count; i++)
+			{
+				var otherPoint = listToSearch.ElementAt(i);
+				var distsq = Transformation.Distance(thisPoint.PointF, otherPoint.PointF);
+
+				if (distsq < nearestDistSquared)
+				{
+					nearestDistSquared = distsq;
+					nearestIndex = i;
+				}
+			}
+			return nearestIndex;
+		}
 	}
 }

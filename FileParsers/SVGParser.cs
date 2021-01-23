@@ -16,6 +16,7 @@ using System.Xml.Linq;
 using System.Globalization;
 using System.Diagnostics;
 using System.Net.Http;
+using System.Numerics;
 
 using CoordinateUtils;
 using BiArcUtils;
@@ -495,7 +496,6 @@ namespace SVG
 		internal DrawModel drawModel = new DrawModel();
 		public DrawModel DrawModel { get { return drawModel; } }
 
-
 		/// <summary>
 		/// Constructor for SVGShapeBase class. Called from derived class
 		/// constructor.
@@ -840,7 +840,7 @@ namespace SVG
 						var p3 = new PointF(x + width, y + height);
 						var p4 = new PointF(x, y + height);
 
-						// add as polyline instead of 4 separate lines
+						// disabled 4 separate lines and add as polyline instead
 						// AddStraightLineSegment(p1, p2);
 						// AddStraightLineSegment(p2, p3);
 						// AddStraightLineSegment(p3, p4);
@@ -901,14 +901,14 @@ namespace SVG
 			drawModel.AddLine(startpointT, endpointT);
 		}
 
-		private static PointF FromVector2(System.Numerics.Vector2 v)
+		private static PointF FromVector2(Vector2 v)
 		{
 			return new PointF(v.X, v.Y);
 		}
 
-		private static System.Numerics.Vector2 ToVector2(PointF p)
+		private static Vector2 ToVector2(PointF p)
 		{
-			return new System.Numerics.Vector2(p.X, p.Y);
+			return new Vector2(p.X, p.Y);
 		}
 
 		private void AddBiArcSegment(PointF startpoint, PointF endpoint, PointF point1turn, PointF point2turn)
@@ -933,9 +933,9 @@ namespace SVG
 
 			// G: incenter point of the triangle (P1, V, P2)
 			// http://www.mathopenref.com/coordincenter.html
-			var dP2V = System.Numerics.Vector2.Distance(p2, V);
-			var dP1V = System.Numerics.Vector2.Distance(p1, V);
-			var dP1P2 = System.Numerics.Vector2.Distance(p1, p2);
+			var dP2V = Vector2.Distance(p2, V);
+			var dP1V = Vector2.Distance(p1, V);
+			var dP1P2 = Vector2.Distance(p1, p2);
 			var G = (dP2V * p1 + dP1V * p2 + dP1P2 * V) / (dP2V + dP1V + dP1P2);
 
 			// ---------------------------------------------------------------------------
@@ -991,83 +991,6 @@ namespace SVG
 			drawModel.AddArc(centerT, (float)radius, (float)(angleA * 180 / Math.PI), (float)(angleB * 180 / Math.PI));
 		}
 
-		private void AddArcSegmentV2(PointF startpoint, PointF endpoint, PointF center, bool clockwise)
-		{
-			// copied arc code from SimpleGCodeParser
-			// see also
-			// https://www.marginallyclever.com/2014/03/how-to-improve-the-2-axis-cnc-gcode-interpreter-to-understand-arcs/
-
-			// figure out our deltas
-			double aX = startpoint.X - center.X;
-			double aY = startpoint.Y - center.Y;
-			double bX = endpoint.X - center.X;
-			double bY = endpoint.Y - center.Y;
-
-			double angleA;
-			double angleB;
-			if (clockwise)
-			{
-				// Clockwise
-				angleA = Math.Atan2(bY, bX);
-				angleB = Math.Atan2(aY, aX);
-			}
-			else
-			{
-				// Counterclockwise
-				angleA = Math.Atan2(aY, aX);
-				angleB = Math.Atan2(bY, bX);
-			}
-
-			// Make sure angleB is always greater than angleA
-			// and if not add 2PI so that it is (this also takes
-			// care of the special case of angleA == angleB,
-			// ie we want a complete circle)
-			if (angleB <= angleA)
-			{
-				angleB += 2 * Math.PI;
-			}
-
-			// calculate angle in radians
-			double angle = angleB - angleA;
-
-			// calculate a couple useful things.
-			double radius = Math.Sqrt(aX * aX + aY * aY);
-			double length = radius * angle;
-
-			// Maximum of either 2.4 times the angle in radians
-			// or the length of the curve divided by the curve section constant
-			int steps = Transformation.CalculateStepsAsInt(angle, radius);
-
-			// this is the real draw action.
-			var newPoint = PointF.Empty;
-
-			int step;
-			double fraction;
-			double angle3;
-			for (int s = 1; s <= steps; s++)
-			{
-				// Forwards for CCW, backwards for CW
-				if (!clockwise)
-				{
-					step = s;
-				}
-				else
-				{
-					step = steps - s;
-				}
-
-				// interpolate around the arc
-				fraction = ((double)step / steps);
-				angle3 = (angle * fraction) + angleA;
-
-				// find the intermediate position
-				newPoint.X = (float)(center.X + Math.Cos(angle3) * radius);
-				newPoint.Y = (float)(center.Y + Math.Sin(angle3) * radius);
-
-				points.Add(newPoint);
-			}
-		}
-
 		public List<List<PointF>> GetContours()
 		{
 			var result = new List<List<PointF>>();
@@ -1118,6 +1041,8 @@ namespace SVG
 			matrix.TransformPoints(pts);
 
 			DestBounds = new RectangleF(pts[0].X, pts[0].Y, pts[1].X - pts[0].X, pts[1].Y - pts[0].Y);
+
+			// Image is not supported by the import
 		}
 
 		public List<List<PointF>> GetContours()
@@ -1169,7 +1094,6 @@ namespace SVG
 			// transform points for the benefit of the drawmodel (add circle)
 			var centerT = Transform(new PointF(cx, cy));
 			drawModel.AddCircle(centerT, r);
-			// drawModel.AddPolyline(points);
 		}
 
 		public List<List<PointF>> GetContours()
@@ -1902,6 +1826,12 @@ namespace SVG
 		public bool FillColorPresent { get; set; }
 		public Color FillColor { get; set; }
 
+		/// <summary>
+		/// Return the color for the given string.
+		/// If nothing is found fully black is returned
+		/// </summary>
+		/// <param name="c">color param</param>
+		/// <returns>Color object</returns>
 		static public Color ParseColor(string c)
 		{
 			Color result;
@@ -1941,36 +1871,50 @@ namespace SVG
 			OutlineWidthPresent = false;
 			FillColorPresent = false;
 
-			style = style.Trim(new[] { '{', '}' });
-			string[] stylePairs = style.Split(new[] { ':', ';' }, StringSplitOptions.RemoveEmptyEntries);
-
-			// check we have pairs (can divide by 2)
-			if ((stylePairs.Count() & 1) != 0)
+			try
 			{
-				throw new ArgumentException("Failed to parse style");
-			}
+				style = style.Trim(new[] { '{', '}' });
+				string[] stylePairs = style.Split(new[] { ':', ';' }, StringSplitOptions.RemoveEmptyEntries);
 
-			for (int index = 0; index < stylePairs.Count(); index += 2)
-			{
-				switch (stylePairs[index])
+				// check we have pairs (can divide by 2)
+				if ((stylePairs.Count() & 1) != 0)
 				{
-					case "stroke":
-						OutlineColor = ParseColor(stylePairs[index + 1]);
-						OutlineColorPresent = true;
-						break;
-					case "stroke-width":
-						OutlineWidth = double.Parse(stylePairs[index + 1], CultureInfo.InvariantCulture);
-						OutlineWidthPresent = true;
-						break;
-					case "fill":
-						FillColor = ParseColor(stylePairs[index + 1]);
-						FillColorPresent = true;
-						break;
-					default: break;
+					throw new ArgumentException("Failed to parse style '" + style + "' with name + '" + name + "'");
+				}
+
+				for (int index = 0; index < stylePairs.Count(); index += 2)
+				{
+					switch (stylePairs[index])
+					{
+						case "stroke":
+							OutlineColor = ParseColor(stylePairs[index + 1]);
+							OutlineColorPresent = true;
+							break;
+						case "stroke-width":
+							double strokeWidthVar = 0;
+							if (double.TryParse(stylePairs[index + 1], NumberStyles.Any, CultureInfo.InvariantCulture, out strokeWidthVar))
+							{
+								OutlineWidth = strokeWidthVar;
+								OutlineWidthPresent = true;
+							}
+							else
+							{
+								throw new ArgumentException("Parsing stroke-width value '" + stylePairs[index + 1] + "' not supported!");
+							}
+							break;
+						case "fill":
+							FillColor = ParseColor(stylePairs[index + 1]);
+							FillColorPresent = true;
+							break;
+						default: break;
+					}
 				}
 			}
+			catch (System.Exception e)
+			{
+				Debug.WriteLine("SVGStyle failed with error: " + e.ToString());
+			}
 		}
-
 	}
 
 	/// <summary>
@@ -2057,7 +2001,6 @@ namespace SVG
 			// Does the document contain in-page styles?
 			if (tagName.Equals("style", StringComparison.InvariantCultureIgnoreCase))
 			{
-
 				// get style data
 				var styleData = String.Join("", element.Nodes()).Trim();
 

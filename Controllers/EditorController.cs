@@ -364,7 +364,7 @@ namespace CAMToolsNet.Controllers
 			if (drawModel != null)
 			{
 				// first sort points
-				if (doConvertLines) drawModel.SortLines();
+				if (doConvertLines) drawModel.SortStartStopSegments();
 
 				// convert connected visible lines to polylines first
 				if (doConvertLines) drawModel.ConvertLinesToPolylines();
@@ -485,38 +485,6 @@ namespace CAMToolsNet.Controllers
 				// make sure to recalculate the bounds
 				newDrawModel.CalculateBounds();
 
-				HttpContext.Session.SetObjectAsJson("DrawModel", newDrawModel);
-
-				return Ok();
-			}
-			return BadRequest();
-		}
-
-		[HttpGet("RotateOld/{degrees:float}")]  // GET /api/Editor/RotateOld/20
-		public IActionResult RotateOld(float degrees)
-		{
-			var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
-			if (drawModel != null)
-			{
-				var gCode = DrawModel.ToGCode(drawModel);
-				// SaveToFile("before_rotate.txt", gCode);
-
-				var parsedInstructions = SimpleGCodeParser.ParseText(gCode);
-
-				var center = new PointF(0, 0);
-				if (degrees == 0) degrees = 90;
-				var gcodeInstructions = GCodeUtils.GetRotatedGCode(parsedInstructions, center, degrees);
-				// SaveToFile("after_rotate.txt", GCodeUtils.GetGCode(gcodeInstructions));
-
-				// clean up the mess with too many G0 commands
-				var cleanedGCode = GCodeUtils.GetMinimizeGCode(gcodeInstructions);
-				// SaveToFile("after_rotate_clean.txt", GCodeUtils.GetGCode(cleanedGCode));
-
-				var gCodeResult = Block.BuildGCodeOutput("Block_1", cleanedGCode, false);
-				// SaveToFile("after_rotate_build_output.txt", gCodeResult);
-
-				// convert gcode to draw model
-				var newDrawModel = DrawModel.FromGCode(gCodeResult, drawModel.FileName);
 				HttpContext.Session.SetObjectAsJson("DrawModel", newDrawModel);
 
 				return Ok();

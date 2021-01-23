@@ -27,12 +27,19 @@ namespace Util
 			}
 		}
 
-		public static void Swap<T>(ref T lhs, ref T rhs)
+		/// <summary>
+		/// Swap two reference objects
+		/// @see https://rosettacode.org/wiki/Generic_swap#C.23:_Using_a_generic_method
+		/// </summary>
+		/// <param name="a">object 1</param>
+		/// <param name="b">object 2</param>
+		/// <typeparam name="T">type</typeparam>
+		public static void Swap<T>(ref T a, ref T b)
 		{
 			T temp;
-			temp = lhs;
-			lhs = rhs;
-			rhs = temp;
+			temp = a;
+			a = b;
+			b = temp;
 		}
 	}
 }
