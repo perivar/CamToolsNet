@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Globalization;
 using System.Text.Json.Serialization;
@@ -8,7 +9,7 @@ namespace CoordinateUtils
 	/// <summary>
 	/// Class to hold a 3D point (i.e. x, y and z coordinates)
 	/// </summary>
-	public class Point3D : IPoint2D
+	public class Point3D : IPoint2D, IComparable<Point3D>
 	{
 		public float X { get; set; }
 		public float Y { get; set; }
@@ -68,16 +69,6 @@ namespace CoordinateUtils
 			}
 		}
 
-		public static bool operator ==(Point3D left, Point3D right)
-		{
-			return left.X == right.X && left.Y == right.Y && left.Z == right.Z;
-		}
-
-		public static bool operator !=(Point3D left, Point3D right)
-		{
-			return !(left == right);
-		}
-
 		public bool NearlyEquals(Point3D other)
 		{
 			if (this.X.AlmostEquals(other.X)
@@ -89,22 +80,7 @@ namespace CoordinateUtils
 			return false;
 		}
 
-		public override bool Equals(object obj)
-		{
-			if (!(obj is Point3D))
-			{
-				return false;
-			}
-			var point3D = (Point3D)obj;
-			return point3D.X == this.X && point3D.Y == this.Y && point3D.Z == this.Z
-				&& point3D.GetType().Equals(base.GetType());
-		}
-
-		public override int GetHashCode()
-		{
-			return base.GetHashCode();
-		}
-
+		#region Object overrides
 		public override string ToString()
 		{
 			return string.Format(CultureInfo.CurrentCulture,
@@ -113,6 +89,94 @@ namespace CoordinateUtils
 									 this.Y,
 									 this.Z
 								 });
+		}
+
+		public override bool Equals(object o)
+		{
+			return o.ToString() == this.ToString();
+		}
+
+		public override int GetHashCode()
+		{
+			return this.ToString().GetHashCode();
+		}
+		#endregion
+
+		#region Overloaded ops
+		// overloaded operator +
+		public static Point3D operator +(Point3D p1, Point3D p2)
+		{
+			return new Point3D(p1.X + p2.X, p1.Y + p2.Y, p1.Z + p2.Z);
+		}
+
+		// overloaded operator -
+		public static Point3D operator -(Point3D p1, Point3D p2)
+		{
+			return new Point3D(p1.X - p2.X, p1.Y - p2.Y, p1.Z - p2.Z);
+		}
+
+		public static Point3D operator +(Point3D p1, int change)
+		{
+			return new Point3D(p1.X + change, p1.Y + change);
+		}
+
+		public static Point3D operator +(int change, Point3D p1)
+		{
+			return new Point3D(p1.X + change, p1.Y + change);
+		}
+
+		// Add 1 to the X/Y values incoming Point.
+		public static Point3D operator ++(Point3D p1)
+		{
+			return new Point3D(p1.X + 1, p1.Y + 1);
+		}
+
+		// Subtract 1 from the X/Y values incoming Point.
+		public static Point3D operator --(Point3D p1)
+		{
+			return new Point3D(p1.X - 1, p1.Y - 1);
+		}
+
+		// Now let's overload the == and != operators.
+		public static bool operator ==(Point3D p1, Point3D p2)
+		{
+			return p1.Equals(p2);
+		}
+
+		public static bool operator !=(Point3D p1, Point3D p2)
+		{
+			return !p1.Equals(p2);
+		}
+
+		public static bool operator <(Point3D p1, Point3D p2)
+		{
+			return (p1.CompareTo(p2) < 0);
+		}
+
+		public static bool operator >(Point3D p1, Point3D p2)
+		{
+			return (p1.CompareTo(p2) > 0);
+		}
+
+		public static bool operator <=(Point3D p1, Point3D p2)
+		{
+			return (p1.CompareTo(p2) <= 0);
+		}
+
+		public static bool operator >=(Point3D p1, Point3D p2)
+		{
+			return (p1.CompareTo(p2) >= 0);
+		}
+		#endregion
+
+		public int CompareTo([AllowNull] Point3D other)
+		{
+			if (this.X > other.X && this.Y > other.Y)
+				return 1;
+			if (this.X < other.X && this.Y < other.Y)
+				return -1;
+			else
+				return 0;
 		}
 	}
 }

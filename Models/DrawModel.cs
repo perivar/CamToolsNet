@@ -6,7 +6,10 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using CoordinateUtils;
+using Util;
 using GCode;
+using Svg;
+using Svg.Pathing;
 
 namespace CAMToolsNet.Models
 {
@@ -19,46 +22,6 @@ namespace CAMToolsNet.Models
 		public List<DrawLine> Lines { get; set; }
 		public List<DrawArc> Arcs { get; set; }
 		public List<DrawPolyline> Polylines { get; set; }
-		public List<DrawPolylineLW> PolylinesLW { get; set; }
-
-		public class VertexLW
-		{
-			//
-			// Summary:
-			//     Gets or sets the light weight polyline Point3D position.
-			public Point3D Position { get; set; }
-
-			// Summary:
-			//     Gets or sets the light weight polyline start segment width.
-			//
-			// Remarks:
-			//     Widths greater than zero produce wide lines.
-			public float StartWidth { get; set; }
-			//
-			// Summary:
-			//     Gets or sets the light weight polyline end segment width.
-			//
-			// Remarks:
-			//     Widths greater than zero produce wide lines.
-			public float EndWidth { get; set; }
-			//
-			// Summary:
-			//     Gets or set the light weight polyline bulge.
-			//
-			// Remarks:
-			//     The bulge is the tangent of one fourth the included angle for an arc segment,
-			//     made negative if the arc goes clockwise from the start point to the endpoint.
-			//     A bulge of 0 indicates a straight segment, and a bulge of 1 is a semicircle.
-			public float Bulge { get; set; }
-
-			// parameter-less constructor needed for de-serialization
-			public VertexLW() { }
-
-			public VertexLW(float x, float y, float z)
-			{
-				Position = new Point3D(x, y, z);
-			}
-		}
 
 		public class DrawColor
 		{
@@ -186,6 +149,39 @@ namespace CAMToolsNet.Models
 			public float StartAngle { get; set; }
 			public float EndAngle { get; set; }
 
+			public Point3D StartPoint
+			{
+				get
+				{
+					var centerX = this.Center.X;
+					var centerY = this.Center.Y;
+					var centerZ = this.Center.Z;
+					var radius = this.Radius;
+					var startAngle = this.StartAngle;
+
+					var startX = centerX + Math.Cos((startAngle * Math.PI) / 180) * radius;
+					var startY = centerY + Math.Sin((startAngle * Math.PI) / 180) * radius;
+
+					return new Point3D((float)startX, (float)startY, centerZ);
+				}
+			}
+			public Point3D EndPoint
+			{
+				get
+				{
+					var centerX = this.Center.X;
+					var centerY = this.Center.Y;
+					var centerZ = this.Center.Z;
+					var radius = this.Radius;
+					var endAngle = this.EndAngle;
+
+					var endX = centerX + Math.Cos((endAngle * Math.PI) / 180) * radius;
+					var endY = centerY + Math.Sin((endAngle * Math.PI) / 180) * radius;
+
+					return new Point3D((float)endX, (float)endY, centerZ);
+				}
+			}
+
 			// parameter-less constructor needed for de-serialization
 			public DrawArc() { }
 
@@ -251,35 +247,15 @@ namespace CAMToolsNet.Models
 				}
 				IsVisible = true;
 			}
-		}
 
-		public class DrawPolylineLW : DrawElement
-		{
-			public bool IsClosed { get; set; }
-
-			public List<VertexLW> Vertexes { get; set; }
-
-			// parameter-less constructor needed for de-serialization
-			public DrawPolylineLW() { }
-
-			// note! don't call base() since we might not support the base properties
-			public DrawPolylineLW(List<VertexLW> vertexes, bool isVisible = true)
-			{
-				Vertexes = vertexes;
-				IsVisible = isVisible;
-			}
-
-			public DrawPolylineLW(netDxf.Entities.LwPolyline p) : base(p)
+			public DrawPolyline(netDxf.Entities.LwPolyline p) : base(p)
 			{
 				IsClosed = p.IsClosed;
-				Vertexes = new List<VertexLW>();
+				Vertexes = new List<Point3D>();
 
 				foreach (var v in p.Vertexes)
 				{
-					var Point3D = new VertexLW((float)v.Position.X, (float)v.Position.Y, 0);
-					Point3D.StartWidth = (float)v.StartWidth;
-					Point3D.EndWidth = (float)v.EndWidth;
-					Point3D.Bulge = (float)v.Bulge;
+					var Point3D = new Point3D((float)v.Position.X, (float)v.Position.Y, 0);
 					Vertexes.Add(Point3D);
 				}
 				IsVisible = true;
@@ -383,26 +359,146 @@ namespace CAMToolsNet.Models
 				}
 				dxf.AddEntity(polylines);
 
-				// polylines light weight
-				var polylinesLW = new List<netDxf.Entities.LwPolyline>();
-				foreach (var p in model.PolylinesLW)
+				return dxf;
+			}
+
+			return null;
+		}
+
+		public static SvgDocument ToSvgDocument(DrawModel model)
+		{
+			if (model != null)
+			{
+				// store some useful variables
+				var minX = model.Bounds.Min.X;
+				var minY = model.Bounds.Min.Y;
+				var maxX = model.Bounds.Max.X;
+				var maxY = model.Bounds.Max.Y;
+
+				var width = maxX;
+				var height = maxY;
+
+				var svg = new SvgDocument
+				{
+					Width = width,
+					Height = height,
+					ViewBox = new SvgViewBox(0, 0, width, height),
+				};
+
+				// We need to shift the Y pos since
+				// the SVG origin is upper left, while in DXF and GCode it is assumed to be lower left
+
+				// circles
+				var circles = new SvgGroup();
+				circles.Stroke = new SvgColourServer(Color.Blue);
+				// circles.StrokeWidth = 1;
+				// circles.Fill = new SvgColourServer(Color.Transparent);
+				// circles.FillOpacity = 1.0f;
+				foreach (var c in model.Circles)
+				{
+					if (c.IsVisible)
+					{
+						var circle = new SvgCircle
+						{
+							CenterX = c.Center.X,
+							CenterY = maxY - c.Center.Y,
+							Radius = c.Radius
+						};
+						circles.Children.Add(circle);
+					}
+				}
+				if (circles.Children.Count > 0) svg.Children.Add(circles);
+
+				// lines
+				var lines = new SvgGroup();
+				lines.Stroke = new SvgColourServer(Color.Green);
+				// lines.StrokeWidth = 1;
+				// lines.Fill = new SvgColourServer(Color.Transparent);
+				// lines.FillOpacity = 1.0f;
+				foreach (var l in model.Lines)
+				{
+					if (l.IsVisible)
+					{
+						var line = new SvgLine
+						{
+							StartX = l.StartPoint.X,
+							StartY = maxY - l.StartPoint.Y,
+							EndX = l.EndPoint.X,
+							EndY = maxY - l.EndPoint.Y
+						};
+						lines.Children.Add(line);
+					}
+				}
+				if (lines.Children.Count > 0) svg.Children.Add(lines);
+
+				// arcs
+				var arcs = new SvgGroup();
+				arcs.Stroke = new SvgColourServer(Color.Black);
+				// arcs.StrokeWidth = 1;
+				// arcs.Fill = new SvgColourServer(Color.Transparent);
+				// arcs.FillOpacity = 1.0f;
+				foreach (var a in model.Arcs)
+				{
+					if (a.IsVisible)
+					{
+						var startPoint = new PointF(a.StartPoint.X, maxY - a.StartPoint.Y);
+						var endPoint = new PointF(a.EndPoint.X, maxY - a.EndPoint.Y);
+
+						var pathList = new SvgPathSegmentList();
+
+						// add MoveTo
+						SvgMoveToSegment svgMove = new SvgMoveToSegment(startPoint);
+						pathList.Add(svgMove);
+
+						// add arc segment
+						var largeArcFlag = a.EndAngle - a.StartAngle <= 180 ? SvgArcSize.Small : SvgArcSize.Large;
+						var sweepFlag = SvgArcSweep.Negative;
+						var arc = new SvgArcSegment(startPoint, a.Radius, a.Radius, a.StartAngle, largeArcFlag, sweepFlag, endPoint);
+						pathList.Add(arc);
+
+						SvgPath path = new SvgPath();
+						path.PathData = pathList;
+
+						arcs.Children.Add(path);
+					}
+				}
+				if (arcs.Children.Count > 0) svg.Children.Add(arcs);
+
+				// polylines
+				var polylines = new SvgGroup();
+				polylines.Stroke = new SvgColourServer(Color.Purple);
+				// polylines.StrokeWidth = 1;
+				// polylines.Fill = new SvgColourServer(Color.Transparent);
+				// polylines.FillOpacity = 1.0f;
+				foreach (var p in model.Polylines)
 				{
 					// cannot add a polyline with only one point
 					if (p.IsVisible && p.Vertexes.Count >= 2)
 					{
-						var vertexes = new List<netDxf.Entities.LwPolylineVertex>();
+						var vertexes = new SvgPointCollection();
 						foreach (var v in p.Vertexes)
 						{
-							vertexes.Add(new netDxf.Entities.LwPolylineVertex(v.Position.X, v.Position.Y, v.Bulge));
+							vertexes.Add(new SvgUnit(v.X));
+							vertexes.Add(new SvgUnit(maxY - v.Y));
 						}
-						var polyLineLW = new netDxf.Entities.LwPolyline(vertexes, p.IsClosed);
-						if (p.LayerName != null) polyLineLW.Layer = new netDxf.Tables.Layer(p.LayerName);
-						polylinesLW.Add(polyLineLW);
+
+						var polyLine = new SvgPolyline
+						{
+							Points = vertexes
+						};
+
+						polylines.Children.Add(polyLine);
 					}
 				}
-				dxf.AddEntity(polylinesLW);
+				if (polylines.Children.Count > 0) svg.Children.Add(polylines);
 
-				return dxf;
+				// Note! Color.Transparent 
+				// produces a svg with a fill-opacity=0 property that isn't supported in TinkerCad
+				svg.StrokeWidth = 1;
+				svg.Fill = new SvgColourServer(Color.Transparent);
+				svg.FillOpacity = 1.0f;
+
+				return svg;
 			}
 
 			return null;
@@ -535,38 +631,6 @@ namespace CAMToolsNet.Models
 						sb.AppendLine();
 					}
 				}
-
-				// polylines light weight
-				foreach (var plw in model.PolylinesLW)
-				{
-					if (plw.IsVisible && plw.Vertexes.Count >= 2)
-					{
-						bool first = true;
-						for (var i = 0; i < plw.Vertexes.Count; i++)
-						{
-							var vertex = plw.Vertexes[i];
-							var pointX = vertex.Position.X;
-							var pointY = vertex.Position.Y;
-							// polyline vertex doesn't have Z
-							var pointZ = safeZ;
-
-							if (first)
-							{
-								sb.AppendLine("(Draw Polyline LW)");
-								sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeZ);
-								sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##} \n", pointX, pointY);
-								sb.AppendFormat(CultureInfo.InvariantCulture, "G1 Z{0:0.##} F{1:0.##}\n", pointZ, plungeFeed);
-								first = false;
-							}
-							else
-							{
-								sb.AppendFormat(CultureInfo.InvariantCulture, "G1 X{0:0.##} Y{1:0.##} F{2:0.##}\n", pointX, pointY, rapidFeed);
-							}
-						}
-						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeZ);
-						sb.AppendLine();
-					}
-				}
 			}
 			return sb.ToString();
 		}
@@ -579,7 +643,6 @@ namespace CAMToolsNet.Models
 			Lines = new List<DrawLine>();
 			Arcs = new List<DrawArc>();
 			Polylines = new List<DrawPolyline>();
-			PolylinesLW = new List<DrawPolylineLW>();
 		}
 
 		public DrawModel(netDxf.DxfDocument dxf, string fileName) : this()
@@ -612,10 +675,10 @@ namespace CAMToolsNet.Models
 					Polylines.Add(new DrawPolyline(p));
 				}
 
-				// polylines light weight
-				foreach (var plw in dxf.LwPolylines)
+				// add polylines lightweight as normal polylines
+				foreach (var p in dxf.LwPolylines)
 				{
-					PolylinesLW.Add(new DrawPolylineLW(plw));
+					Polylines.Add(new DrawPolyline(p));
 				}
 
 				CalculateBounds();
@@ -629,10 +692,17 @@ namespace CAMToolsNet.Models
 			if (svg != null)
 			{
 				var contours = svg.GetScaledContoursAndSetMinMax();
-				var maxY = svg.MaxY;
+
+				var shiftX = 0;             // disable shifting i X direction (was minX)
+				var shiftY = svg.SvgHeight; // disable shifting in Y direction except flipping (was maxY)
+
 				var minX = svg.MinX;
-				// Make sure we are taking the shift of y origin into account
-				Bounds = new Bounds(0, svg.MaxX - svg.MinX, 0, svg.MaxY - svg.MinY, 0, 0);
+				var minY = svg.MinY;
+				var maxX = svg.MaxX;
+				var maxY = svg.MaxY;
+
+				// we ar not shifting except flipping
+				Bounds = new Bounds(minX, maxX, shiftY - maxY, shiftY - minY, 0, 0);
 
 				// Assuming these points come from a SVG
 				// we need to shift the Y pos since
@@ -642,12 +712,12 @@ namespace CAMToolsNet.Models
 				{
 					var elem = shape.DrawModel;
 
-					Circles.AddRange(elem.Circles.Select(c => new DrawCircle(new PointF { X = c.Center.X - minX, Y = maxY - c.Center.Y }, c.Radius)).ToList());
-					Lines.AddRange(elem.Lines.Select(l => new DrawLine(new PointF { X = l.StartPoint.X - minX, Y = maxY - l.StartPoint.Y }, new PointF { X = l.EndPoint.X - minX, Y = maxY - l.EndPoint.Y })).ToList());
-					Arcs.AddRange(elem.Arcs.Select(a => new DrawArc(new PointF { X = a.Center.X - minX, Y = maxY - a.Center.Y }, a.Radius, -a.EndAngle, -a.StartAngle)).ToList());
+					Circles.AddRange(elem.Circles.Select(c => new DrawCircle(new PointF { X = c.Center.X - shiftX, Y = shiftY - c.Center.Y }, c.Radius)).ToList());
+					Lines.AddRange(elem.Lines.Select(l => new DrawLine(new PointF { X = l.StartPoint.X - shiftX, Y = shiftY - l.StartPoint.Y }, new PointF { X = l.EndPoint.X - shiftX, Y = shiftY - l.EndPoint.Y })).ToList());
+					Arcs.AddRange(elem.Arcs.Select(a => new DrawArc(new PointF { X = a.Center.X - shiftX, Y = shiftY - a.Center.Y }, a.Radius, -a.EndAngle, -a.StartAngle)).ToList());
 
 					// fix vertexes for polylines
-					var polylines = (elem.Polylines.Select(a => new DrawPolyline(a.Vertexes.Select(b => new PointF { X = b.X - minX, Y = maxY - b.Y }).ToList())));
+					var polylines = (elem.Polylines.Select(a => new DrawPolyline(a.Vertexes.Select(b => new PointF { X = b.X - shiftX, Y = shiftY - b.Y }).ToList())));
 					Polylines.AddRange(polylines);
 
 					// svg doesn't have polylines lw
@@ -968,6 +1038,120 @@ namespace CAMToolsNet.Models
 			}
 		}
 
+		public void SortLines()
+		{
+			var openList = new List<DrawLine>(Lines);
+			var orderedList = new List<DrawLine>();
+
+			// https://stackoverflow.com/questions/39546622/sort-my-class-by-two-values
+			// https://forum.unity.com/threads/sorting-line-segments.254411/
+			// https://www.geeksforgeeks.org/cocktail-sort/
+
+			for (int j = 0; j < openList.Count; j++)
+			{
+				// Move first entry from open to ordered
+				orderedList.Add(openList.ElementAt(j));
+				openList.RemoveAt(j);
+
+				bool foundNext = true;
+				// forward direction
+				do
+				{
+					foundNext = false;
+					for (int i = 0; i < openList.Count; i++)
+					{
+						var segment = openList.ElementAt(i);
+						if (orderedList.Last().EndPoint == segment.StartPoint)
+						{
+							// move segment from open to end of ordered
+							orderedList.Add(segment);
+							openList.RemoveAt(i);
+							foundNext = true;
+						}
+						else if (orderedList.Last().EndPoint == segment.EndPoint)
+						{
+							// swap start and end points
+							var startPoint = segment.StartPoint;
+							var endPoint = segment.EndPoint;
+							CollectionsUtils.Swap(ref startPoint, ref endPoint);
+							segment.StartPoint = startPoint;
+							segment.EndPoint = endPoint;
+
+							// move segment from open to end of ordered
+							orderedList.Add(segment);
+							openList.RemoveAt(i);
+							foundNext = true;
+						}
+					}
+
+				} while (foundNext);
+
+				// backwards direction
+				do
+				{
+					foundNext = false;
+					for (int i = openList.Count - 1; i >= 0; i--)
+					{
+						var segment = openList.ElementAt(i);
+						if (orderedList.First().StartPoint == segment.EndPoint)
+						{
+							// move segment from open to beginning of ordered
+							orderedList.Insert(0, segment);
+							openList.RemoveAt(i);
+							foundNext = true;
+						}
+						else if (orderedList.First().StartPoint == segment.StartPoint)
+						{
+							// swap start and end points
+							var startPoint = segment.StartPoint;
+							var endPoint = segment.EndPoint;
+							CollectionsUtils.Swap(ref startPoint, ref endPoint);
+							segment.StartPoint = startPoint;
+							segment.EndPoint = endPoint;
+
+							// move segment from open to beginning of ordered
+							orderedList.Insert(0, segment);
+							openList.RemoveAt(i);
+							foundNext = true;
+						}
+					}
+
+				} while (foundNext);
+			}
+
+			// https://stackoverflow.com/questions/25287834/how-to-sort-a-collection-of-points-so-that-they-set-up-one-after-another
+			// while (openList.Count > 0)
+			// {
+			// 	// Find the index of the closest point (using another method)
+			// 	int nearestIndex = FindNearestIndex(orderedList.ElementAt(orderedList.Count - 1), openList);
+
+			// 	// Remove from the unorderedList and add to the ordered one
+			// 	orderedList.Add(openList.ElementAt(nearestIndex));
+			// 	openList.RemoveAt(nearestIndex);
+			// }
+
+			Lines = orderedList.Concat(openList).ToList();
+		}
+
+		int FindNearestIndex(DrawLine thisPoint, List<DrawLine> listToSearch)
+		{
+			double nearestDistSquared = Double.PositiveInfinity;
+			int nearestIndex = 0;
+			for (int i = 0; i < listToSearch.Count; i++)
+			{
+				var otherPoint = listToSearch.ElementAt(i);
+				// this only works one direction - from endpoint to startpoint
+				var distsq = Transformation.Distance(thisPoint.EndPoint.PointF, otherPoint.StartPoint.PointF);
+
+				if (distsq < nearestDistSquared)
+				{
+					nearestDistSquared = distsq;
+					nearestIndex = i;
+				}
+			}
+			return nearestIndex;
+		}
+
 		public void ConvertLinesToPolylines()
 		{
 			// lines
@@ -1053,13 +1237,6 @@ namespace CAMToolsNet.Models
 		{
 			var poly = new DrawPolyline(vertexes, isVisible);
 			Polylines.Add(poly);
-		}
-
-		public void AddPolylineLW(List<PointF> vertexes, bool isVisible = true)
-		{
-			var vertexesLW = vertexes.Select(a => new VertexLW(a.X, a.Y, 0)).ToList();
-			var polyLW = new DrawPolylineLW(vertexesLW, isVisible);
-			PolylinesLW.Add(polyLW);
 		}
 
 		public void AddLine(PointF startPoint, PointF endPoint, bool isVisible = true)
@@ -1225,28 +1402,6 @@ namespace CAMToolsNet.Models
 				}
 			}
 
-			// polylines light weight
-			foreach (var plw in PolylinesLW)
-			{
-				if (plw.IsVisible && plw.Vertexes.Count >= 2)
-				{
-					for (var i = 0; i < plw.Vertexes.Count; i++)
-					{
-						var vertex = plw.Vertexes[i];
-						var pointX = vertex.Position.X;
-						var pointY = vertex.Position.Y;
-						// polyline vertex doesn't have Z
-
-						curX = pointX;
-						curY = pointY;
-						maxX = curX > maxX ? curX : maxX;
-						minX = curX < minX ? curX : minX;
-						maxY = curY > maxY ? curY : maxY;
-						minY = curY < minY ? curY : minY;
-					}
-				}
-			}
-
 			Bounds = new Bounds((float)minX, (float)maxX, (float)minY, (float)maxY, (float)minZ, (float)maxZ);
 		}
 
@@ -1319,20 +1474,6 @@ namespace CAMToolsNet.Models
 						var vertex = p.Vertexes[i];
 						vertex.X -= Bounds.Min.X;
 						vertex.Y -= Bounds.Min.Y;
-					}
-				}
-			}
-
-			// polylines light weight
-			foreach (var p in PolylinesLW)
-			{
-				if (p.Vertexes.Count >= 2 && doIncludeInvisible || p.IsVisible)
-				{
-					for (int i = 0; i < p.Vertexes.Count; i++)
-					{
-						var vertex = p.Vertexes[i];
-						vertex.Position.X -= Bounds.Min.X;
-						vertex.Position.Y -= Bounds.Min.Y;
 					}
 				}
 			}

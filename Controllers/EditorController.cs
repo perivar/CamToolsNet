@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using netDxf;
 using netDxf.Entities;
 using SVG;
+using Svg;
 
 namespace CAMToolsNet.Controllers
 {
@@ -275,6 +276,54 @@ namespace CAMToolsNet.Controllers
 			return Ok();
 		}
 
+		[HttpGet("SaveSvg/{doSave:bool}")]  // GET /api/Editor/SaveSvg/false
+		public IActionResult SaveSvg(bool doSave)
+		{
+			// traverse through all circles and set the layer whenever the radius is the same
+			var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
+			if (drawModel != null)
+			{
+				// convert to a real svg document
+				var svg = DrawModel.ToSvgDocument(drawModel);
+
+				// build new filename
+				string fileName = drawModel.FileName;
+				var newFileName = Path.GetFileNameWithoutExtension(fileName);
+
+				// always use the svg extension since thats what we are saving
+				var newFileExtension = ".svg";
+				var newFullFileName = newFileName + newFileExtension;
+
+				if (doSave)
+				{
+					var basePath = Path.Combine(Directory.GetCurrentDirectory() + "\\Files\\");
+					bool basePathExists = System.IO.Directory.Exists(basePath);
+					if (!basePathExists) Directory.CreateDirectory(basePath);
+
+					var filePath = Path.Combine(basePath, newFullFileName);
+					svg.Write(filePath);
+				}
+				else
+				{
+					// download converted file to user
+					var memoryStream = new MemoryStream();
+					svg.Write(memoryStream);
+
+					// At this point, the Offset is at the end of the MemoryStream
+					// Either do this to seek to the beginning
+					memoryStream.Position = 0;
+					return File(memoryStream, "APPLICATION/octet-stream", newFullFileName);
+				}
+			}
+			else
+			{
+				_logger.LogError("Saving Svg unsuccessfull!");
+				return BadRequest();
+			}
+
+			return Ok();
+		}
+
 		[HttpGet("PolylineToCircles/{doConvertLines:bool}")]  // GET /api/Editor/PolylineToCircles/false
 		public IActionResult PolylineToCircles(bool doConvertLines)
 		{
@@ -282,6 +331,9 @@ namespace CAMToolsNet.Controllers
 			var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
 			if (drawModel != null)
 			{
+				// first sort points
+				if (doConvertLines) drawModel.SortLines();
+
 				// convert connected visible lines to polylines first
 				if (doConvertLines) drawModel.ConvertLinesToPolylines();
 
@@ -396,19 +448,6 @@ namespace CAMToolsNet.Controllers
 						newVertexes.Add(newVertex);
 					}
 					newDrawModel.AddPolyline(newVertexes, p.IsVisible);
-				}
-
-				// polylines light weight
-				foreach (var plw in drawModel.PolylinesLW)
-				{
-					var newVertexes = new List<PointF>();
-					for (var i = 0; i < plw.Vertexes.Count; i++)
-					{
-						var vertex = plw.Vertexes[i];
-						var newVertex = Transformation.Rotate(vertex.Position.PointF, degrees);
-						newVertexes.Add(newVertex);
-					}
-					newDrawModel.AddPolylineLW(newVertexes, plw.IsVisible);
 				}
 
 				// make sure to recalculate the bounds

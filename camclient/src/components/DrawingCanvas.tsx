@@ -8,7 +8,6 @@ import {
   DrawLine,
   DrawArc,
   DrawPolyline,
-  DrawPolylineLW,
   DrawShape
 } from '../types/DrawingModel';
 
@@ -404,49 +403,10 @@ const drawPolyline = (
   }
 };
 
-const drawPolylineLW = (
-  context: CanvasRenderingContext2D,
-  p: DrawPolylineLW,
-  showArrows: boolean,
-  arrowLen: number,
-  lineColor: string,
-  lineWidth: number
-) => {
-  context.beginPath(); // begin
-  for (let i = 0; i < p.vertexes.length; i++) {
-    const vertex = p.vertexes[i];
-    const pointX = vertex.position.x;
-    const pointY = vertex.position.y;
-    const { bulge } = vertex;
-    let prePointX = 0;
-    let prePointY = 0;
-
-    if (i === 0) {
-      context.moveTo(pointX, pointY);
-    } else {
-      const angle = 4 * Math.atan(Math.abs(bulge)) * RAD_TO_DEG;
-      const length = Math.sqrt(
-        (pointX - prePointX) * (pointX - prePointX) + (pointY - prePointY) * (pointY - prePointY)
-      );
-      const radius = Math.abs(length / (2 * Math.sin((angle / 360) * Math.PI)));
-      context.arc(pointX, pointY, radius, 0, (angle * Math.PI) / 180, false);
-
-      prePointX = pointX;
-      prePointY = pointY;
-    }
-  }
-
-  context.lineWidth = lineWidth;
-  context.strokeStyle = lineColor;
-  context.stroke();
-};
-
 const defineIrregularPath = (context: CanvasRenderingContext2D, shape: DrawShape) => {
   let points: PointF[] = [{ x: 0, y: 0 }];
   if (shape.kind === 'polyline') {
     points = shape.vertexes;
-  } else if (shape.kind === 'polylinelw') {
-    points = Array.from(shape.vertexes, (p) => p.position);
   }
 
   context.beginPath();
@@ -510,12 +470,14 @@ const isMouseInShape = (context: CanvasRenderingContext2D, mx: number, my: numbe
     if (context.isPointInStroke(mx, my)) {
       return true;
     }
-  } else if (shape.kind === 'polyline' || shape.kind === 'polylinelw') {
+  } else if (shape.kind === 'polyline') {
     // First redefine the path again (no need to stroke/fill!)
     defineIrregularPath(context, shape);
 
-    // Then hit-test with isPointInPath
-    if (context.isPointInPath(mx, my)) {
+    // isPointInPath hits inside shapes, which makes it weird when this is a border
+    // therefore hit-test with isPointInStroke
+    // if (context.isPointInPath(mx, my)) {
+    if (context.isPointInStroke(mx, my)) {
       return true;
     }
   }
@@ -908,31 +870,6 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
       }
     });
 
-    this.props.drawModel.polylinesLW.forEach((p: DrawPolylineLW) => {
-      if (p.isVisible && p.vertexes.length >= 2) {
-        for (let i = 0; i < p.vertexes.length; i++) {
-          const vertex = p.vertexes[i];
-          const pointX = vertex.position.x;
-          const pointY = vertex.position.y;
-
-          curX = pointX;
-          curY = pointY;
-          maxX = curX > maxX ? curX : maxX;
-          minX = curX < minX ? curX : minX;
-          maxY = curY > maxY ? curY : maxY;
-          minY = curY < minY ? curY : minY;
-        }
-
-        p.kind = 'polylinelw';
-        const firstPoint = p.vertexes[0].position;
-        const lastPoint = p.vertexes[p.vertexes.length - 1].position;
-        p.infoText = `PolylineLW: [${round2TwoDecimal(firstPoint.x)} : ${round2TwoDecimal(
-          firstPoint.y
-        )}] -- [${round2TwoDecimal(lastPoint.x)} : ${round2TwoDecimal(lastPoint.y)}]`;
-        this.shapes.push(p);
-      }
-    });
-
     return { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } };
   };
 
@@ -970,13 +907,6 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
       drawPolyline(context, p, this.props.showArrows, arrowLen, lineColor, lineWidth);
     });
     // done drawing polylines
-
-    // drawing polylines light weight
-    lineColor = '#002266';
-    this.props.drawModel.polylinesLW.forEach((p: DrawPolylineLW) => {
-      drawPolylineLW(context, p, this.props.showArrows, arrowLen, lineColor, lineWidth);
-    });
-    // done drawing polylines light weight
   };
 
   private drawFile = (context: CanvasRenderingContext2D) => {
@@ -1053,14 +983,6 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
             lineColor = '#ff00ff';
           }
           drawPolyline(context, shape, this.props.showArrows, arrowLen, lineColor, lineWidth);
-          break;
-        case 'polylinelw':
-          if (this.selectedShapeIndex === i) {
-            lineColor = defaultHighlightColor;
-          } else {
-            lineColor = '#002266';
-          }
-          drawPolylineLW(context, shape, this.props.showArrows, arrowLen, lineColor, lineWidth);
           break;
         default:
           break;

@@ -4,3 +4,4 @@
 /Files
 /camclient/node_modules
 /camclient/*.eslintcache
+/camclient/src/debug.log

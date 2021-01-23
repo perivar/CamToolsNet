@@ -72,13 +72,7 @@ export interface DrawPolyline extends BaseElement {
   vertexes: Vertex[];
 }
 
-export interface DrawPolylineLW extends BaseElement {
-  kind: 'polylinelw';
-  isClosed: boolean;
-  vertexes: VertexLW[];
-}
-
-export type DrawShape = DrawCircle | DrawLine | DrawArc | DrawPolyline | DrawPolylineLW;
+export type DrawShape = DrawCircle | DrawLine | DrawArc | DrawPolyline;
 
 export interface DrawingModel {
   fileName: string;
@@ -87,5 +81,4 @@ export interface DrawingModel {
   lines: DrawLine[];
   arcs: DrawArc[];
   polylines: DrawPolyline[];
-  polylinesLW: DrawPolylineLW[];
 }

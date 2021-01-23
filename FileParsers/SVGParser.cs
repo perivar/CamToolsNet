@@ -840,10 +840,24 @@ namespace SVG
 						var p3 = new PointF(x + width, y + height);
 						var p4 = new PointF(x, y + height);
 
-						AddStraightLineSegment(p1, p2);
-						AddStraightLineSegment(p2, p3);
-						AddStraightLineSegment(p3, p4);
-						AddStraightLineSegment(p4, p1);
+						// add as polyline instead of 4 separate lines
+						// AddStraightLineSegment(p1, p2);
+						// AddStraightLineSegment(p2, p3);
+						// AddStraightLineSegment(p3, p4);
+						// AddStraightLineSegment(p4, p1);
+
+						// for drawModel we transform here and are not using the transformed points in the parent method
+						// remember to add to the points array
+						points.Add(p1);
+						points.Add(p2);
+						points.Add(p3);
+						points.Add(p4);
+
+						var p1T = Transform(p1);
+						var p2T = Transform(p2);
+						var p3T = Transform(p3);
+						var p4T = Transform(p4);
+						drawModel.AddPolyline(new List<PointF>() { p1T, p2T, p3T, p4T, p1T });
 					}
 				}
 			}
@@ -2331,8 +2345,15 @@ namespace SVG
 						var scaledPoints = new List<PointF>();
 						foreach (PointF point in contour)
 						{
-							var scaledPoint = point.ScaleByDPI(SvgImportResolution);
-							scaledPoints.Add(scaledPoint);
+							if (SvgImportResolution != 1)
+							{
+								var scaledPoint = point.ScaleByDPI(SvgImportResolution);
+								scaledPoints.Add(scaledPoint);
+							}
+							else
+							{
+								scaledPoints.Add(point);
+							}
 						}
 						contours.Add(scaledPoints);
 					}
@@ -2407,7 +2428,7 @@ namespace SVG
 		{
 			float widthMM = 0.0f;
 			float heightMM = 0.0f;
-			float svgImportResolution = 0.0f;
+			float svgImportResolution = 1.0f;
 
 			// width="8.5in" height="11in"
 			// viewBox="0 0 765.00001 990.00002"
@@ -2440,7 +2461,7 @@ namespace SVG
 			// The default is 90dpi but it may not be.
 			if (viewboxValue != null)
 			{
-				var viewBoxArgs = viewboxValue.Split(' ').Where(t => !string.IsNullOrEmpty(t));
+				var viewBoxArgs = viewboxValue.Split(new Char[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
 				float[] viewBoxFloatArgs = viewBoxArgs.Select(arg => float.Parse(arg, CultureInfo.InvariantCulture)).ToArray();
 
 				if (viewBoxArgs.Count() == 4)
@@ -2470,12 +2491,12 @@ namespace SVG
 						Debug.WriteLine("Size in mm: {0}, {1}", widthMM, heightMM);
 					}
 				}
-
-				// set the global variables
-				SvgImportResolution = svgImportResolution;
-				SvgWidth = widthMM;
-				SvgHeight = heightMM;
 			}
+
+			// set the global variables
+			SvgImportResolution = svgImportResolution;
+			SvgWidth = widthMM;
+			SvgHeight = heightMM;
 		}
 
 		/// <summary>

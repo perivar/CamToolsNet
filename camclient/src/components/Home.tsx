@@ -4,7 +4,7 @@ import Dropzone from 'react-dropzone';
 import axios from 'axios';
 import './Home.scss';
 import DrawingCanvas from './DrawingCanvas';
-import { DrawArc, DrawCircle, DrawingModel, DrawLine, DrawPolyline, DrawPolylineLW } from '../types/DrawingModel';
+import { DrawArc, DrawCircle, DrawingModel, DrawLine, DrawPolyline } from '../types/DrawingModel';
 // import { KonvaCanvas } from './KonvaCanvas';
 
 // read from .env files
@@ -34,10 +34,9 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
         circles: [],
         lines: [],
         arcs: [],
-        polylines: [],
-        polylinesLW: []
+        polylines: []
       },
-      xSplit: 100,
+      xSplit: 0,
       splitIndex: 0,
       rotateDegrees: 45,
       showArrows: false,
@@ -231,16 +230,6 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
       }
     });
 
-    drawModel.polylinesLW.forEach((p: DrawPolylineLW) => {
-      if (p.isVisible && p.vertexes.length >= 2) {
-        for (let i = 0; i < p.vertexes.length; i++) {
-          const vertex = p.vertexes[i];
-          vertex.position.x -= drawModel.bounds.min.x;
-          vertex.position.y -= drawModel.bounds.min.y;
-        }
-      }
-    });
-
     // update state
     this.setState({ isLoading: false, drawModel });
   };
@@ -407,7 +396,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
                         variant="info"
                         onClick={this.onPolyToCircle}
                         size="sm">
-                        Poly to Circle
+                        To Poly & Circle
                       </Button>
                       <Button className="mb-1" title="Reload" variant="info" onClick={this.onReload} size="sm">
                         Reload Model
@@ -424,8 +413,13 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
                 <Form className="align-items-center">
                   <Form.Row>
                     <Col sm={{ span: 10, offset: 2 }}>
-                      <a className="btn btn-info btn-sm" href={`${config.apiUrl}/CirclesToLayers/false`}>
-                        DXF Circles to Layers
+                      <a className="btn btn-info btn-sm mb-1" href={`${config.apiUrl}/CirclesToLayers/false`}>
+                        Save DXF w/ Layers
+                      </a>
+                    </Col>
+                    <Col sm={{ span: 10, offset: 2 }}>
+                      <a className="btn btn-info btn-sm" href={`${config.apiUrl}/SaveSvg/false`}>
+                        Save SVG
                       </a>
                     </Col>
                   </Form.Row>
