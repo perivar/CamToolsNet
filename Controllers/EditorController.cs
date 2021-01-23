@@ -15,6 +15,9 @@ using netDxf;
 using netDxf.Entities;
 using SVG;
 using Svg;
+using System.Text;
+using System.Xml.Linq;
+using System.Xml.XPath;
 
 namespace CAMToolsNet.Controllers
 {
@@ -312,7 +315,13 @@ namespace CAMToolsNet.Controllers
 					// At this point, the Offset is at the end of the MemoryStream
 					// Either do this to seek to the beginning
 					memoryStream.Position = 0;
-					return File(memoryStream, "APPLICATION/octet-stream", newFullFileName);
+
+					// have to fix the xml / svg document since
+					// the library used creates tags
+					// that TinkerCad doesn't support
+					var fixedMemStream = FixSvgDocument(memoryStream);
+
+					return File(fixedMemStream, "APPLICATION/octet-stream", newFullFileName);
 				}
 			}
 			else
@@ -322,6 +331,29 @@ namespace CAMToolsNet.Controllers
 			}
 
 			return Ok();
+		}
+
+		private static MemoryStream FixSvgDocument(MemoryStream input)
+		{
+			// have to fix the xml / svg document since
+			// the library used creates some tags
+			// that TinkerCad doesn't support
+			XDocument xdoc = XDocument.Load(input);
+
+			// modify the svg parameters
+			var elements = xdoc.XPathSelectElements("//*[@fill-opacity='0']");
+			foreach (var elem in elements)
+			{
+				elem.SetAttributeValue("fill-opacity", "1");
+			}
+
+			// convert back to stream
+			var stream = new MemoryStream();
+			xdoc.Save(stream);
+
+			// Rewind the stream ready to read from it elsewhere
+			stream.Position = 0;
+			return stream;
 		}
 
 		[HttpGet("PolylineToCircles/{doConvertLines:bool}")]  // GET /api/Editor/PolylineToCircles/false
