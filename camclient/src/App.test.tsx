@@ -2,8 +2,8 @@ import React from 'react';
 import { render } from '@testing-library/react';
 import App from './App';
 
-test('renders save dxf link', () => {
+test('renders save svg link', () => {
   const { getByText } = render(<App />);
-  const linkElement = getByText(/DXF Circles to Layers/i);
+  const linkElement = getByText(/Save SVG/i);
   expect(linkElement).toBeInTheDocument();
 });
