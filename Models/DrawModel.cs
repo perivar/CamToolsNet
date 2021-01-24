@@ -115,7 +115,7 @@ namespace CAMToolsNet.Models
 			public override string ToString()
 			{
 				return string.Format(CultureInfo.CurrentCulture,
-									 "Center={0}, Radius={1}", Center, Radius);
+									 "Circle: Center={0}, Radius={1}", Center, Radius);
 			}
 		}
 
@@ -173,7 +173,7 @@ namespace CAMToolsNet.Models
 			public override string ToString()
 			{
 				return string.Format(CultureInfo.CurrentCulture,
-									 "StartPoint={0}, EndPoint={1}", StartPoint, EndPoint);
+									 "Line: StartPoint={0}, EndPoint={1}", StartPoint, EndPoint);
 			}
 		}
 
@@ -245,24 +245,24 @@ namespace CAMToolsNet.Models
 			{
 				// ignore the swapping for arcs since the arcs are correct anyway
 				// even if the start and end point isn't really swapped
-				// var startAngle = StartAngle;
-				// var endAngle = EndAngle;
-				// StartAngle = endAngle;
-				// EndAngle = startAngle;
 			}
 
 			public override string ToString()
 			{
 				return string.Format(CultureInfo.CurrentCulture,
-									 "StartPoint={0}, EndPoint={1}", StartPoint, EndPoint);
+									 "Arc: StartPoint={0}, EndPoint={1}", StartPoint, EndPoint);
 			}
 		}
 
-		public class DrawPolyline : DrawElement
+		public class DrawPolyline : DrawElement, IStartEndPoint
 		{
 			public bool IsClosed { get; set; }
 
 			public List<Point3D> Vertexes { get; set; }
+
+			public Point3D StartPoint { get { return Vertexes.First(); } }
+
+			public Point3D EndPoint { get { return Vertexes.Last(); } }
 
 			// parameter-less constructor needed for de-serialization
 			public DrawPolyline() { }
@@ -316,7 +316,13 @@ namespace CAMToolsNet.Models
 			public override string ToString()
 			{
 				return string.Format(CultureInfo.CurrentCulture,
-									 "StartPoint={0}, EndPoint={1}", Vertexes.First(), Vertexes.Last());
+									 "Poly: StartPoint={0}, EndPoint={1}", Vertexes.First(), Vertexes.Last());
+			}
+
+			public void SwapStartEnd()
+			{
+				// ignore the swapping for polylines since the polylines are correctly connected anyway
+				// even if the start and end point isn't really swapped
 			}
 		}
 
@@ -326,9 +332,9 @@ namespace CAMToolsNet.Models
 		/// <param name="dxf">dxf model to parse</param>
 		/// <param name="fileName">original filename</param>
 		/// <returns></returns>
-		public static DrawModel FromDxfDocument(netDxf.DxfDocument dxf, string fileName)
+		public static DrawModel FromDxfDocument(netDxf.DxfDocument dxf, string fileName, bool useContours = true)
 		{
-			return new DrawModel(dxf, fileName);
+			return new DrawModel(dxf, fileName, useContours);
 		}
 
 		/// <summary>
@@ -337,9 +343,9 @@ namespace CAMToolsNet.Models
 		/// <param name="svg">svg model to parse</param>
 		/// <param name="fileName">original filename</param>
 		/// <returns></returns>
-		public static DrawModel FromSVGDocument(SVG.SVGDocument svg, string fileName)
+		public static DrawModel FromSVGDocument(SVG.SVGDocument svg, string fileName, bool useContours = true)
 		{
-			return new DrawModel(svg, fileName);
+			return new DrawModel(svg, fileName, useContours);
 		}
 
 		/// <summary>
@@ -703,47 +709,122 @@ namespace CAMToolsNet.Models
 			Polylines = new List<DrawPolyline>();
 		}
 
-		public DrawModel(netDxf.DxfDocument dxf, string fileName) : this()
+		public DrawModel(netDxf.DxfDocument dxf, string fileName, bool useContours = true) : this()
 		{
 			FileName = fileName;
 
 			if (dxf != null)
 			{
-				// circles
-				foreach (var c in dxf.Circles)
+				if (!useContours)
 				{
-					Circles.Add(new DrawCircle(c));
-				}
+					// circles
+					foreach (var c in dxf.Circles)
+					{
+						Circles.Add(new DrawCircle(c));
+					}
 
-				// lines
-				foreach (var l in dxf.Lines)
-				{
-					Lines.Add(new DrawLine(l));
-				}
+					// lines
+					foreach (var l in dxf.Lines)
+					{
+						Lines.Add(new DrawLine(l));
+					}
 
-				// arcs
-				foreach (var a in dxf.Arcs)
-				{
-					Arcs.Add(new DrawArc(a));
-				}
+					// arcs
+					foreach (var a in dxf.Arcs)
+					{
+						Arcs.Add(new DrawArc(a));
+					}
 
-				// polylines
-				foreach (var p in dxf.Polylines)
-				{
-					Polylines.Add(new DrawPolyline(p));
-				}
+					// polylines
+					foreach (var p in dxf.Polylines)
+					{
+						Polylines.Add(new DrawPolyline(p));
+					}
 
-				// add polylines lightweight as normal polylines
-				foreach (var p in dxf.LwPolylines)
+					// add polylines lightweight as normal polylines
+					foreach (var p in dxf.LwPolylines)
+					{
+						Polylines.Add(new DrawPolyline(p));
+					}
+				}
+				else
 				{
-					Polylines.Add(new DrawPolyline(p));
+					// use contours, i.e. convert everything to polylines
+					int shapeCounter = 0;
+
+					// Enumerate each contour in the document
+
+					// circles
+					foreach (var c in dxf.Circles)
+					{
+						shapeCounter++;
+
+						var cx = c.Center.X;
+						var cy = c.Center.Y;
+						var r = c.Radius;
+
+						var points = Transformation.RenderCircle(cx, cy, r);
+
+						// add as separate polylines
+						var polyline = new DrawPolyline(points);
+						Polylines.Add(polyline);
+					}
+
+					// lines
+					foreach (var l in dxf.Lines)
+					{
+						shapeCounter++;
+
+						Lines.Add(new DrawLine(l));
+					}
+
+					// arcs
+					foreach (var a in dxf.Arcs)
+					{
+						shapeCounter++;
+
+						var centerX = a.Center.X;
+						var centerY = a.Center.Y;
+						var radius = a.Radius;
+						var startAngle = a.StartAngle;
+						var endAngle = a.EndAngle;
+
+						var points = Transformation.RenderArc(centerX, centerY, radius, startAngle, endAngle);
+
+						// add as separate polylines
+						var polyline = new DrawPolyline(points);
+						Polylines.Add(polyline);
+					}
+
+					// polylines
+					foreach (var p in dxf.Polylines)
+					{
+						shapeCounter++;
+
+						Polylines.Add(new DrawPolyline(p));
+					}
+
+					// add polylines lightweight as normal polylines
+					foreach (var p in dxf.LwPolylines)
+					{
+						shapeCounter++;
+
+						Polylines.Add(new DrawPolyline(p));
+					}
 				}
 
 				CalculateBounds();
 			}
 		}
 
-		public DrawModel(SVG.SVGDocument svg, string fileName) : this()
+		/// <summary>
+		/// Convert a SVG Document to a DrawModel
+		/// </summary>
+		/// <param name="svg">the svg document</param>
+		/// <param name="fileName">the filename</param>
+		/// <param name="useContours">use contours (polylines) instead of geometrical shapes, default true</param>
+		/// <returns>a draw model</returns>
+		public DrawModel(SVG.SVGDocument svg, string fileName, bool useContours = true) : this()
 		{
 			FileName = fileName;
 
@@ -751,34 +832,52 @@ namespace CAMToolsNet.Models
 			{
 				var contours = svg.GetScaledContoursAndSetMinMax();
 
-				var shiftX = 0;             // disable shifting i X direction (was minX)
-				var shiftY = svg.SvgHeight; // disable shifting in Y direction except flipping (was maxY)
-
+				// Assuming these points come from a SVG
+				// we need to shift the Y pos since
+				// the SVG origin is upper left, while in DXF and GCode it is assumed to be lower left
 				var minX = svg.MinX;
 				var minY = svg.MinY;
 				var maxX = svg.MaxX;
 				var maxY = svg.MaxY;
 
-				// we ar not shifting except flipping
+				var shiftX = 0; // to shift (crop) in X direction use minX
+				var shiftY = svg.SvgHeight > 0 ? svg.SvgHeight : maxY; // to shift (crop) in Y direction except flipping, use maxY
+
+				// we are not shifting except flipping
 				Bounds = new Bounds(minX, maxX, shiftY - maxY, shiftY - minY, 0, 0);
 
-				// Assuming these points come from a SVG
-				// we need to shift the Y pos since
-				// the SVG origin is upper left, while in DXF and GCode it is assumed to be lower left
-
-				foreach (var shape in svg.Shapes)
+				if (!useContours)
 				{
-					var elem = shape.DrawModel;
+					foreach (var shape in svg.Shapes)
+					{
+						var elem = shape.DrawModel;
 
-					Circles.AddRange(elem.Circles.Select(c => new DrawCircle(new PointF { X = c.Center.X - shiftX, Y = shiftY - c.Center.Y }, c.Radius)).ToList());
-					Lines.AddRange(elem.Lines.Select(l => new DrawLine(new PointF { X = l.StartPoint.X - shiftX, Y = shiftY - l.StartPoint.Y }, new PointF { X = l.EndPoint.X - shiftX, Y = shiftY - l.EndPoint.Y })).ToList());
-					Arcs.AddRange(elem.Arcs.Select(a => new DrawArc(new PointF { X = a.Center.X - shiftX, Y = shiftY - a.Center.Y }, a.Radius, -a.EndAngle, -a.StartAngle)).ToList());
+						Circles.AddRange(elem.Circles.Select(c => new DrawCircle(new PointF { X = c.Center.X - shiftX, Y = shiftY - c.Center.Y }, c.Radius)).ToList());
+						Lines.AddRange(elem.Lines.Select(l => new DrawLine(new PointF { X = l.StartPoint.X - shiftX, Y = shiftY - l.StartPoint.Y }, new PointF { X = l.EndPoint.X - shiftX, Y = shiftY - l.EndPoint.Y })).ToList());
+						Arcs.AddRange(elem.Arcs.Select(a => new DrawArc(new PointF { X = a.Center.X - shiftX, Y = shiftY - a.Center.Y }, a.Radius, -a.EndAngle, -a.StartAngle)).ToList());
 
-					// fix vertexes for polylines
-					var polylines = (elem.Polylines.Select(a => new DrawPolyline(a.Vertexes.Select(b => new PointF { X = b.X - shiftX, Y = shiftY - b.Y }).ToList())));
-					Polylines.AddRange(polylines);
+						// fix vertexes for polylines
+						var polylines = (elem.Polylines.Select(a => new DrawPolyline(a.Vertexes.Select(b => new PointF { X = b.X - shiftX, Y = shiftY - b.Y }).ToList())));
+						Polylines.AddRange(polylines);
 
-					// svg doesn't have polylines lw
+						// svg doesn't have polylines lw
+					}
+				}
+				else
+				{
+					// use contours
+					int contourCounter = 0;
+
+					// Enumerate each contour in the document
+					foreach (var contour in contours)
+					{
+						contourCounter++;
+
+						// add as separate polylines
+						var vertexes = contour.Select(b => new Point3D(b.X - shiftX, shiftY - b.Y)).ToList();
+						var polyline = new DrawPolyline(vertexes);
+						Polylines.Add(polyline);
+					}
 				}
 			}
 		}
@@ -1104,6 +1203,7 @@ namespace CAMToolsNet.Models
 			// add Lines and Arcs
 			openList.AddRange(Lines);
 			openList.AddRange(Arcs);
+			openList.AddRange(Polylines);
 
 			// https://stackoverflow.com/questions/39546622/sort-my-class-by-two-values
 			// https://forum.unity.com/threads/sorting-line-segments.254411/

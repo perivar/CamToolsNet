@@ -83,6 +83,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
       const formData = new FormData();
       formData.append('files', acceptedFiles[i]);
       formData.append('description', acceptedFiles[i].name);
+      formData.append('useContours', 'true');
       axios
         .post(`${config.apiUrl}/Upload`, formData, {
           withCredentials: true

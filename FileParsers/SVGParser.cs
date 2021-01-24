@@ -299,7 +299,7 @@ namespace SVG
 			startAng = theta1;
 			endAng = thetaDelta;
 
-			// calculate numbmer of segments
+			// calculate number of segments
 			if (numSegments > 0)
 			{
 				angStep = (Math.PI / (numSegments * 2));
@@ -456,7 +456,7 @@ namespace SVG
 	public interface ISVGElement
 	{
 		// Retrieve the list of contours for this shape
-		List<List<PointF>> GetContours();
+		IEnumerable<IEnumerable<PointF>> GetContours();
 
 		// System.Drawing GraphicsPath
 		GraphicsPath GraphicsPath { get; }
@@ -689,7 +689,7 @@ namespace SVG
 			drawModel.AddLine(points[0], points[1]);
 		}
 
-		public List<List<PointF>> GetContours()
+		public IEnumerable<IEnumerable<PointF>> GetContours()
 		{
 			var result = new List<List<PointF>>();
 			result.Add(points);
@@ -746,7 +746,7 @@ namespace SVG
 			drawModel.AddPolyline(points);
 		}
 
-		public List<List<PointF>> GetContours()
+		public IEnumerable<IEnumerable<PointF>> GetContours()
 		{
 			var result = new List<List<PointF>>();
 			result.Add(points);
@@ -840,24 +840,10 @@ namespace SVG
 						var p3 = new PointF(x + width, y + height);
 						var p4 = new PointF(x, y + height);
 
-						// disabled 4 separate lines and add as polyline instead
-						// AddStraightLineSegment(p1, p2);
-						// AddStraightLineSegment(p2, p3);
-						// AddStraightLineSegment(p3, p4);
-						// AddStraightLineSegment(p4, p1);
-
-						// for drawModel we transform here and are not using the transformed points in the parent method
-						// remember to add to the points array
-						points.Add(p1);
-						points.Add(p2);
-						points.Add(p3);
-						points.Add(p4);
-
-						var p1T = Transform(p1);
-						var p2T = Transform(p2);
-						var p3T = Transform(p3);
-						var p4T = Transform(p4);
-						drawModel.AddPolyline(new List<PointF>() { p1T, p2T, p3T, p4T, p1T });
+						AddStraightLineSegment(p1, p2);
+						AddStraightLineSegment(p2, p3);
+						AddStraightLineSegment(p3, p4);
+						AddStraightLineSegment(p4, p1);
 					}
 				}
 			}
@@ -991,7 +977,7 @@ namespace SVG
 			drawModel.AddArc(centerT, (float)radius, (float)(angleA * 180 / Math.PI), (float)(angleB * 180 / Math.PI));
 		}
 
-		public List<List<PointF>> GetContours()
+		public IEnumerable<IEnumerable<PointF>> GetContours()
 		{
 			var result = new List<List<PointF>>();
 			result.Add(points);
@@ -1045,7 +1031,7 @@ namespace SVG
 			// Image is not supported by the import
 		}
 
-		public List<List<PointF>> GetContours()
+		public IEnumerable<IEnumerable<PointF>> GetContours()
 		{
 			var result = new List<List<PointF>>();
 			return result;
@@ -1066,26 +1052,7 @@ namespace SVG
 			float cy = SVGUtils.ReadFloat(element, "cy");
 			float r = SVGUtils.ReadFloat(element, "r");
 
-			// calculate number of steps to use
-			// It follows that the magnitude in radians of one complete revolution (360 degrees)
-			// is the length of the entire circumference divided by the radius, or 2πr / r, or 2π.
-			// Thus 2π radians is equal to 360 degrees, meaning that one radian is equal to
-			// 180/π degrees.
-			double steps = Transformation.CalculateSteps(2 * Math.PI, r);
-
-			for (double theta = 0.0; theta < 2.0 * Math.PI; theta += Math.PI / (steps / 2.0))
-			{
-				double x = Math.Sin(theta) * r + cx;
-				double y = Math.Cos(theta) * r + cy;
-
-				points.Add(new PointF((float)x, (float)y));
-			}
-
-			// add last point
-			double xLast = Math.Sin(2.0 * Math.PI) * r + cx;
-			double yLast = Math.Cos(2.0 * Math.PI) * r + cy;
-			var lastPoint = new PointF((float)xLast, (float)yLast);
-			if (!points.Last().Equals(lastPoint)) points.Add(lastPoint);
+			points.AddRange(Transformation.RenderCircle(cx, cy, r));
 
 			points = Transform(points);
 
@@ -1096,7 +1063,7 @@ namespace SVG
 			drawModel.AddCircle(centerT, r);
 		}
 
-		public List<List<PointF>> GetContours()
+		public IEnumerable<IEnumerable<PointF>> GetContours()
 		{
 			var result = new List<List<PointF>>();
 			result.Add(points);
@@ -1157,13 +1124,13 @@ namespace SVG
 				graphicsPath.AddPolygon(currentContour.ToArray());
 			}
 
-			// add this single countour to the master point list as well
+			// add this single contour to the master point list as well
 			contours.Add(currentContour);
 
 			drawModel.AddPolyline(currentContour);
 		}
 
-		public List<List<PointF>> GetContours()
+		public IEnumerable<IEnumerable<PointF>> GetContours()
 		{
 			return contours;
 		}
@@ -1762,7 +1729,7 @@ namespace SVG
 
 						currentContour = Transform(currentContour);
 
-						// add this single countour to the master point list as well
+						// add this single contour to the master point list as well
 						contours.Add(currentContour);
 
 						graphicsPath.AddPolygon(currentContour.ToArray());
@@ -1793,7 +1760,7 @@ namespace SVG
 
 					currentContour = Transform(currentContour);
 
-					// add this single countour to the master point list as well
+					// add this single contour to the master point list as well
 					contours.Add(currentContour);
 
 					graphicsPath.AddPolygon(currentContour.ToArray());
@@ -1803,7 +1770,7 @@ namespace SVG
 			}
 		}
 
-		public List<List<PointF>> GetContours()
+		public IEnumerable<IEnumerable<PointF>> GetContours()
 		{
 			return contours;
 		}
@@ -2239,8 +2206,9 @@ namespace SVG
 		/// as well as the min x and min y coordinates.
 		/// This fixes the issue where coordinates are negative
 		/// </summary>
+		/// <param name="doScaleAndShift">optionally remove space a top and left, default is false</param>
 		/// <returns>a scaled contour list</returns>
-		public IEnumerable<IEnumerable<PointF>> GetScaledContoursAndSetMinMax()
+		public IEnumerable<IEnumerable<PointF>> GetScaledContoursAndSetMinMax(bool doScaleAndShift = false)
 		{
 			var contours = new List<List<PointF>>();
 
@@ -2255,8 +2223,7 @@ namespace SVG
 			MinY = points.Min(point => point.Y);
 			MaxY = points.Max(point => point.Y);
 
-			bool DoScaleAndShift = false;
-			if (DoScaleAndShift)
+			if (doScaleAndShift)
 			{
 				// Scale by the DPI
 				// And fix the points by removing space at the left and top

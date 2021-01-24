@@ -80,7 +80,7 @@ namespace CAMToolsNet.Controllers
 		}
 
 		[HttpPost("Upload")] // POST /api/Editor/Upload
-		public async Task<IActionResult> Upload(List<IFormFile> files, [FromForm] string description)
+		public async Task<IActionResult> Upload(List<IFormFile> files, [FromForm] string description, [FromForm] bool useContours)
 		{
 			DrawModel drawModel = null;
 			foreach (var file in files)
@@ -125,7 +125,7 @@ namespace CAMToolsNet.Controllers
 
 								// convert dxf to a model that can be serialized
 								// since I am unable to get the default dxfnet model to be serialized
-								drawModel = DrawModel.FromDxfDocument(dxf, file.FileName);
+								drawModel = DrawModel.FromDxfDocument(dxf, file.FileName, useContours);
 								_logger.LogInformation("Successfully parsed DXF to draw model!");
 								hasParsedSuccessfully = true;
 							}
@@ -151,7 +151,7 @@ namespace CAMToolsNet.Controllers
 							if (svg != null)
 							{
 								_logger.LogInformation("SVG read successfully!");
-								drawModel = DrawModel.FromSVGDocument(svg, file.FileName);
+								drawModel = DrawModel.FromSVGDocument(svg, file.FileName, useContours);
 								_logger.LogInformation("Successfully parsed SVG to draw model!");
 								hasParsedSuccessfully = true;
 							}

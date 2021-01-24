@@ -924,5 +924,136 @@ namespace CoordinateUtils
 			}
 			return nearestIndex;
 		}
+
+		/// <summary>
+		/// Render circle as points
+		/// </summary>
+		/// <param name="centerX">center x</param>
+		/// <param name="centerY">center y</param>
+		/// <param name="radius">radius</param>
+		/// <returns>points</returns>
+		public static List<PointF> RenderCircle(double centerX, double centerY, double radius)
+		{
+			var points = new List<PointF>();
+
+			// calculate number of steps to use
+			// It follows that the magnitude in radians of one complete revolution (360 degrees)
+			// is the length of the entire circumference divided by the radius, or 2πr / r, or 2π.
+			// Thus 2π radians is equal to 360 degrees, meaning that one radian is equal to
+			// 180/π degrees.
+			double steps = Transformation.CalculateSteps(2 * Math.PI, radius);
+
+			for (double theta = 0.0; theta < 2.0 * Math.PI; theta += Math.PI / (steps / 2.0))
+			{
+				double x = Math.Sin(theta) * radius + centerX;
+				double y = Math.Cos(theta) * radius + centerY;
+
+				points.Add(new PointF((float)x, (float)y));
+			}
+
+			// add last point
+			double xLast = Math.Sin(2.0 * Math.PI) * radius + centerX;
+			double yLast = Math.Cos(2.0 * Math.PI) * radius + centerY;
+			var lastPoint = new PointF((float)xLast, (float)yLast);
+			if (!points.Last().Equals(lastPoint)) points.Add(lastPoint);
+
+			return points;
+		}
+
+		/// <summary>
+		/// Render arc into points
+		/// </summary>
+		/// <param name="centerX">center x</param>
+		/// <param name="centerY">center y</param>
+		/// <param name="radius">radius</param>
+		/// <param name="startAngle">start angle in degrees</param>
+		/// <param name="endAngle">end angle in degrees</param>
+		/// <param name="clockwise">which way is the arc</param>
+		/// <returns>points</returns>
+		public static List<PointF> RenderArc(double centerX, double centerY, double radius, double startAngle, double endAngle, bool clockwise = false)
+		{
+			// see RenderArc in SimpleGCodeParser and
+			// ParseArcSegment in SVGParser
+
+			var points = new List<PointF>();
+
+			// calculate useful variables
+			var startX = centerX + Math.Cos((startAngle * Math.PI) / 180) * radius;
+			var startY = centerY + Math.Sin((startAngle * Math.PI) / 180) * radius;
+			var endX = centerX + Math.Cos((endAngle * Math.PI) / 180) * radius;
+			var endY = centerY + Math.Sin((endAngle * Math.PI) / 180) * radius;
+
+			var center = new PointF((float)centerX, (float)centerY);
+			var startpoint = new PointF((float)startX, (float)startY);
+			var endpoint = new PointF((float)endX, (float)endY);
+
+			// add first point 
+			points.Add(startpoint);
+
+			// Turn the degrees of rotation into radians
+			double startAng = Transformation.DegreeToRadian(startAngle);
+			double endAng = Transformation.DegreeToRadian(endAngle);
+
+			// angle variables.
+			double angleA;
+			double angleB;
+			if (clockwise)
+			{
+				// Clockwise
+				angleA = endAng;
+				angleB = startAng;
+			}
+			else
+			{
+				// Counterclockwise
+				angleA = startAng;
+				angleB = endAng;
+			}
+
+			// Make sure angleB is always greater than angleA
+			// and if not add 2PI so that it is (this also takes
+			// care of the special case of angleA == angleB,
+			// ie we want a complete circle)
+			if (angleB <= angleA)
+			{
+				angleB += 2 * Math.PI;
+			}
+
+			double angle = angleB - angleA;
+
+			// Maximum of either 2.4 times the angle in radians
+			// or the length of the curve divided by the curve section constant
+			int steps = Transformation.CalculateStepsAsInt(angle, radius);
+
+			int step;
+			double fraction;
+			double angle3;
+			for (int s = 1; s <= steps; s++)
+			{
+				// Forwards for CCW, backwards for CW
+				if (!clockwise)
+				{
+					step = s;
+				}
+				else
+				{
+					step = steps - s;
+				}
+
+				// interpolate around the arc
+				fraction = ((double)step / steps);
+				angle3 = (angle * fraction) + angleA;
+
+				// find the intermediate position
+				var newPoint = new PointF();
+				newPoint.X = (float)(center.X + Math.Cos(angle3) * radius);
+				newPoint.Y = (float)(center.Y + Math.Sin(angle3) * radius);
+
+				// and add the new point
+				points.Add(newPoint);
+			}
+
+			return points;
+		}
 	}
 }
