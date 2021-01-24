@@ -1210,8 +1210,11 @@ namespace CAMToolsNet.Models
 			// https://www.geeksforgeeks.org/cocktail-sort/
 
 			bool foundNext = true;
+			int mainLoopCounter = 0;
 			while (openList.Count > 0)
 			{
+				mainLoopCounter++;
+
 				// move entry from open to ordered
 				orderedList.Add(openList.ElementAt(0));
 				openList.RemoveAt(0);
@@ -1222,6 +1225,7 @@ namespace CAMToolsNet.Models
 					foundNext = false;
 					// Iterate the list in reverse with a for loop to be able to remove while iterating
 					for (int i = openList.Count - 1; i >= 0; i--)
+					// for (int i = 0; i < openList.Count; i++)
 					{
 						var segment = openList.ElementAt(i);
 						if (orderedList.Last().EndPoint == segment.StartPoint)
@@ -1253,6 +1257,7 @@ namespace CAMToolsNet.Models
 					foundNext = false;
 					// Iterate the list in reverse with a for loop to be able to remove while iterating
 					for (int i = openList.Count - 1; i >= 0; i--)
+					// for (int i = 0; i < openList.Count; i++)
 					{
 						var segment = openList.ElementAt(i);
 						if (orderedList.First().StartPoint == segment.EndPoint)
@@ -1281,6 +1286,61 @@ namespace CAMToolsNet.Models
 
 			// open list should be empty at this point
 			SortedStartEnd = orderedList.ToList();
+		}
+
+		public List<List<IStartEndPoint>> GroupIntoSegments()
+		{
+			var segments = new List<List<IStartEndPoint>>();
+
+			if (SortedStartEnd != null && SortedStartEnd.Count > 0)
+			{
+				IStartEndPoint prevElement = null;
+				List<IStartEndPoint> segment = null;
+
+				// go through the list and find out where two sequental elements are disconnected
+				foreach (var element in SortedStartEnd)
+				{
+					if (prevElement != null &&
+					   (prevElement.EndPoint == element.StartPoint
+					 || prevElement.StartPoint == element.EndPoint
+					 || prevElement.EndPoint == element.EndPoint
+					 || prevElement.StartPoint == element.StartPoint))
+					{
+						// found connected
+						Console.WriteLine("Found connected point: " + element.StartPoint + " -> " + element.EndPoint);
+
+						// add both first and this to segment
+						if (!segment.Contains(prevElement)) segment.Add(prevElement);
+						if (!segment.Contains(element)) segment.Add(element);
+					}
+					else
+					{
+						// first point or not connected anylonger
+						Console.WriteLine("Found potential new start point: " + element.StartPoint + " -> " + element.EndPoint);
+
+						// in case this is not a closed polygon, make sure to add existing vertexes
+						if (segment != null && segment.Count > 0)
+						{
+							Console.WriteLine("Adding segment. Count: " + segment.Count);
+							segments.Add(segment);
+						}
+
+						// reset segment list
+						segment = new List<IStartEndPoint>();
+					}
+
+					prevElement = element;
+				}
+
+				// add last segment
+				if (segment != null && segment.Count > 0)
+				{
+					Console.WriteLine("Adding last segment. Count: " + segment.Count);
+					segments.Add(segment);
+				}
+			}
+
+			return segments;
 		}
 
 		public void ConvertLinesToPolylines()

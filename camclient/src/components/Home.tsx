@@ -83,7 +83,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
       const formData = new FormData();
       formData.append('files', acceptedFiles[i]);
       formData.append('description', acceptedFiles[i].name);
-      formData.append('useContours', 'true');
+      formData.append('useContours', 'false');
       axios
         .post(`${config.apiUrl}/Upload`, formData, {
           withCredentials: true
@@ -140,6 +140,18 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
       })
       .catch((error) => {
         console.error('Unable to perform poly to circle.', error);
+      });
+  };
+
+  private onFlatten = () => {
+    axios
+      .get(`${config.apiUrl}/Flatten`, { withCredentials: true })
+      .then((response) => {
+        console.log(response);
+        this.getDrawModel();
+      })
+      .catch((error) => {
+        console.error('Unable to perform flatten.', error);
       });
   };
 
@@ -399,8 +411,11 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
                         size="sm">
                         To Poly & Circle
                       </Button>
-                      <Button className="mb-1" title="Reload" variant="info" onClick={this.onReload} size="sm">
+                      {/* <Button className="mb-1" title="Reload" variant="info" onClick={this.onReload} size="sm">
                         Reload Model
+                      </Button> */}
+                      <Button className="mb-1" title="Flatten" variant="info" onClick={this.onFlatten} size="sm">
+                        Flatten
                       </Button>
                     </Col>
                   </Form.Row>

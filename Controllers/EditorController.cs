@@ -364,7 +364,7 @@ namespace CAMToolsNet.Controllers
 			if (drawModel != null)
 			{
 				// first sort points
-				if (doConvertLines) drawModel.SortStartStopSegments();
+				if (drawModel.SortedStartEnd == null && doConvertLines) drawModel.SortStartStopSegments();
 
 				// convert connected visible lines to polylines first
 				if (doConvertLines) drawModel.ConvertLinesToPolylines();
@@ -401,6 +401,73 @@ namespace CAMToolsNet.Controllers
 			return Ok();
 		}
 
+		[HttpGet("Flatten")]  // GET /api/Editor/Flatten
+		public IActionResult Flatten()
+		{
+			var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
+			if (drawModel != null)
+			{
+				if (drawModel.SortedStartEnd == null) drawModel.SortStartStopSegments();
+
+				var segments = drawModel.GroupIntoSegments();
+
+				foreach (var segment in segments)
+				{
+					// if a segment contain a element that isn't
+					// polyline, convert first
+					var shapePoints = new List<PointF>();
+					foreach (var shape in segment)
+					{
+						if (shape.GetType() == typeof(DrawModel.DrawArc))
+						{
+							var a = shape as DrawModel.DrawArc;
+							// convert to polyline
+							var centerX = a.Center.X;
+							var centerY = a.Center.Y;
+							var radius = a.Radius;
+							var startAngle = a.StartAngle;
+							var endAngle = a.EndAngle;
+
+							var points = Transformation.RenderArc(centerX, centerY, radius, startAngle, endAngle);
+
+							// add to shapePoints
+							shapePoints.AddRange(points);
+
+							// and remove arc
+							drawModel.Arcs.Remove(a);
+						}
+
+						if (shape.GetType() == typeof(DrawModel.DrawLine))
+						{
+							var l = shape as DrawModel.DrawLine;
+
+							// add to shapePoints, if not already added
+							if (!shapePoints.Contains(l.StartPoint.PointF)) shapePoints.Add(l.StartPoint.PointF);
+
+							// always add the end point
+							shapePoints.Add(l.EndPoint.PointF);
+
+							// and remove line
+							drawModel.Lines.Remove(l);
+						}
+					}
+
+					// add as separate polylines
+					var polyline = new DrawModel.DrawPolyline(shapePoints);
+					drawModel.Polylines.Add(polyline);
+				}
+
+				// update model
+				HttpContext.Session.SetObjectAsJson("DrawModel", drawModel);
+			}
+			else
+			{
+				_logger.LogError("Flatten unsuccessfull!");
+				return BadRequest();
+			}
+
+			return Ok();
+		}
 
 		[HttpGet("Trim")]  // GET /api/Editor/Trim
 		public IActionResult Trim()
