@@ -28,6 +28,10 @@ namespace CAMToolsNet.Models
 		[JsonIgnore]
 		public List<IStartEndPoint> SortedStartEnd { get; set; }
 
+		// used to hold the grouped segment list
+		[JsonIgnore]
+		public List<List<IStartEndPoint>> GroupedSegments { get; set; }
+
 		public class DrawColor
 		{
 			public byte A { get; }
@@ -1288,7 +1292,7 @@ namespace CAMToolsNet.Models
 			SortedStartEnd = orderedList.ToList();
 		}
 
-		public List<List<IStartEndPoint>> GroupIntoSegments()
+		public void GroupIntoSegments()
 		{
 			var segments = new List<List<IStartEndPoint>>();
 
@@ -1307,7 +1311,7 @@ namespace CAMToolsNet.Models
 					 || prevElement.StartPoint == element.StartPoint))
 					{
 						// found connected
-						Console.WriteLine("Found connected point: " + element.StartPoint + " -> " + element.EndPoint);
+						// Console.WriteLine("Found connected point: " + element.StartPoint + " -> " + element.EndPoint);
 
 						// add both first and this to segment
 						if (!segment.Contains(prevElement)) segment.Add(prevElement);
@@ -1316,12 +1320,12 @@ namespace CAMToolsNet.Models
 					else
 					{
 						// first point or not connected anylonger
-						Console.WriteLine("Found potential new start point: " + element.StartPoint + " -> " + element.EndPoint);
+						// Console.WriteLine("Found potential new start point: " + element.StartPoint + " -> " + element.EndPoint);
 
 						// in case this is not a closed polygon, make sure to add existing vertexes
 						if (segment != null && segment.Count > 0)
 						{
-							Console.WriteLine("Adding segment. Count: " + segment.Count);
+							// Console.WriteLine("Adding segment. Count: " + segment.Count);
 							segments.Add(segment);
 						}
 
@@ -1335,12 +1339,12 @@ namespace CAMToolsNet.Models
 				// add last segment
 				if (segment != null && segment.Count > 0)
 				{
-					Console.WriteLine("Adding last segment. Count: " + segment.Count);
+					// Console.WriteLine("Adding last segment. Count: " + segment.Count);
 					segments.Add(segment);
 				}
 			}
 
-			return segments;
+			GroupedSegments = segments;
 		}
 
 		public void ConvertLinesToPolylines()

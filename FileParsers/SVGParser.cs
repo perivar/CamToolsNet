@@ -865,21 +865,7 @@ namespace SVG
 		{
 			// avoid duplicates by checking that the new starting point isn't
 			// the same as the previous one
-			if (points.Count() > 1)
-			{
-				var lastPoint = points.Last();
-				if (!lastPoint.Equals(startpoint))
-				{
-					points.Add(startpoint);
-				}
-			}
-			else
-			{
-				points.Add(startpoint);
-			}
-
-			// always add the second point
-			points.Add(endpoint);
+			Transformation.AddAvoidDuplicates(points, startpoint, endpoint);
 
 			// for drawModel we transform here and are not using the transformed points in the parent method
 			var startpointT = Transform(startpoint);
@@ -965,11 +951,7 @@ namespace SVG
 			var tmpPoints = SVGUtils.ParseArcSegment((float)radius, (float)radius, angleDegrees, startpoint, endpoint, false, !sweep, steps);
 
 			// don't add the first point since it's already added
-			if (tmpPoints.Any())
-			{
-				tmpPoints.RemoveAt(0);
-				points.AddRange(tmpPoints);
-			}
+			Transformation.AddAvoidDuplicates(points, tmpPoints);
 
 			// for drawModel we transform here and are not using the transformed points in the parent method
 			var centerT = Transform(center);

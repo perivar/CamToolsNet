@@ -364,7 +364,7 @@ namespace CAMToolsNet.Controllers
 			if (drawModel != null)
 			{
 				// first sort points
-				if (drawModel.SortedStartEnd == null && doConvertLines) drawModel.SortStartStopSegments();
+				if (doConvertLines) drawModel.SortStartStopSegments();
 
 				// convert connected visible lines to polylines first
 				if (doConvertLines) drawModel.ConvertLinesToPolylines();
@@ -401,17 +401,16 @@ namespace CAMToolsNet.Controllers
 			return Ok();
 		}
 
-		[HttpGet("Flatten")]  // GET /api/Editor/Flatten
-		public IActionResult Flatten()
+		[HttpGet("Flatten/{doConvertCircles:bool}")]  // GET /api/Editor/Flatten/false
+		public IActionResult Flatten(bool doConvertCircles)
 		{
 			var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
 			if (drawModel != null)
 			{
-				if (drawModel.SortedStartEnd == null) drawModel.SortStartStopSegments();
+				drawModel.SortStartStopSegments();
+				drawModel.GroupIntoSegments();
 
-				var segments = drawModel.GroupIntoSegments();
-
-				foreach (var segment in segments)
+				foreach (var segment in drawModel.GroupedSegments)
 				{
 					// if a segment contain a element that isn't
 					// polyline, convert first
@@ -430,8 +429,7 @@ namespace CAMToolsNet.Controllers
 
 							var points = Transformation.RenderArc(centerX, centerY, radius, startAngle, endAngle);
 
-							// add to shapePoints
-							shapePoints.AddRange(points);
+							Transformation.AddAvoidDuplicates(shapePoints, points);
 
 							// and remove arc
 							drawModel.Arcs.Remove(a);
@@ -441,11 +439,10 @@ namespace CAMToolsNet.Controllers
 						{
 							var l = shape as DrawModel.DrawLine;
 
-							// add to shapePoints, if not already added
-							if (!shapePoints.Contains(l.StartPoint.PointF)) shapePoints.Add(l.StartPoint.PointF);
+							var startPoint = l.StartPoint.PointF;
+							var endPoint = l.EndPoint.PointF;
 
-							// always add the end point
-							shapePoints.Add(l.EndPoint.PointF);
+							Transformation.AddAvoidDuplicates(shapePoints, startPoint, endPoint);
 
 							// and remove line
 							drawModel.Lines.Remove(l);
@@ -455,6 +452,28 @@ namespace CAMToolsNet.Controllers
 					// add as separate polylines
 					var polyline = new DrawModel.DrawPolyline(shapePoints);
 					drawModel.Polylines.Add(polyline);
+				}
+
+				// converting circles
+				if (doConvertCircles)
+				{
+					for (int i = drawModel.Circles.Count - 1; i >= 0; i--)
+					{
+						var c = drawModel.Circles.ElementAt(i);
+
+						var cx = c.Center.X;
+						var cy = c.Center.Y;
+						var r = c.Radius;
+
+						var points = Transformation.RenderCircle(cx, cy, r);
+
+						// add as separate polylines
+						var polyline = new DrawModel.DrawPolyline(points);
+						drawModel.Polylines.Add(polyline);
+
+						// and remove circle
+						drawModel.Circles.Remove(c);
+					}
 				}
 
 				// update model

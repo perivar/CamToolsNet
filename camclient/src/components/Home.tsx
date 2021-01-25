@@ -145,7 +145,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
 
   private onFlatten = () => {
     axios
-      .get(`${config.apiUrl}/Flatten`, { withCredentials: true })
+      .get(`${config.apiUrl}/Flatten/true`, { withCredentials: true })
       .then((response) => {
         console.log(response);
         this.getDrawModel();
@@ -409,13 +409,13 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
                         variant="info"
                         onClick={this.onPolyToCircle}
                         size="sm">
-                        To Poly & Circle
+                        Detect Circles
                       </Button>
                       {/* <Button className="mb-1" title="Reload" variant="info" onClick={this.onReload} size="sm">
                         Reload Model
                       </Button> */}
                       <Button className="mb-1" title="Flatten" variant="info" onClick={this.onFlatten} size="sm">
-                        Flatten
+                        Flatten Polyline
                       </Button>
                     </Col>
                   </Form.Row>

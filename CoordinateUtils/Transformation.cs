@@ -1055,5 +1055,52 @@ namespace CoordinateUtils
 
 			return points;
 		}
+
+		public static void AddAvoidDuplicates(List<PointF> allPoints, PointF startPoint, PointF endPoint)
+		{
+			// avoid duplicates by checking that the new starting point isn't
+			// the same as the previous one
+			if (allPoints.Any())
+			{
+				var lastPoint = allPoints.Last();
+				if (!lastPoint.Equals(startPoint))
+				{
+					allPoints.Add(startPoint);
+				}
+			}
+			else
+			{
+				allPoints.Add(startPoint);
+			}
+
+			// always add the second point
+			allPoints.Add(endPoint);
+		}
+
+		public static void AddAvoidDuplicates(List<PointF> allPoints, List<PointF> newPoints)
+		{
+			// avoid duplicates by checking that the new starting point isn't
+			// the same as the previous one
+			if (allPoints.Any() && newPoints.Any())
+			{
+				var lastPoint = allPoints.Last();
+				var newFirstPoint = newPoints.First();
+				if (!lastPoint.Equals(newFirstPoint))
+				{
+					allPoints.AddRange(newPoints);
+				}
+				else
+				{
+					// don't add the first point since it's already added
+					newPoints.RemoveAt(0);
+					allPoints.AddRange(newPoints);
+				}
+			}
+			else
+			{
+				allPoints.AddRange(newPoints);
+			}
+		}
+
 	}
 }
