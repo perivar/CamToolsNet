@@ -1205,9 +1205,9 @@ namespace CAMToolsNet.Models
 			var orderedList = new List<IStartEndPoint>();
 
 			// add Lines and Arcs
-			openList.AddRange(Lines);
-			openList.AddRange(Arcs);
-			openList.AddRange(Polylines);
+			openList.AddRange(Lines.Where(a => a.IsVisible));
+			openList.AddRange(Arcs.Where(a => a.IsVisible));
+			openList.AddRange(Polylines.Where(a => a.IsVisible));
 
 			// https://stackoverflow.com/questions/39546622/sort-my-class-by-two-values
 			// https://forum.unity.com/threads/sorting-line-segments.254411/
