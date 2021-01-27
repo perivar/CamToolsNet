@@ -84,7 +84,7 @@ namespace CoordinateUtils
 		public override string ToString()
 		{
 			return string.Format(CultureInfo.CurrentCulture,
-								 "{{X={0}, Y={1}, Z={2}}}", new object[] {
+								 "{{X={0:0.####}, Y={1:0.####}, Z={2:0.####}}}", new object[] {
 									 this.X,
 									 this.Y,
 									 this.Z

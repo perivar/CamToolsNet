@@ -132,8 +132,16 @@ namespace CoordinateUtils
 		/// <returns>area</returns>
 		public static double PolygonArea(IEnumerable<PointF> points)
 		{
+			var pointsToUse = points.Count();
+
+			// ignore if the start and end is the same
+			if (pointsToUse > 2 && points.First() == points.Last())
+			{
+				pointsToUse -= 1;
+			}
+
 			double area = 0;
-			for (int i = 0; i < points.Count(); i++)
+			for (int i = 0; i < pointsToUse; i++)
 			{
 				int j = (i + 1) % points.Count();
 				area += points.ElementAt(i).X * points.ElementAt(j).Y;
@@ -150,16 +158,32 @@ namespace CoordinateUtils
 		/// <returns>true if circular shape has been detected</returns>
 		public static bool IsPolygonCircular(IEnumerable<PointF> points)
 		{
+			float radius = 0;
+			return IsPolygonCircular(points, out radius);
+		}
+
+		/// <summary>
+		/// Test if the passed list of points is circular
+		/// </summary>
+		/// <param name="points">list of points</param>
+		/// <param name="radius">out estimated radius</param>
+		/// <returns></returns>
+		public static bool IsPolygonCircular(IEnumerable<PointF> points, out float radius)
+		{
 			// A circle:
 			// 1. Has more than 10 vertices.
 			// 2. Has diameter of the same size in each direction.
 			// 3. The area of the contour is ~πr2
 
-			if (points.Count() < 10) return false;
+			if (points.Count() < 10)
+			{
+				radius = 0;
+				return false;
+			}
 
 			double area = PolygonArea(points);
 			var rect = BoundingRect(points);
-			float radius = Math.Max(rect.Width / 2, rect.Height / 2);
+			radius = Math.Max(rect.Width / 2, rect.Height / 2);
 
 			if (Math.Abs(1 - ((double)rect.Width / rect.Height)) <= 0.2 &&
 				Math.Abs(1 - (area / (Math.PI * Math.Pow(radius, 2)))) <= 0.2)
@@ -167,6 +191,8 @@ namespace CoordinateUtils
 				// found circle
 				return true;
 			}
+
+			radius = 0;
 			return false;
 		}
 
@@ -178,23 +204,11 @@ namespace CoordinateUtils
 		public static bool IsPolygonCircle(IEnumerable<PointF> points, ref PointF center, out float radius)
 		{
 			// A circle:
-			// 1. Has more than 10 vertices.
-			// 2. Has diameter of the same size in each direction.
-			// 3. The area of the contour is ~πr2
-			// 4. The radiuses are somewhat equal
+			// 1. Is circular, see IsPolygonCircular
+			// 2. The radiuses are somewhat equal
 
-			if (points.Count() < 10)
-			{
-				radius = 0;
-				return false;
-			}
-
-			double area = PolygonArea(points);
-			var rect = BoundingRect(points);
-			float tmpRadius = Math.Max(rect.Width / 2, rect.Height / 2);
-
-			if (Math.Abs(1 - ((double)rect.Width / rect.Height)) <= 0.2 &&
-				Math.Abs(1 - (area / (Math.PI * Math.Pow(tmpRadius, 2)))) <= 0.2)
+			float tmpRadius = 0;
+			if (IsPolygonCircular(points, out tmpRadius))
 			{
 				// found circluar shape
 				center = GetCentroid(points);
@@ -216,7 +230,7 @@ namespace CoordinateUtils
 					double distance = Distance(center, point);
 					r += distance;
 
-					if (Math.Abs(distance - tmpRadius) > 0.05)
+					if (Math.Abs(distance - tmpRadius) > 0.2)
 					{
 						// failed, return false
 						center = PointF.Empty;
@@ -243,7 +257,7 @@ namespace CoordinateUtils
 		/// <param name="points">list of points</param>
 		/// <param name="center">out center point</param>
 		/// <param name="radius">out radius</param>
-		public static void GetCenterAndRadiusForPolygonCircleOld(IEnumerable<PointF> points, ref PointF center, out float radius)
+		public static void GetCenterAndRadiusForPolygonCircleAveraged(IEnumerable<PointF> points, ref PointF center, out float radius)
 		{
 			center = new PointF
 			{
