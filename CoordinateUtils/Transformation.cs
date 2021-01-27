@@ -113,7 +113,7 @@ namespace CoordinateUtils
 
 		/// <summary>
 		/// Return the center point of the bounding rectangle for a list of points
-		/// Note that this is not necceserily correct for skewed polygons
+		/// Note that this is not neccesarily correct for skewed polygons
 		/// </summary>
 		/// <param name="points">list of points</param>
 		/// <returns>the centerpoint of the bounding rectangle</returns>
@@ -126,11 +126,29 @@ namespace CoordinateUtils
 		}
 
 		/// <summary>
-		/// Test if the passed list of points is a circle
+		/// Determine the area of the passed polygon
+		/// </summary>
+		/// <param name="points">contour</param>
+		/// <returns>area</returns>
+		public static double PolygonArea(IEnumerable<PointF> points)
+		{
+			double area = 0;
+			for (int i = 0; i < points.Count(); i++)
+			{
+				int j = (i + 1) % points.Count();
+				area += points.ElementAt(i).X * points.ElementAt(j).Y;
+				area -= points.ElementAt(i).Y * points.ElementAt(j).X;
+			}
+			area /= 2;
+			return (area < 0 ? -area : area);
+		}
+
+		/// <summary>
+		/// Test if the passed list of points is circular
 		/// </summary>
 		/// <param name="points">list of points</param>
-		/// <returns>true if circle has been detected</returns>
-		public static bool IsPolygonCircle(IEnumerable<PointF> points)
+		/// <returns>true if circular shape has been detected</returns>
+		public static bool IsPolygonCircular(IEnumerable<PointF> points)
 		{
 			// A circle:
 			// 1. Has more than 10 vertices.
@@ -140,15 +158,81 @@ namespace CoordinateUtils
 			if (points.Count() < 10) return false;
 
 			double area = PolygonArea(points);
-			var r = BoundingRect(points);
-			float radius = r.Width / 2;
+			var rect = BoundingRect(points);
+			float radius = Math.Max(rect.Width / 2, rect.Height / 2);
 
-			if (Math.Abs(1 - ((double)r.Width / r.Height)) <= 0.2 &&
+			if (Math.Abs(1 - ((double)rect.Width / rect.Height)) <= 0.2 &&
 				Math.Abs(1 - (area / (Math.PI * Math.Pow(radius, 2)))) <= 0.2)
 			{
 				// found circle
 				return true;
 			}
+			return false;
+		}
+
+		/// <summary>
+		/// Test if the passed list of points is a circle
+		/// </summary>
+		/// <param name="points">list of points</param>
+		/// <returns>true if a circle has been detected</returns>
+		public static bool IsPolygonCircle(IEnumerable<PointF> points, ref PointF center, out float radius)
+		{
+			// A circle:
+			// 1. Has more than 10 vertices.
+			// 2. Has diameter of the same size in each direction.
+			// 3. The area of the contour is ~πr2
+			// 4. The radiuses are somewhat equal
+
+			if (points.Count() < 10)
+			{
+				radius = 0;
+				return false;
+			}
+
+			double area = PolygonArea(points);
+			var rect = BoundingRect(points);
+			float tmpRadius = Math.Max(rect.Width / 2, rect.Height / 2);
+
+			if (Math.Abs(1 - ((double)rect.Width / rect.Height)) <= 0.2 &&
+				Math.Abs(1 - (area / (Math.PI * Math.Pow(tmpRadius, 2)))) <= 0.2)
+			{
+				// found circluar shape
+				center = GetCentroid(points);
+
+				// check that the radiuses are somewhat equal
+				var pointsToUse = points.Count();
+
+				// ignore if the start and end is the same
+				if (pointsToUse > 2 && points.First() == points.Last())
+				{
+					pointsToUse -= 1;
+				}
+
+				// get and verify radius
+				double r = 0;
+				for (int i = 0; i < pointsToUse; i++)
+				{
+					var point = points.ElementAt(i);
+					double distance = Distance(center, point);
+					r += distance;
+
+					if (Math.Abs(distance - tmpRadius) > 0.05)
+					{
+						// failed, return false
+						center = PointF.Empty;
+						radius = 0;
+						return false;
+					}
+				}
+
+				// all the radiuses seem fine
+				double rad = r / pointsToUse;
+				radius = (float)rad;
+				return true;
+			}
+
+			center = PointF.Empty;
+			radius = 0;
 			return false;
 		}
 
@@ -159,7 +243,7 @@ namespace CoordinateUtils
 		/// <param name="points">list of points</param>
 		/// <param name="center">out center point</param>
 		/// <param name="radius">out radius</param>
-		public static void GetCenterAndRadiusForPolygonCircle(IEnumerable<PointF> points, ref PointF center, out float radius)
+		public static void GetCenterAndRadiusForPolygonCircleOld(IEnumerable<PointF> points, ref PointF center, out float radius)
 		{
 			center = new PointF
 			{
@@ -177,22 +261,151 @@ namespace CoordinateUtils
 		}
 
 		/// <summary>
-		/// Determine the area of the passed polygon
+		/// If the polygon is a circle, this method can be used to
+		/// return the center point and radius
 		/// </summary>
-		/// <param name="points">contour</param>
-		/// <returns>area</returns>
-		public static double PolygonArea(IEnumerable<PointF> points)
+		/// <param name="points">list of points</param>
+		/// <param name="center">out center point</param>
+		/// <param name="radius">out radius</param>
+		public static void GetCenterAndRadiusForPolygonCircle(IEnumerable<PointF> points, ref PointF center, out float radius)
 		{
-			int i, j;
-			double area = 0;
-			for (i = 0; i < points.Count(); i++)
+			// get centroid
+			center = GetCentroid(points);
+
+			var pointsToUse = points.Count();
+
+			// ignore if the start and end is the same
+			if (pointsToUse > 2 && points.First() == points.Last())
 			{
-				j = (i + 1) % points.Count();
-				area += points.ElementAt(i).X * points.ElementAt(j).Y;
-				area -= points.ElementAt(i).Y * points.ElementAt(j).X;
+				pointsToUse -= 1;
 			}
+
+			// radius
+			double r = 0;
+			for (int i = 0; i < pointsToUse; i++)
+			{
+				var point = points.ElementAt(i);
+				r += Distance(center, point);
+			}
+			double rad = r / pointsToUse;
+			radius = (float)rad;
+		}
+
+		/// <summary>
+		/// return the centroid from a polygon
+		/// </summary>
+		/// <param name="points">points</param>
+		/// <returns>the centroid</returns>
+		/// <see cref="https://gis.stackexchange.com/questions/77425/how-to-calculate-centroid-of-a-polygon-defined-by-a-list-of-longitude-latitude-p" />
+		/// <see cref="https://stackoverflow.com/questions/9815699/how-to-calculate-centroid" />
+		public static PointF GetCentroid(IEnumerable<PointF> points)
+		{
+			var pointsToUse = points.Count();
+
+			// ignore if the start and end is the same
+			if (pointsToUse > 2 && points.First() == points.Last())
+			{
+				pointsToUse -= 1;
+			}
+
+			// centroid
+			double x = 0;
+			double y = 0;
+			double k = 0;
+			double area = 0;
+
+			for (int i = 0; i < pointsToUse; i++)
+			{
+				int j = (i + 1) % points.Count();
+				var point1 = points.ElementAt(i);
+				var point2 = points.ElementAt(j);
+
+				k = point1.X * point2.Y - point2.X * point1.Y;
+				area += k;
+				x += (point1.X + point2.X) * k;
+				y += (point1.Y + point2.Y) * k;
+			}
+
 			area /= 2;
-			return (area < 0 ? -area : area);
+			k = area * 6;
+
+			var center = PointF.Empty;
+			center.X = (float)(x / k);
+			center.Y = (float)(y / k);
+			return center;
+		}
+
+		/// <summary>
+		/// Function to find the circle on which the given three points lie 
+		/// </summary>
+		/// <param name="x1"></param>
+		/// <param name="y1"></param>
+		/// <param name="x2"></param>
+		/// <param name="y2"></param>
+		/// <param name="x3"></param>
+		/// <param name="y3"></param>
+		/// <param name="center">out center point</param>
+		/// <param name="radius">out radius</param>
+		/// <see cref="https://www.geeksforgeeks.org/equation-of-circle-when-three-points-on-the-circle-are-given/" />
+		public static void GetCenterAndRadius(
+						int x1, int y1,
+						int x2, int y2,
+						int x3, int y3,
+						ref PointF center, out float radius)
+		{
+			int x12 = x1 - x2;
+			int x13 = x1 - x3;
+
+			int y12 = y1 - y2;
+			int y13 = y1 - y3;
+
+			int y31 = y3 - y1;
+			int y21 = y2 - y1;
+
+			int x31 = x3 - x1;
+			int x21 = x2 - x1;
+
+			// x1^2 - x3^2 
+			int sx13 = (int)(Math.Pow(x1, 2) -
+							Math.Pow(x3, 2));
+
+			// y1^2 - y3^2 
+			int sy13 = (int)(Math.Pow(y1, 2) -
+							Math.Pow(y3, 2));
+
+			int sx21 = (int)(Math.Pow(x2, 2) -
+							Math.Pow(x1, 2));
+
+			int sy21 = (int)(Math.Pow(y2, 2) -
+							Math.Pow(y1, 2));
+
+			int f = ((sx13) * (x12)
+					+ (sy13) * (x12)
+					+ (sx21) * (x13)
+					+ (sy21) * (x13))
+					/ (2 * ((y31) * (x12) - (y21) * (x13)));
+			int g = ((sx13) * (y12)
+					+ (sy13) * (y12)
+					+ (sx21) * (y13)
+					+ (sy21) * (y13))
+					/ (2 * ((x31) * (y12) - (x21) * (y13)));
+
+			int c = -(int)Math.Pow(x1, 2) - (int)Math.Pow(y1, 2) -
+										2 * g * x1 - 2 * f * y1;
+
+			// eqn of circle be x^2 + y^2 + 2*g*x + 2*f*y + c = 0 
+			// where centre is (h = -g, k = -f) and radius r 
+			// as r^2 = h^2 + k^2 - c 
+			int h = -g;
+			int k = -f;
+			int sqr_of_r = h * h + k * k - c;
+
+			// r is the radius 
+			double r = Math.Round(Math.Sqrt(sqr_of_r), 5);
+
+			center.X = h;
+			center.Y = k;
+			radius = (float)r;
 		}
 
 		/// <summary>
@@ -501,11 +714,9 @@ namespace CoordinateUtils
 		/// <param name="radius">radius</param>
 		/// <param name="clockwise">whether the arc is clockwise (default true)</param>
 		/// <returns>the arc center point</returns>
+		/// <see cref="https://stackoverflow.com/questions/22472427/get-the-centerpoint-of-an-arc-g-code-conversion"/>
 		public static PointF GetArcCenter(PointF p1, PointF p2, float radius, bool clockwise = true)
 		{
-			// Source:
-			// https://stackoverflow.com/questions/22472427/get-the-centerpoint-of-an-arc-g-code-conversion
-
 			// Compute arc center from radius
 			var theta = 0.0f;
 			var w = 0.0f;
@@ -557,12 +768,12 @@ namespace CoordinateUtils
 			  center.Y = 0
 			  w = center.X - co1.X
 			  If Abs(mModal.RWord) < w Then
-			    '--- R-word too small
-			    If mModal.ThrowErr And w - Abs(mModal.RWord) > 0.00
-			      Err.Raise 911, , "R-word too small"
-			    End If
+				'--- R-word too small
+				If mModal.ThrowErr And w - Abs(mModal.RWord) > 0.00
+				  Err.Raise 911, , "R-word too small"
+				End If
 			  Else
-			    center.Y = -Sqr(mModal.RWord * mModal.RWord - w * w
+				center.Y = -Sqr(mModal.RWord * mModal.RWord - w * w
 			  End If
 			  '--- Choose out of the 4 possible arcs
 			  If Not cw Then center.Y = -center.Y

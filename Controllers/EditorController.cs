@@ -374,13 +374,12 @@ namespace CAMToolsNet.Controllers
 				{
 					var poly = drawModel.Polylines[i];
 					var points = poly.Vertexes.Select(p => p.PointF);
-					if (Transformation.IsPolygonCircle(points))
-					{
-						// get center point and radius
-						PointF center = PointF.Empty;
-						float radius = 0.0f;
-						Transformation.GetCenterAndRadiusForPolygonCircle(points, ref center, out radius);
 
+					// get center point and radius
+					PointF center = PointF.Empty;
+					float radius = 0.0f;
+					if (Transformation.IsPolygonCircle(points, ref center, out radius))
+					{
 						// add circle
 						drawModel.AddCircle(center, radius);
 
