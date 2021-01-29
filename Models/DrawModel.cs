@@ -186,39 +186,58 @@ namespace CAMToolsNet.Models
 			public Point3D Center { get; set; }
 			public float Radius { get; set; }
 			public float Thickness { get; set; }
-			public float StartAngle { get; set; }
-			public float EndAngle { get; set; }
+			public float StartAngle { get; set; } // degrees
+			public float EndAngle { get; set; } // degrees
+			public bool IsClockwise { get; set; }
+
+			private Tuple<Point3D, Point3D> GetStartEndPoint()
+			{
+				// check DrawingCanvas drawArc method 
+				var centerX = this.Center.X;
+				var centerY = this.Center.Y;
+				var centerZ = this.Center.Z;
+				var radius = this.Radius;
+				var startAngle = this.StartAngle;
+				var endAngle = this.EndAngle;
+
+				var isCounterClockwise = IsClockwise; // since we are flipping the axis, we need to invert the clockwise as well
+
+				double startX = 0;
+				double startY = 0;
+				double endX = 0;
+				double endY = 0;
+				if (isCounterClockwise)
+				{
+					endX = centerX + Math.Cos((startAngle * Math.PI) / 180) * radius;
+					endY = centerY + Math.Sin((startAngle * Math.PI) / 180) * radius;
+					startX = centerX + Math.Cos((endAngle * Math.PI) / 180) * radius;
+					startY = centerY + Math.Sin((endAngle * Math.PI) / 180) * radius;
+				}
+				else
+				{
+					startX = centerX + Math.Cos((startAngle * Math.PI) / 180) * radius;
+					startY = centerY + Math.Sin((startAngle * Math.PI) / 180) * radius;
+					endX = centerX + Math.Cos((endAngle * Math.PI) / 180) * radius;
+					endY = centerY + Math.Sin((endAngle * Math.PI) / 180) * radius;
+				}
+
+				return Tuple.Create(new Point3D((float)startX, (float)startY, centerZ), new Point3D((float)endX, (float)endY, centerZ));
+			}
 
 			public Point3D StartPoint
 			{
 				get
 				{
-					var centerX = this.Center.X;
-					var centerY = this.Center.Y;
-					var centerZ = this.Center.Z;
-					var radius = this.Radius;
-					var startAngle = this.StartAngle;
-
-					var startX = centerX + Math.Cos((startAngle * Math.PI) / 180) * radius;
-					var startY = centerY + Math.Sin((startAngle * Math.PI) / 180) * radius;
-
-					return new Point3D((float)startX, (float)startY, centerZ);
+					var points = GetStartEndPoint();
+					return points.Item1;
 				}
 			}
 			public Point3D EndPoint
 			{
 				get
 				{
-					var centerX = this.Center.X;
-					var centerY = this.Center.Y;
-					var centerZ = this.Center.Z;
-					var radius = this.Radius;
-					var endAngle = this.EndAngle;
-
-					var endX = centerX + Math.Cos((endAngle * Math.PI) / 180) * radius;
-					var endY = centerY + Math.Sin((endAngle * Math.PI) / 180) * radius;
-
-					return new Point3D((float)endX, (float)endY, centerZ);
+					var points = GetStartEndPoint();
+					return points.Item2;
 				}
 			}
 
@@ -226,13 +245,14 @@ namespace CAMToolsNet.Models
 			public DrawArc() { }
 
 			// note! don't call base() since we might not support the base properties
-			public DrawArc(PointF center, float radius, float startAngle, float endAngle, bool isVisible = true)
+			public DrawArc(PointF center, float radius, float startAngle, float endAngle, bool isClockwise, bool isVisible = true)
 			{
 				Center = new Point3D(center.X, center.Y, 0);
 				Radius = radius;
 				StartAngle = startAngle;
 				EndAngle = endAngle;
 				IsVisible = isVisible;
+				IsClockwise = isClockwise;
 			}
 
 			public DrawArc(netDxf.Entities.Arc a) : base(a)
@@ -243,6 +263,7 @@ namespace CAMToolsNet.Models
 				StartAngle = (float)a.StartAngle;
 				EndAngle = (float)a.EndAngle;
 				IsVisible = true;
+				IsClockwise = true;
 			}
 
 			public void SwapStartEnd()
@@ -858,7 +879,7 @@ namespace CAMToolsNet.Models
 
 						Circles.AddRange(elem.Circles.Select(c => new DrawCircle(new PointF { X = c.Center.X - shiftX, Y = shiftY - c.Center.Y }, c.Radius)).ToList());
 						Lines.AddRange(elem.Lines.Select(l => new DrawLine(new PointF { X = l.StartPoint.X - shiftX, Y = shiftY - l.StartPoint.Y }, new PointF { X = l.EndPoint.X - shiftX, Y = shiftY - l.EndPoint.Y })).ToList());
-						Arcs.AddRange(elem.Arcs.Select(a => new DrawArc(new PointF { X = a.Center.X - shiftX, Y = shiftY - a.Center.Y }, a.Radius, -a.EndAngle, -a.StartAngle)).ToList());
+						Arcs.AddRange(elem.Arcs.Select(a => new DrawArc(new PointF { X = a.Center.X - shiftX, Y = shiftY - a.Center.Y }, a.Radius, -a.EndAngle, -a.StartAngle, true, true)).ToList());
 
 						// fix vertexes for polylines
 						var polylines = (elem.Polylines.Select(a => new DrawPolyline(a.Vertexes.Select(b => new PointF { X = b.X - shiftX, Y = shiftY - b.Y }).ToList())));
@@ -1103,7 +1124,7 @@ namespace CAMToolsNet.Models
 										angleB += 2 * Math.PI;
 									}
 
-									AddArc(new PointF(center.X, center.Y), (float)radius, (float)Transformation.RadianToDegree(angleA), (float)Transformation.RadianToDegree(angleB));
+									AddArc(new PointF(center.X, center.Y), (float)radius, (float)Transformation.RadianToDegree(angleA), (float)Transformation.RadianToDegree(angleB), clockwise);
 								}
 
 
@@ -1449,9 +1470,9 @@ namespace CAMToolsNet.Models
 			Circles.Add(circle);
 		}
 
-		public void AddArc(PointF center, float radius, float startAngle, float endAngle, bool isVisible = true)
+		public void AddArc(PointF center, float radius, float startAngle, float endAngle, bool isClockwise, bool isVisible = true)
 		{
-			var arc = new DrawArc(center, radius, startAngle, endAngle, isVisible);
+			var arc = new DrawArc(center, radius, startAngle, endAngle, isClockwise, isVisible);
 			Arcs.Add(arc);
 		}
 

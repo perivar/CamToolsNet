@@ -42,9 +42,11 @@ namespace GCode
 				if ((currentInstruction.X.HasValue || currentInstruction.Y.HasValue || currentInstruction.Z.HasValue)
 					&& !currentInstruction.Command.StartsWith("G"))
 				{
-					//currentInstruction.Command = lastCommand;
+					// unless we have gotten a new G code, keep the last
+					currentInstruction.Command = lastCommand;
+
 					// force to G1 instead of using last command since last command could have been another arc
-					currentInstruction.Command = "G1";
+					// currentInstruction.Command = "G1";
 				}
 
 				// for arcs it's important that both I and J is used, even if they are zero

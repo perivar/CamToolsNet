@@ -184,7 +184,7 @@ namespace SVG
 		/// <param name="P1">start point</param>
 		/// <param name="P2">end point</param>
 		/// <param name="largeArcFlag">use large arc (meaning the longest distance between the two points)</param>
-		/// <param name="sweepFlag">if true use increasing sweep (otherwise decreasing)</param>
+		/// <param name="sweepFlag">if true use increasing sweep = clockwise (otherwise decreasing = counterclockwise)</param>
 		/// <returns>a list of points forming the arc</returns>
 		public static List<PointF> ParseArcSegment(float RX, float RY, float rotAng, PointF P1, PointF P2, bool largeArcFlag, bool sweepFlag, int numSegments = -1)
 		{

@@ -1023,6 +1023,17 @@ namespace CoordinateUtils
 		}
 
 		/// <summary>
+		/// Scale by factor
+		/// </summary>
+		/// <param name="point">point to scale</param>
+		/// <param name="scaleFactor">scale factor</param>
+		/// <returns></returns>
+		public static PointF Scale(this PointF point, float scaleFactor)
+		{
+			return new PointF(point.X * scaleFactor, point.Y * scaleFactor);
+		}
+
+		/// <summary>
 		/// Scale by DPI extension method
 		/// </summary>
 		/// <param name="point">point to scale</param>
@@ -1030,7 +1041,7 @@ namespace CoordinateUtils
 		/// <returns></returns>
 		public static PointF ScaleByDPI(this PointF point, float dpiResolution)
 		{
-			return new PointF(point.X / dpiResolution, point.Y / dpiResolution);
+			return Scale(point, 1 / dpiResolution);
 		}
 
 		/// <summary>

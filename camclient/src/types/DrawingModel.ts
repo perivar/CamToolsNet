@@ -64,6 +64,9 @@ export interface DrawArc extends BaseElement {
   thickness: number;
   startAngle: number;
   endAngle: number;
+  isClockwise: boolean;
+  startPoint: Point3D;
+  endPoint: Point3D;
 }
 
 export interface DrawPolyline extends BaseElement {

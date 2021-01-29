@@ -551,7 +551,7 @@ namespace CAMToolsNet.Controllers
 					// "startAngle": 45.00003
 					// "endAngle": 134.99957
 
-					newDrawModel.AddArc(newCenterPoint, a.Radius, a.StartAngle + degrees, a.EndAngle + degrees, a.IsVisible);
+					newDrawModel.AddArc(newCenterPoint, a.Radius, a.StartAngle + degrees, a.EndAngle + degrees, a.IsVisible, a.IsVisible);
 				}
 
 				// polylines
@@ -617,6 +617,60 @@ namespace CAMToolsNet.Controllers
 					HttpContext.Session.SetObjectAsJson("Split-0", newDrawModel1);
 					HttpContext.Session.SetObjectAsJson("Split-1", newDrawModel2);
 				}
+				return Ok();
+			}
+			return BadRequest();
+		}
+
+		[HttpGet("Scale/{scaleFactor:float}")]  // GET /api/Editor/scale/2.5
+		public IActionResult Scale(float scaleFactor)
+		{
+			var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
+			if (drawModel != null)
+			{
+				var newDrawModel = new DrawModel();
+				newDrawModel.FileName = drawModel.FileName;
+
+				// circles
+				foreach (var circle in drawModel.Circles)
+				{
+					var newCenterPoint = Transformation.Scale(circle.Center.PointF, scaleFactor);
+					newDrawModel.AddCircle(newCenterPoint, circle.Radius * scaleFactor, circle.IsVisible);
+				}
+
+				// lines
+				foreach (var line in drawModel.Lines)
+				{
+					var newStartPoint = Transformation.Scale(line.StartPoint.PointF, scaleFactor);
+					var newEndPoint = Transformation.Scale(line.EndPoint.PointF, scaleFactor);
+					newDrawModel.AddLine(newStartPoint, newEndPoint, line.IsVisible);
+				}
+
+				// arcs
+				foreach (var a in drawModel.Arcs)
+				{
+					var newCenterPoint = Transformation.Scale(a.Center.PointF, scaleFactor);
+					newDrawModel.AddArc(newCenterPoint, a.Radius * scaleFactor, a.StartAngle, a.EndAngle, a.IsClockwise, a.IsVisible);
+				}
+
+				// polylines
+				foreach (var p in drawModel.Polylines)
+				{
+					var newVertexes = new List<PointF>();
+					for (var i = 0; i < p.Vertexes.Count; i++)
+					{
+						var vertex = p.Vertexes[i];
+						var newVertex = Transformation.Scale(vertex.PointF, scaleFactor);
+						newVertexes.Add(newVertex);
+					}
+					newDrawModel.AddPolyline(newVertexes, p.IsVisible);
+				}
+
+				// make sure to recalculate the bounds
+				newDrawModel.CalculateBounds();
+
+				HttpContext.Session.SetObjectAsJson("DrawModel", newDrawModel);
+
 				return Ok();
 			}
 			return BadRequest();

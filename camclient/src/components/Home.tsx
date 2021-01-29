@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Spinner, Button, Card, Col, Container, Row, Form } from 'react-bootstrap';
+import { Alert, Spinner, Button, Card, Col, Container, Row, Form, Accordion } from 'react-bootstrap';
 import Dropzone from 'react-dropzone';
 import axios from 'axios';
 import './Home.scss';
@@ -16,6 +16,7 @@ export interface IHomeState {
   xSplit: number;
   splitIndex: number;
   rotateDegrees: number;
+  scaleFactor: number;
   showArrows: boolean;
   showInfo: boolean;
   drawModel: DrawingModel;
@@ -39,6 +40,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
       xSplit: 0,
       splitIndex: 0,
       rotateDegrees: 45,
+      scaleFactor: 2,
       showArrows: false,
       showInfo: false
     };
@@ -131,6 +133,12 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
     this.setState({ rotateDegrees: degreeValue });
   };
 
+  private onScaleFactorChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const { value } = e.currentTarget;
+    const scaleValue = parseFloat(value);
+    this.setState({ scaleFactor: scaleValue });
+  };
+
   private onPolyToCircle = () => {
     axios
       .get(`${config.apiUrl}/PolylineToCircles/true`, { withCredentials: true })
@@ -176,6 +184,18 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
       })
       .catch((error) => {
         console.error('Unable to perform rotate.', error);
+      });
+  };
+
+  private onScale = () => {
+    axios
+      .get(`${config.apiUrl}/Scale/${this.state.scaleFactor}`, { withCredentials: true })
+      .then((response) => {
+        console.log(response);
+        this.getDrawModel();
+      })
+      .catch((error) => {
+        console.error('Unable to perform scaling.', error);
       });
   };
 
@@ -288,160 +308,212 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
             )}
           </Col>
           <Col className="px-0 py-0 mx-1">
-            <Card className="mb-1">
-              <Card.Header className="px-2 py-1">Split</Card.Header>
-              <Card.Body className="px-1 py-1">
-                <Form className="align-items-center">
-                  <Form.Row>
-                    <Col>
-                      <Form.Label column="sm">X:</Form.Label>
-                    </Col>
-                    <Col>
-                      <Form.Control
-                        size="sm"
-                        type="number"
-                        defaultValue={this.state.xSplit}
-                        onChange={this.onXSplitChange}
-                      />
-                    </Col>
-                  </Form.Row>
-                  <Form.Row>
-                    <Col>
-                      <Form.Label column="sm">Page:</Form.Label>
-                    </Col>
-                    <Col>
-                      <Form.Check
-                        id="split-page-1"
-                        inline
-                        type="radio"
-                        value="0"
-                        label="1"
-                        checked={this.state.splitIndex === 0}
-                        onChange={this.onSplitIndexChange}
-                      />
-                      <Form.Check
-                        id="split-page-2"
-                        inline
-                        type="radio"
-                        value="1"
-                        label="2"
-                        checked={this.state.splitIndex === 1}
-                        onChange={this.onSplitIndexChange}
-                      />
-                    </Col>
-                  </Form.Row>
-                  <Form.Row>
-                    <Col sm={{ offset: 1 }}>
-                      <Button className="mb-1 mr-1" title="Split" variant="info" onClick={this.onSplit} size="sm">
-                        Split
-                      </Button>
-                      <Button
-                        className="mb-1 mr-1"
-                        title="LoadSplit"
-                        variant="info"
-                        onClick={this.onGetSplit}
-                        size="sm">
-                        Load
-                      </Button>
-                      <Button className="mb-1" title="SaveSplit" variant="info" onClick={this.onSaveSplit} size="sm">
-                        Save
-                      </Button>
-                    </Col>
-                  </Form.Row>
-                </Form>
-              </Card.Body>
-            </Card>
+            <Accordion defaultActiveKey="3">
+              <Card>
+                <Accordion.Toggle as={Card.Header} eventKey="0">
+                  Split
+                </Accordion.Toggle>
+                <Accordion.Collapse eventKey="0">
+                  <Card.Body className="px-1 py-1">
+                    <Form className="align-items-center">
+                      <Form.Row>
+                        <Col>
+                          <Form.Label column="sm">X:</Form.Label>
+                        </Col>
+                        <Col>
+                          <Form.Control
+                            size="sm"
+                            type="number"
+                            defaultValue={this.state.xSplit}
+                            onChange={this.onXSplitChange}
+                          />
+                        </Col>
+                      </Form.Row>
+                      <Form.Row>
+                        <Col>
+                          <Form.Label column="sm">Page:</Form.Label>
+                        </Col>
+                        <Col>
+                          <Form.Check
+                            id="split-page-1"
+                            inline
+                            type="radio"
+                            value="0"
+                            label="1"
+                            checked={this.state.splitIndex === 0}
+                            onChange={this.onSplitIndexChange}
+                          />
+                          <Form.Check
+                            id="split-page-2"
+                            inline
+                            type="radio"
+                            value="1"
+                            label="2"
+                            checked={this.state.splitIndex === 1}
+                            onChange={this.onSplitIndexChange}
+                          />
+                        </Col>
+                      </Form.Row>
+                      <Form.Row>
+                        <Col sm={{ offset: 1 }}>
+                          <Button className="mb-1 mr-1" title="Split" variant="info" onClick={this.onSplit} size="sm">
+                            Split
+                          </Button>
+                          <Button
+                            className="mb-1 mr-1"
+                            title="LoadSplit"
+                            variant="info"
+                            onClick={this.onGetSplit}
+                            size="sm">
+                            Load
+                          </Button>
+                          <Button
+                            className="mb-1"
+                            title="SaveSplit"
+                            variant="info"
+                            onClick={this.onSaveSplit}
+                            size="sm">
+                            Save
+                          </Button>
+                        </Col>
+                      </Form.Row>
+                    </Form>
+                  </Card.Body>
+                </Accordion.Collapse>
+              </Card>
 
-            <Card className="mb-1">
-              <Card.Header className="px-2 py-1">Rotate</Card.Header>
-              <Card.Body className="px-1 py-1">
-                <Form className="align-items-center">
-                  <Form.Row>
-                    <Col>
-                      <Form.Label column="sm">Degrees:</Form.Label>
-                    </Col>
-                    <Col>
-                      <Form.Control
-                        size="sm"
-                        type="number"
-                        defaultValue={this.state.rotateDegrees}
-                        onChange={this.onRotateDegressChange}
-                      />
-                    </Col>
-                  </Form.Row>
-                  <Form.Row>
-                    <Col sm={{ span: 10, offset: 2 }}>
-                      <Button className="mb-1" title="Rotate" variant="info" onClick={this.onRotate} size="sm">
-                        Rotate {`${this.state.rotateDegrees}`} degrees
-                      </Button>
-                    </Col>
-                  </Form.Row>
-                </Form>
-              </Card.Body>
-            </Card>
+              <Card>
+                <Accordion.Toggle as={Card.Header} eventKey="1">
+                  Rotate
+                </Accordion.Toggle>
+                <Accordion.Collapse eventKey="1">
+                  <Card.Body className="px-1 py-1">
+                    <Form className="align-items-center">
+                      <Form.Row>
+                        <Col>
+                          <Form.Label column="sm">Degrees:</Form.Label>
+                        </Col>
+                        <Col>
+                          <Form.Control
+                            size="sm"
+                            type="number"
+                            defaultValue={this.state.rotateDegrees}
+                            onChange={this.onRotateDegressChange}
+                          />
+                        </Col>
+                      </Form.Row>
+                      <Form.Row>
+                        <Col sm={{ span: 10, offset: 2 }}>
+                          <Button className="mb-1 mt-1" title="Rotate" variant="info" onClick={this.onRotate} size="sm">
+                            Rotate {`${this.state.rotateDegrees}`} degrees
+                          </Button>
+                        </Col>
+                      </Form.Row>
+                    </Form>
+                  </Card.Body>
+                </Accordion.Collapse>
+              </Card>
 
-            <Card className="mb-1">
-              <Card.Header className="px-2 py-1">Other</Card.Header>
-              <Card.Body className="px-1 py-1">
-                <Form className="align-items-center">
-                  <Form.Row>
-                    <Col sm={{ span: 10, offset: 2 }}>
-                      <Form.Check
-                        type="checkbox"
-                        label="Show arrows"
-                        value={`${this.state.showArrows}`}
-                        checked={this.state.showArrows === true}
-                        onChange={this.onShowArrowsChange}
-                      />
-                      <Form.Check
-                        type="checkbox"
-                        label="Show info"
-                        value={`${this.state.showInfo}`}
-                        checked={this.state.showInfo === true}
-                        onChange={this.onShowInfoChange}
-                      />
-                      <Button className="mb-1" title="Trim" variant="info" onClick={this.onTrim} size="sm">
-                        Trim X and Y
-                      </Button>
-                      <Button
-                        className="mb-1"
-                        title="ConvertToCircles"
-                        variant="info"
-                        onClick={this.onPolyToCircle}
-                        size="sm">
-                        Detect Circles
-                      </Button>
-                      {/* <Button className="mb-1" title="Reload" variant="info" onClick={this.onReload} size="sm">
+              <Card>
+                <Accordion.Toggle as={Card.Header} eventKey="2">
+                  Scale
+                </Accordion.Toggle>
+                <Accordion.Collapse eventKey="2">
+                  <Card.Body className="px-1 py-1">
+                    <Form className="align-items-center">
+                      <Form.Row>
+                        <Col>
+                          <Form.Label column="sm">Scale:</Form.Label>
+                        </Col>
+                        <Col>
+                          <Form.Control
+                            size="sm"
+                            type="number"
+                            step="any"
+                            defaultValue={this.state.scaleFactor}
+                            onChange={this.onScaleFactorChange}
+                          />
+                        </Col>
+                      </Form.Row>
+                      <Form.Row>
+                        <Col sm={{ span: 10, offset: 2 }}>
+                          <Button className="mb-1 mt-1" title="Rotate" variant="info" onClick={this.onScale} size="sm">
+                            Scale by {`${this.state.scaleFactor}`}
+                          </Button>
+                        </Col>
+                      </Form.Row>
+                    </Form>
+                  </Card.Body>
+                </Accordion.Collapse>
+              </Card>
+
+              <Card>
+                <Accordion.Toggle as={Card.Header} eventKey="3">
+                  Other
+                </Accordion.Toggle>
+                <Accordion.Collapse eventKey="3">
+                  <Card.Body className="px-1 py-1">
+                    <Form className="align-items-center">
+                      <Form.Row>
+                        <Col sm={{ span: 10, offset: 2 }}>
+                          <Form.Check
+                            type="checkbox"
+                            label="Show arrows"
+                            value={`${this.state.showArrows}`}
+                            checked={this.state.showArrows === true}
+                            onChange={this.onShowArrowsChange}
+                          />
+                          <Form.Check
+                            type="checkbox"
+                            label="Show info"
+                            value={`${this.state.showInfo}`}
+                            checked={this.state.showInfo === true}
+                            onChange={this.onShowInfoChange}
+                          />
+                          <Button className="mb-1" title="Trim" variant="info" onClick={this.onTrim} size="sm">
+                            Trim X and Y
+                          </Button>
+                          <Button
+                            className="mb-1"
+                            title="ConvertToCircles"
+                            variant="info"
+                            onClick={this.onPolyToCircle}
+                            size="sm">
+                            Detect Circles
+                          </Button>
+                          {/* <Button className="mb-1" title="Reload" variant="info" onClick={this.onReload} size="sm">
                         Reload Model
                       </Button> */}
-                      <Button className="mb-1" title="Flatten" variant="info" onClick={this.onFlatten} size="sm">
-                        Flatten Polyline
-                      </Button>
-                    </Col>
-                  </Form.Row>
-                </Form>
-              </Card.Body>
-            </Card>
+                          <Button className="mb-1" title="Flatten" variant="info" onClick={this.onFlatten} size="sm">
+                            Flatten Polyline
+                          </Button>
+                        </Col>
+                      </Form.Row>
+                    </Form>
+                  </Card.Body>
+                </Accordion.Collapse>
+              </Card>
 
-            <Card className="mb-1">
-              <Card.Header className="px-2 py-1">Save</Card.Header>
-              <Card.Body className="px-1 py-1">
-                <Form className="align-items-center">
-                  <Form.Row>
-                    <Col sm={{ span: 10, offset: 2 }}>
-                      <a className="btn btn-info btn-sm mb-1" href={`${config.apiUrl}/CirclesToLayers/false`}>
-                        Save DXF w/ Layers
-                      </a>
-                    </Col>
-                    <Col sm={{ span: 10, offset: 2 }}>
-                      <a className="btn btn-info btn-sm" href={`${config.apiUrl}/SaveSvg/false`}>
-                        Save SVG
-                      </a>
-                    </Col>
-                  </Form.Row>
-                </Form>
-              </Card.Body>
-            </Card>
+              <Card>
+                <Card.Header>Save</Card.Header>
+                <Card.Body className="px-1 py-1">
+                  <Form className="align-items-center">
+                    <Form.Row>
+                      <Col sm={{ span: 10, offset: 2 }}>
+                        <a className="btn btn-info btn-sm mb-1" href={`${config.apiUrl}/CirclesToLayers/false`}>
+                          Save DXF w/ Layers
+                        </a>
+                      </Col>
+                      <Col sm={{ span: 10, offset: 2 }}>
+                        <a className="btn btn-info btn-sm" href={`${config.apiUrl}/SaveSvg/false`}>
+                          Save SVG
+                        </a>
+                      </Col>
+                    </Form.Row>
+                  </Form>
+                </Card.Body>
+              </Card>
+            </Accordion>
           </Col>
         </Row>
       </Container>

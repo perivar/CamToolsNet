@@ -263,7 +263,7 @@ const drawArc = (
   const { startAngle } = arc;
   const { endAngle } = arc;
 
-  const isCounterClockwise = false;
+  const isCounterClockwise = arc.isClockwise; // since we are flipping the axis, we need to invert the clockwise as well
 
   let startX = 0;
   let startY = 0;
@@ -762,7 +762,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
         minY = curY < minY ? curY : minY;
 
         circle.kind = 'circle';
-        circle.infoText = `Circle: Center: [${round2TwoDecimal(x)} : ${round2TwoDecimal(
+        circle.infoText = `Circle: Center: [${round2TwoDecimal(x)} , ${round2TwoDecimal(
           y
         )}] , Radius: ${round2TwoDecimal(radius)}`;
         this.shapes.push(circle);
@@ -793,9 +793,9 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
 
       // include non visible lines (rapid moves)
       line.kind = 'line';
-      line.infoText = `Line: [${round2TwoDecimal(startX)} : ${round2TwoDecimal(startY)}] - [${round2TwoDecimal(
+      line.infoText = `Line: [${round2TwoDecimal(startX)} , ${round2TwoDecimal(startY)}] → [${round2TwoDecimal(
         endX
-      )} : ${round2TwoDecimal(endY)}] , Length: ${round2TwoDecimal(distance(startX, startY, endX, endY))}`;
+      )} , ${round2TwoDecimal(endY)}] , Length: ${round2TwoDecimal(distance(startX, startY, endX, endY))}`;
       this.shapes.push(line);
     });
 
@@ -836,11 +836,11 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
         // minY = curY < minY ? curY : minY;
 
         a.kind = 'arc';
-        a.infoText = `Arc: [${round2TwoDecimal(startX)} : ${round2TwoDecimal(startY)}] - [${round2TwoDecimal(
-          endX
-        )} : ${round2TwoDecimal(endY)}] , Center: [${round2TwoDecimal(centerX)} : ${round2TwoDecimal(
-          centerY
-        )}], Radius: ${round2TwoDecimal(radius)}`;
+        a.infoText = `Arc: [${round2TwoDecimal(a.startPoint.x)} : ${round2TwoDecimal(
+          a.startPoint.y
+        )}] → [${round2TwoDecimal(a.endPoint.x)} , ${round2TwoDecimal(a.endPoint.y)}] , Center: [${round2TwoDecimal(
+          centerX
+        )} , ${round2TwoDecimal(centerY)}], Radius: ${round2TwoDecimal(radius)}, CW: ${a.isClockwise}`;
         this.shapes.push(a);
       }
     });
@@ -863,9 +863,9 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
         p.kind = 'polyline';
         const firstPoint = p.vertexes[0];
         const lastPoint = p.vertexes[p.vertexes.length - 1];
-        p.infoText = `Polyline: [${round2TwoDecimal(firstPoint.x)} : ${round2TwoDecimal(
+        p.infoText = `Polyline: [${round2TwoDecimal(firstPoint.x)} , ${round2TwoDecimal(
           firstPoint.y
-        )}] -- [${round2TwoDecimal(lastPoint.x)} : ${round2TwoDecimal(lastPoint.y)}]`;
+        )}] → [${round2TwoDecimal(lastPoint.x)} , ${round2TwoDecimal(lastPoint.y)}]`;
         this.shapes.push(p);
       }
     });
@@ -1036,18 +1036,18 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
 
       // get locally calculated bounds
       this.ctx.fillText(
-        `Local Bounds: [${round2TwoDecimal(this.bounds.min.x)} : ${round2TwoDecimal(
+        `Local Bounds: [${round2TwoDecimal(this.bounds.min.x)} , ${round2TwoDecimal(
           this.bounds.min.y
-        )}] - [${round2TwoDecimal(this.bounds.max.x)} : ${round2TwoDecimal(this.bounds.max.y)}]`,
+        )}] → [${round2TwoDecimal(this.bounds.max.x)} , ${round2TwoDecimal(this.bounds.max.y)}]`,
         10,
         55
       );
 
       // get bounds from the fetched model
       this.ctx.fillText(
-        `Model Bounds: [${round2TwoDecimal(this.props.drawModel.bounds.min.x)} : ${round2TwoDecimal(
+        `Model Bounds: [${round2TwoDecimal(this.props.drawModel.bounds.min.x)} , ${round2TwoDecimal(
           this.props.drawModel.bounds.min.y
-        )}] - [${round2TwoDecimal(this.props.drawModel.bounds.max.x)} : ${round2TwoDecimal(
+        )}] → [${round2TwoDecimal(this.props.drawModel.bounds.max.x)} , ${round2TwoDecimal(
           this.props.drawModel.bounds.max.y
         )}]`,
         10,
