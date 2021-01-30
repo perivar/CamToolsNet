@@ -425,8 +425,9 @@ namespace CAMToolsNet.Controllers
 							var radius = a.Radius;
 							var startAngle = a.StartAngle;
 							var endAngle = a.EndAngle;
+							var isClockwise = a.IsClockwise;
 
-							var points = Transformation.RenderArc(centerX, centerY, radius, startAngle, endAngle);
+							var points = Transformation.RenderArc(centerX, centerY, radius, startAngle, endAngle, isClockwise);
 
 							Transformation.AddAvoidDuplicates(shapePoints, points);
 

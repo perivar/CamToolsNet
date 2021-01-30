@@ -1206,7 +1206,7 @@ namespace CoordinateUtils
 		/// <param name="endAngle">end angle in degrees</param>
 		/// <param name="clockwise">which way is the arc</param>
 		/// <returns>points</returns>
-		public static List<PointF> RenderArc(double centerX, double centerY, double radius, double startAngle, double endAngle, bool clockwise = false)
+		public static List<PointF> RenderArc(double centerX, double centerY, double radius, double startAngle, double endAngle, bool clockwise)
 		{
 			// see RenderArc in SimpleGCodeParser and
 			// ParseArcSegment in SVGParser
@@ -1223,28 +1223,13 @@ namespace CoordinateUtils
 			var startpoint = new PointF((float)startX, (float)startY);
 			var endpoint = new PointF((float)endX, (float)endY);
 
-			// add first point 
-			points.Add(startpoint);
-
 			// Turn the degrees of rotation into radians
 			double startAng = Transformation.DegreeToRadian(startAngle);
 			double endAng = Transformation.DegreeToRadian(endAngle);
 
 			// angle variables.
-			double angleA;
-			double angleB;
-			if (clockwise)
-			{
-				// Clockwise
-				angleA = endAng;
-				angleB = startAng;
-			}
-			else
-			{
-				// Counterclockwise
-				angleA = startAng;
-				angleB = endAng;
-			}
+			double angleA = startAng;
+			double angleB = endAng;
 
 			// Make sure angleB is always greater than angleA
 			// and if not add 2PI so that it is (this also takes
@@ -1264,7 +1249,7 @@ namespace CoordinateUtils
 			int step;
 			double fraction;
 			double angle3;
-			for (int s = 1; s <= steps; s++)
+			for (int s = 0; s <= steps; s++)
 			{
 				// Forwards for CCW, backwards for CW
 				if (!clockwise)

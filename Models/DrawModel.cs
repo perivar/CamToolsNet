@@ -189,6 +189,22 @@ namespace CAMToolsNet.Models
 			public float StartAngle { get; set; } // degrees
 			public float EndAngle { get; set; } // degrees
 			public bool IsClockwise { get; set; }
+			public Point3D StartPoint
+			{
+				get
+				{
+					var points = GetStartEndPoint();
+					return points.Item1;
+				}
+			}
+			public Point3D EndPoint
+			{
+				get
+				{
+					var points = GetStartEndPoint();
+					return points.Item2;
+				}
+			}
 
 			private Tuple<Point3D, Point3D> GetStartEndPoint()
 			{
@@ -224,23 +240,6 @@ namespace CAMToolsNet.Models
 				return Tuple.Create(new Point3D((float)startX, (float)startY, centerZ), new Point3D((float)endX, (float)endY, centerZ));
 			}
 
-			public Point3D StartPoint
-			{
-				get
-				{
-					var points = GetStartEndPoint();
-					return points.Item1;
-				}
-			}
-			public Point3D EndPoint
-			{
-				get
-				{
-					var points = GetStartEndPoint();
-					return points.Item2;
-				}
-			}
-
 			// parameter-less constructor needed for de-serialization
 			public DrawArc() { }
 
@@ -268,8 +267,7 @@ namespace CAMToolsNet.Models
 
 			public void SwapStartEnd()
 			{
-				// ignore the swapping for arcs since the arcs are correct anyway
-				// even if the start and end point isn't really swapped
+				IsClockwise = !IsClockwise;
 			}
 
 			public override string ToString()
@@ -346,8 +344,7 @@ namespace CAMToolsNet.Models
 
 			public void SwapStartEnd()
 			{
-				// ignore the swapping for polylines since the polylines are correctly connected anyway
-				// even if the start and end point isn't really swapped
+				Vertexes.Reverse();
 			}
 		}
 
@@ -814,7 +811,7 @@ namespace CAMToolsNet.Models
 						var startAngle = a.StartAngle;
 						var endAngle = a.EndAngle;
 
-						var points = Transformation.RenderArc(centerX, centerY, radius, startAngle, endAngle);
+						var points = Transformation.RenderArc(centerX, centerY, radius, startAngle, endAngle, false);
 
 						// add as separate polylines
 						var polyline = new DrawPolyline(points);

@@ -69,13 +69,17 @@ namespace CoordinateUtils
 			}
 		}
 
-		public bool NearlyEquals(Point3D other)
+		public bool NearlyEquals(object o)
 		{
-			if (this.X.AlmostEquals(other.X)
-			&& this.Y.AlmostEquals(other.Y)
-			&& this.Z.AlmostEquals(other.Z))
+			if (o is Point3D)
 			{
-				return true;
+				var other = o as Point3D;
+				if (this.X.AlmostEquals(other.X)
+				&& this.Y.AlmostEquals(other.Y)
+				&& this.Z.AlmostEquals(other.Z))
+				{
+					return true;
+				}
 			}
 			return false;
 		}
@@ -84,7 +88,7 @@ namespace CoordinateUtils
 		public override string ToString()
 		{
 			return string.Format(CultureInfo.CurrentCulture,
-								 "{{X={0:0.####}, Y={1:0.####}, Z={2:0.####}}}", new object[] {
+								 "{{X={0:0.##}, Y={1:0.##}, Z={2:0.##}}}", new object[] {
 									 this.X,
 									 this.Y,
 									 this.Z
@@ -93,7 +97,11 @@ namespace CoordinateUtils
 
 		public override bool Equals(object o)
 		{
-			return o.ToString() == this.ToString();
+			// Using ToString with only two decimals might work:
+			// return o.ToString() == this.ToString();
+			// but -0 and 0 will not be equal!
+			// Therefore NearlyEquals is better
+			return NearlyEquals(o);
 		}
 
 		public override int GetHashCode()

@@ -22,7 +22,7 @@ const { PI } = Math;
 const HALF_PI = Math.PI / 2;
 const TWO_PI = Math.PI * 2;
 const DEG_TO_RAD = Math.PI / 180;
-const RAD_TO_DEG = 180 / Math.PI;
+// const RAD_TO_DEG = 180 / Math.PI;
 
 const round2TwoDecimal = (number: number): number => {
   return Math.round((number + Number.EPSILON) * 100) / 100;
