@@ -6,6 +6,7 @@ import './Home.scss';
 import DrawingCanvas from './DrawingCanvas';
 import { DrawArc, DrawCircle, DrawingModel, DrawLine, DrawPolyline } from '../types/DrawingModel';
 // import { KonvaCanvas } from './KonvaCanvas';
+// import FabricCanvas from './FabricCanvas';
 
 // read from .env files
 const config = { apiUrl: process.env.REACT_APP_API };

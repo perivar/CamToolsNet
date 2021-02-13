@@ -1,7 +1,6 @@
 module.exports = {
   parser: '@typescript-eslint/parser', // Specifies the ESLint parser
   extends: [
-    'airbnb-typescript-prettier',
     'eslint:recommended',
     'plugin:react/recommended', 							// 1. Uses the recommended rules from @eslint-plugin-react
     'plugin:jsx-a11y/recommended',
