@@ -1,10 +1,23 @@
 import React from 'react';
-import { Alert, Spinner, Button, Card, Col, Container, Row, Form, Accordion } from 'react-bootstrap';
+import {
+  Alert,
+  Spinner,
+  Button,
+  Card,
+  Col,
+  Container,
+  Row,
+  Form,
+  Accordion,
+  DropdownButton,
+  Dropdown
+} from 'react-bootstrap';
 import Dropzone from 'react-dropzone';
 import axios from 'axios';
 import './Home.scss';
 import DrawingCanvas from './DrawingCanvas';
 import { DrawArc, DrawCircle, DrawingModel, DrawLine, DrawPolyline } from '../types/DrawingModel';
+import FontFaceObserver from 'fontfaceobserver';
 // import { KonvaCanvas } from './KonvaCanvas';
 // import FabricCanvas from './FabricCanvas';
 
@@ -20,6 +33,12 @@ export interface IHomeState {
   scaleFactor: number;
   showArrows: boolean;
   showInfo: boolean;
+  textValue: string;
+  textFont: string;
+  textFontSize: number;
+  textStartX: number;
+  textStartY: number;
+  textFonts: string[];
   drawModel: DrawingModel;
 }
 
@@ -36,18 +55,46 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
         circles: [],
         lines: [],
         arcs: [],
-        polylines: []
+        polylines: [],
+        texts: []
       },
       xSplit: 0,
       splitIndex: 0,
       rotateDegrees: 45,
       scaleFactor: 2,
       showArrows: false,
-      showInfo: false
+      showInfo: false,
+      textValue: '',
+      textFont: 'sans-serif',
+      textFontSize: 10,
+      textStartX: 0,
+      textStartY: 0,
+      textFonts: ['Pacifico', 'VT323', 'Quicksand', 'Inconsolata']
     };
   }
 
   componentDidMount() {
+    // Make one observer for each font,
+    // by iterating over the data we already have
+    const fontObservers: any[] = [];
+    Object.values(this.state.textFonts).forEach((family) => {
+      const obs = new FontFaceObserver(family);
+      fontObservers.push(obs.load());
+    });
+
+    Promise.all(fontObservers).then(
+      (fonts) => {
+        fonts.forEach((font) => {
+          console.log(`${font.family} ` + `loaded`);
+        });
+        // this.setState({ isLoading: false });
+      },
+      (err) => {
+        console.error('Failed to load fonts!', err);
+        // this.setState({ isLoading: false });
+      }
+    );
+
     this.getDrawModel();
   }
 
@@ -140,6 +187,35 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
     this.setState({ scaleFactor: scaleValue });
   };
 
+  private onTextValueChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const { value } = e.currentTarget;
+    this.setState({ textValue: value });
+  };
+
+  private onTextFontSelect = (eventKey: string | null, e: React.SyntheticEvent<unknown>): void => {
+    if (eventKey) {
+      this.setState({ textFont: eventKey });
+    }
+  };
+
+  private onTextFontSizeChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const { value } = e.currentTarget;
+    const sizeValue = parseFloat(value);
+    this.setState({ textFontSize: sizeValue });
+  };
+
+  private onTextStartXChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const { value } = e.currentTarget;
+    const posValue = parseFloat(value);
+    this.setState({ textStartX: posValue });
+  };
+
+  private onTextStartYChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const { value } = e.currentTarget;
+    const posValue = parseFloat(value);
+    this.setState({ textStartY: posValue });
+  };
+
   private onPolyToCircle = () => {
     axios
       .get(`${config.apiUrl}/PolylineToCircles/true`, { withCredentials: true })
@@ -228,6 +304,25 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
     this.getDrawModelSplit();
   };
 
+  private onTextAdd = () => {
+    const formData = new FormData();
+    formData.append('text', this.state.textValue);
+    formData.append('font', this.state.textFont);
+    formData.append('fontSize', `${this.state.textFontSize}`);
+    formData.append('startX', `${this.state.textStartX}`);
+    formData.append('startY', `${this.state.textStartY}`);
+    axios
+      .post(`${config.apiUrl}/AddText`, formData, {
+        withCredentials: true
+      })
+      .then(() => {
+        this.getDrawModel();
+      })
+      .catch((e) => {
+        console.log(e);
+      });
+  };
+
   private onTrimDisabled = () => {
     const { drawModel } = this.state;
 
@@ -287,6 +382,83 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
                 </div>
               )}
             </Dropzone>
+            <Card className="mt-2 mb-2">
+              <Card.Header>Add Text</Card.Header>
+              <Card.Body>
+                <Form className="align-items-center">
+                  <Form.Row>
+                    <Col>
+                      <DropdownButton
+                        className="mb-1"
+                        onSelect={this.onTextFontSelect}
+                        title={`${this.state.textFont} `}
+                        id="font-selection"
+                        size="sm"
+                        variant="secondary">
+                        {this.state.textFonts.map((font) => (
+                          <Dropdown.Item key={font} eventKey={font} selected={font === this.state.textFont}>
+                            {font}
+                          </Dropdown.Item>
+                        ))}
+                      </DropdownButton>
+                    </Col>
+                  </Form.Row>
+                  <Form.Row>
+                    <Col>
+                      <Form.Label column="sm">Size:</Form.Label>
+                    </Col>
+                    <Col>
+                      <Form.Control
+                        size="sm"
+                        type="number"
+                        step="any"
+                        defaultValue={this.state.textFontSize}
+                        onChange={this.onTextFontSizeChange}
+                      />
+                    </Col>
+                  </Form.Row>
+                  <Form.Row>
+                    <Col>
+                      <Form.Label column="sm">Pos:</Form.Label>
+                    </Col>
+                    <Col>
+                      <Form.Control
+                        className="mt-1"
+                        size="sm"
+                        type="number"
+                        step="any"
+                        defaultValue={this.state.textStartX}
+                        onChange={this.onTextStartXChange}
+                      />
+                    </Col>
+                    <Col>
+                      <Form.Control
+                        className="mt-1"
+                        size="sm"
+                        type="number"
+                        step="any"
+                        defaultValue={this.state.textStartY}
+                        onChange={this.onTextStartYChange}
+                      />
+                    </Col>
+                  </Form.Row>
+                  <Form.Row>
+                    <Form.Control
+                      className="mt-1"
+                      size="sm"
+                      type="text"
+                      defaultValue={this.state.textValue}
+                      onChange={this.onTextValueChange}
+                    />
+                  </Form.Row>
+                  <Form.Row>
+                    <Button className="mb-1 mt-1" title="AddText" variant="info" onClick={this.onTextAdd} size="sm">
+                      Add
+                    </Button>
+                  </Form.Row>
+                </Form>
+              </Card.Body>
+            </Card>
           </Col>
           <Col xs={8} className="px-0 py-0 mx-1">
             {isError ? (

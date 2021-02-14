@@ -8,8 +8,11 @@ import {
   DrawLine,
   DrawArc,
   DrawPolyline,
-  DrawShape
+  DrawShape,
+  DrawText
 } from '../types/DrawingModel';
+import opentype from 'opentype.js';
+import Segmentize from 'svg-segmentize';
 
 interface IDrawingCanvasProps {
   drawModel: DrawingModel;
@@ -403,6 +406,99 @@ const drawPolyline = (
   }
 };
 
+const measureOpentypeText = (font: opentype.Font, fontSize: number, text: string) => {
+  let ascent = 0;
+  let descent = 0;
+  let width = 0;
+  let kerningValue = 0;
+  const scale = (1 / font.unitsPerEm) * fontSize;
+  const glyphs = font.stringToGlyphs(text);
+
+  for (let i = 0; i < glyphs.length; i++) {
+    const glyph = glyphs[i];
+    if (glyph.advanceWidth) {
+      width += glyph.advanceWidth * scale;
+    }
+    if (i < glyphs.length - 1) {
+      kerningValue = font.getKerningValue(glyph, glyphs[i + 1]);
+      width += kerningValue * scale;
+    }
+    ascent = Math.max(ascent, glyph.getBoundingBox().y2);
+    descent = Math.min(descent, glyph.getBoundingBox().y1);
+  }
+
+  return {
+    width,
+    actualBoundingBoxAscent: ascent * scale,
+    actualBoundingBoxDescent: descent * scale,
+    fontBoundingBoxAscent: font.ascender * scale,
+    fontBoundingBoxDescent: font.descender * scale
+  };
+};
+
+const drawText = (
+  context: CanvasRenderingContext2D,
+  drawText: DrawText,
+  canvasHeight: number,
+  showInfo = false,
+  lineColor: string,
+  lineWidth: number,
+  opentypeDictionary: { [key: string]: opentype.Font }
+) => {
+  const startX = drawText.startPoint.x;
+  const startY = drawText.startPoint.y;
+  const { font } = drawText;
+  const { fontSize } = drawText;
+  const { text } = drawText;
+
+  // draw text
+  // (need to flip y axis back first)
+  context.save();
+  context.scale(1, -1); // flip back
+  context.translate(0, -canvasHeight); // and translate so that we draw the text the right way up
+
+  if (opentypeDictionary[font]) {
+    const opentypeFont = opentypeDictionary[font];
+    const path = opentypeFont.getPath(text, startX, canvasHeight - startY, fontSize);
+    // path.draw(context);
+
+    // flatten
+    const pathData = path.toSVG(2);
+    const segments = Segmentize(pathData, {
+      input: 'string',
+      output: 'data',
+      resolution: {
+        circle: 256,
+        ellipse: 256,
+        path: 1024
+      }
+    });
+
+    segments.forEach((d: any) => {
+      drawSingleLine(context, d[0], d[1], d[2], d[3], showInfo, 0.1, lineColor, lineWidth);
+    });
+
+    // measure text
+    // const dim = measureOpentypeText(opentypeFont, fontSize, text);
+    // console.log(dim);
+
+    // const dim2 = opentypeFont.getAdvanceWidth(text, fontSize);
+    // console.log(dim2);
+
+    // opentypeFont.drawPoints(context, text, startX, canvasHeight - startY, fontSize);
+    // opentypeFont.drawMetrics(context, text, startX, canvasHeight - startY, fontSize);
+  } else {
+    context.font = `${fontSize}px ${font}`;
+    context.fillStyle = `${lineColor}`;
+    context.fillText(`${text}`, startX, canvasHeight - startY);
+  }
+
+  context.restore();
+
+  // if (showInfo) {
+  // }
+};
+
 const defineIrregularPath = (context: CanvasRenderingContext2D, shape: DrawShape) => {
   let points: PointF[] = [{ x: 0, y: 0 }];
   if (shape.kind === 'polyline') {
@@ -511,6 +607,9 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
   private selectedShapeIndex: number;
   private selectedShapeInfo: string;
 
+  // save opentype fonts in dictionary
+  private opentypeDictionary: { [key: string]: opentype.Font } = {};
+
   constructor(props: IDrawingCanvasProps) {
     super(props);
 
@@ -527,6 +626,28 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     this.currentMousePos = { x: 0, y: 0 };
     this.selectedShapeIndex = -1;
     this.selectedShapeInfo = '';
+
+    const opentypeFonts: { [key: string]: string } = {
+      Pacifico: 'Pacifico-Regular.ttf',
+      VT323: 'VT323-Regular.ttf',
+      Quicksand: 'Quicksand-VariableFont_wght.ttf',
+      Inconsolata: 'Inconsolata-VariableFont_wdth,wght.ttf'
+    };
+
+    Object.keys(opentypeFonts).forEach((fontKey) => {
+      const fontFileName = opentypeFonts[fontKey];
+      opentype.load(`fonts/${fontFileName}`, (err, font) => {
+        if (err) {
+          alert(`Font could not be loaded: ${err}`);
+        } else {
+          console.log(`Opentype font ${fontKey} loaded`);
+          // store in dictionary
+          if (font) {
+            this.opentypeDictionary[fontKey] = font;
+          }
+        }
+      });
+    });
   }
 
   componentDidMount() {
@@ -870,6 +991,33 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
       }
     });
 
+    this.props.drawModel.texts.forEach((p: DrawText) => {
+      const { startPoint } = p;
+      const startX = startPoint.x;
+      const startY = startPoint.y;
+      // TODO: fix this
+      const endX = startPoint.x + (p.fontSize / 2) * p.text.length;
+      const endY = startPoint.y + p.fontSize;
+
+      curX = startX;
+      curY = startY;
+      maxX = curX > maxX ? curX : maxX;
+      minX = curX < minX ? curX : minX;
+      maxY = curY > maxY ? curY : maxY;
+      minY = curY < minY ? curY : minY;
+
+      curX = endX;
+      curY = endY;
+      maxX = curX > maxX ? curX : maxX;
+      minX = curX < minX ? curX : minX;
+      maxY = curY > maxY ? curY : maxY;
+      minY = curY < minY ? curY : minY;
+
+      p.kind = 'text';
+      p.infoText = `Text: [${round2TwoDecimal(startPoint.x)} , ${round2TwoDecimal(startPoint.y)}] → ${p.text}`;
+      this.shapes.push(p);
+    });
+
     return { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } };
   };
 
@@ -983,6 +1131,22 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
             lineColor = '#ff00ff';
           }
           drawPolyline(context, shape, this.props.showArrows, arrowLen, lineColor, lineWidth);
+          break;
+        case 'text':
+          if (this.selectedShapeIndex === i) {
+            lineColor = defaultHighlightColor;
+          } else {
+            lineColor = '#ffcc99';
+          }
+          drawText(
+            context,
+            shape,
+            this.canvasHeight,
+            this.props.showInfo,
+            lineColor,
+            lineWidth,
+            this.opentypeDictionary
+          );
           break;
         default:
           break;

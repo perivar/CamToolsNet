@@ -23,6 +23,7 @@ namespace CAMToolsNet.Models
 		public List<DrawLine> Lines { get; set; }
 		public List<DrawArc> Arcs { get; set; }
 		public List<DrawPolyline> Polylines { get; set; }
+		public List<DrawText> Texts { get; set; }
 
 		// used to hold the sorted start end segment list
 		[JsonIgnore]
@@ -345,6 +346,42 @@ namespace CAMToolsNet.Models
 			public void SwapStartEnd()
 			{
 				Vertexes.Reverse();
+			}
+		}
+
+		public class DrawText : DrawElement
+		{
+			public Point3D StartPoint { get; set; }
+			public String Text { get; set; }
+			public String Font { get; set; }
+			public float FontSize { get; set; }
+
+			// parameter-less constructor needed for de-serialization
+			public DrawText() { }
+
+			// note! don't call base() since we might not support the base properties
+			public DrawText(Point3D startPoint, String text)
+			{
+				StartPoint = startPoint;
+				Text = text;
+
+				// set defaults
+				Font = "Arial";
+				FontSize = 8;
+			}
+
+			public DrawText(Point3D startPoint, String font, float fontSize, string text)
+			{
+				StartPoint = startPoint;
+				Font = font;
+				FontSize = fontSize;
+				Text = text;
+			}
+
+			public override string ToString()
+			{
+				return string.Format(CultureInfo.CurrentCulture,
+									 "Text: StartPoint={0}, Text={1}", StartPoint, Text);
 			}
 		}
 
@@ -729,6 +766,7 @@ namespace CAMToolsNet.Models
 			Lines = new List<DrawLine>();
 			Arcs = new List<DrawArc>();
 			Polylines = new List<DrawPolyline>();
+			Texts = new List<DrawText>();
 		}
 
 		public DrawModel(netDxf.DxfDocument dxf, string fileName, bool useContours = true) : this()
@@ -1471,6 +1509,12 @@ namespace CAMToolsNet.Models
 		{
 			var arc = new DrawArc(center, radius, startAngle, endAngle, isClockwise, isVisible);
 			Arcs.Add(arc);
+		}
+
+		public void AddText(Point3D startPoint, String font, float fontSize, string textValue)
+		{
+			var text = new DrawText(startPoint, font, fontSize, textValue);
+			Texts.Add(text);
 		}
 
 		public void CalculateBounds()

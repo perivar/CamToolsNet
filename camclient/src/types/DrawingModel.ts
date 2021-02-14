@@ -75,7 +75,15 @@ export interface DrawPolyline extends BaseElement {
   vertexes: Vertex[];
 }
 
-export type DrawShape = DrawCircle | DrawLine | DrawArc | DrawPolyline;
+export interface DrawText extends BaseElement {
+  kind: 'text';
+  font: string;
+  fontSize: number;
+  text: string;
+  startPoint: Point3D;
+}
+
+export type DrawShape = DrawCircle | DrawLine | DrawArc | DrawPolyline | DrawText;
 
 export interface DrawingModel {
   fileName: string;
@@ -84,4 +92,5 @@ export interface DrawingModel {
   lines: DrawLine[];
   arcs: DrawArc[];
   polylines: DrawPolyline[];
+  texts: DrawText[];
 }
