@@ -98,6 +98,40 @@ const getArcBoundingBox = (ini: number, end: number, radius: number, margin = 0)
   return { x, y, w, h };
 };
 
+const measureOpentypeText = (font: opentype.Font, fontSize: number, text: string) => {
+  // width can be gotten with
+  // const dim2 = opentypeFont.getAdvanceWidth(text, fontSize);
+  // console.log(dim2);
+
+  let ascent = 0;
+  let descent = 0;
+  let width = 0;
+  let kerningValue = 0;
+  const scale = (1 / font.unitsPerEm) * fontSize;
+  const glyphs = font.stringToGlyphs(text);
+
+  for (let i = 0; i < glyphs.length; i++) {
+    const glyph = glyphs[i];
+    if (glyph.advanceWidth) {
+      width += glyph.advanceWidth * scale;
+    }
+    if (i < glyphs.length - 1) {
+      kerningValue = font.getKerningValue(glyph, glyphs[i + 1]);
+      width += kerningValue * scale;
+    }
+    ascent = Math.max(ascent, glyph.getBoundingBox().y2);
+    descent = Math.min(descent, glyph.getBoundingBox().y1);
+  }
+
+  return {
+    width,
+    actualBoundingBoxAscent: ascent * scale,
+    actualBoundingBoxDescent: descent * scale,
+    fontBoundingBoxAscent: font.ascender * scale,
+    fontBoundingBoxDescent: font.descender * scale
+  };
+};
+
 const fillTextFlipped = (
   context: CanvasRenderingContext2D,
   canvasHeight: number,
@@ -431,40 +465,6 @@ const drawPolyline = (
   }
 };
 
-const measureOpentypeText = (font: opentype.Font, fontSize: number, text: string) => {
-  // width can be gotten with
-  // const dim2 = opentypeFont.getAdvanceWidth(text, fontSize);
-  // console.log(dim2);
-
-  let ascent = 0;
-  let descent = 0;
-  let width = 0;
-  let kerningValue = 0;
-  const scale = (1 / font.unitsPerEm) * fontSize;
-  const glyphs = font.stringToGlyphs(text);
-
-  for (let i = 0; i < glyphs.length; i++) {
-    const glyph = glyphs[i];
-    if (glyph.advanceWidth) {
-      width += glyph.advanceWidth * scale;
-    }
-    if (i < glyphs.length - 1) {
-      kerningValue = font.getKerningValue(glyph, glyphs[i + 1]);
-      width += kerningValue * scale;
-    }
-    ascent = Math.max(ascent, glyph.getBoundingBox().y2);
-    descent = Math.min(descent, glyph.getBoundingBox().y1);
-  }
-
-  return {
-    width,
-    actualBoundingBoxAscent: ascent * scale,
-    actualBoundingBoxDescent: descent * scale,
-    fontBoundingBoxAscent: font.ascender * scale,
-    fontBoundingBoxDescent: font.descender * scale
-  };
-};
-
 const drawText = (
   context: CanvasRenderingContext2D,
   drawText: DrawText,
@@ -507,6 +507,7 @@ const drawText = (
     //   drawSingleLine(context, d[0], d[1], d[2], d[3], showInfo, 0.1, lineColor, lineWidth);
     // });
   } else {
+    context.lineWidth = lineWidth;
     context.font = `${fontSize}px ${font}`;
     context.fillStyle = `${lineColor}`;
     context.fillText(`${text}`, startX, canvasHeight - startY);
@@ -600,6 +601,12 @@ const isMouseInShape = (context: CanvasRenderingContext2D, mx: number, my: numbe
   return false;
 };
 
+const loadFont = async (url: string): Promise<opentype.Font> => {
+  return await new Promise((resolve, reject) =>
+    opentype.load(url, (err: any, font: any) => (err ? reject(err) : resolve(font)))
+  );
+};
+
 export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasProps> {
   // instance variables
   private bounds: Bounds = { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } };
@@ -632,6 +639,8 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
   constructor(props: IDrawingCanvasProps) {
     super(props);
 
+    console.log('DrawingCanvas constructor called');
+
     this.scale = 1.0;
     this.startDragOffset = { x: 0, y: 0 };
     this.mouseDown = false;
@@ -654,18 +663,20 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     };
 
     Object.keys(opentypeFonts).forEach((fontKey) => {
+      console.log(`Processing opentype font ${fontKey}...`);
       const fontFileName = opentypeFonts[fontKey];
-      opentype.load(`fonts/${fontFileName}`, (err, font) => {
-        if (err) {
-          alert(`Font could not be loaded: ${err}`);
-        } else {
-          console.log(`Opentype font ${fontKey} loaded`);
+      loadFont(`fonts/${fontFileName}`)
+        .then((font: opentype.Font) => {
+          const fontName = font.names.fullName.en.toLowerCase();
+          console.log(`Opentype font ${fontName} loaded`);
           // store in dictionary
           if (font) {
             this.opentypeDictionary[fontKey] = font;
           }
-        }
-      });
+        })
+        .catch((err) => {
+          alert(`Font could not be loaded: ${err}`);
+        });
     });
   }
 
@@ -825,24 +836,20 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     const y = evt.nativeEvent.offsetY;
 
     // use deltaY instead of wheelData. Note deltaY has the opposite value of wheelData
-    const amount = evt.deltaY > 0 ? 1 / 1.1 : 1.1;
+    let amount = 0.999 ** evt.deltaY;
 
-    // set limits
-    // const tmpScale = this.scale * amount;
-    // if (tmpScale > 30) return;
-    // if (tmpScale < 0.3) return;
-
-    this.scale *= amount; // the new scale
+    let zoom = this.scale;
+    zoom *= amount;
+    if (zoom > 30) zoom = 30;
+    if (zoom < 0.5) zoom = 0.5;
+    amount = zoom / this.scale;
+    this.scale = zoom;
 
     // move the origin
     this.translatePos.x = x - (x - this.translatePos.x) * amount;
     this.translatePos.y = y - (y - this.translatePos.y) * amount;
 
     this.draw(this.scale, this.translatePos);
-
-    // i don't believe these work?!
-    evt.preventDefault();
-    evt.nativeEvent.returnValue = false;
   };
 
   private zoomToFit = () => {

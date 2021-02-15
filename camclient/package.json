@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@jscad/csg": "^0.7.0",
+    "@jscad/stl-serializer": "^0.2.0",
     "@testing-library/jest-dom": "^5.11.9",
     "@testing-library/react": "^11.2.5",
     "@testing-library/user-event": "^12.7.0",
@@ -28,6 +30,7 @@
     "web-vitals": "^1.1.0"
   },
   "devDependencies": {
+    "@danmarshall/jscad-typings": "^1.0.0",
     "@types/fabric": "^4.2.2",
     "@types/fontfaceobserver": "^0.0.6",
     "@types/jest": "^26.0.20",

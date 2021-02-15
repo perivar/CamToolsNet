@@ -15,9 +15,12 @@ import {
 import Dropzone from 'react-dropzone';
 import axios from 'axios';
 import './Home.scss';
-import DrawingCanvas from './DrawingCanvas';
 import { DrawArc, DrawCircle, DrawingModel, DrawLine, DrawPolyline } from '../types/DrawingModel';
 import FontFaceObserver from 'fontfaceobserver';
+import { Canvas } from 'react-three-fiber';
+import Scene from './Scene';
+import Controls from './Controls';
+// import DrawingCanvas from './DrawingCanvas';
 // import { KonvaCanvas } from './KonvaCanvas';
 // import FabricCanvas from './FabricCanvas';
 
@@ -471,13 +474,17 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
                 <div>Loading drawing ...</div>
               </Alert>
             ) : (
-              <DrawingCanvas
-                drawModel={drawModel}
-                showArrows={showArrows}
-                showInfo={showInfo}
-                xSplit={this.state.xSplit}
-              />
+              // <DrawingCanvas
+              //   drawModel={drawModel}
+              //   showArrows={showArrows}
+              //   showInfo={showInfo}
+              //   xSplit={this.state.xSplit}
+              // />
               // <KonvaCanvas drawModel={drawModel} showArrows={showArrows} />
+              <Canvas>
+                <Scene />
+                <Controls />
+              </Canvas>
             )}
           </Col>
           <Col className="px-0 py-0 mx-1">
