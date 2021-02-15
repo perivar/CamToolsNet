@@ -98,6 +98,27 @@ const getArcBoundingBox = (ini: number, end: number, radius: number, margin = 0)
   return { x, y, w, h };
 };
 
+const fillTextFlipped = (
+  context: CanvasRenderingContext2D,
+  canvasHeight: number,
+  text: string,
+  startX: number,
+  startY: number,
+  font: string,
+  fontSize: number,
+  lineColor: string
+) => {
+  // draw text
+  // (need to flip y axis back first)
+  context.save();
+  context.scale(1, -1); // flip back
+  context.translate(0, -canvasHeight); // and translate so that we draw the text the right way up
+  context.font = `${fontSize}px ${font}`;
+  context.fillStyle = `${lineColor}`;
+  context.fillText(`${text}`, startX, canvasHeight - startY);
+  context.restore();
+};
+
 const drawArrowHead = (
   context: CanvasRenderingContext2D,
   endX: number,
@@ -173,6 +194,7 @@ const drawLineWithArrows = (
 
 const drawGrid = (
   context: CanvasRenderingContext2D,
+  canvasHeight: number,
   gridPixelSize: number,
   colorAxis: string,
   colorGrid: string,
@@ -192,6 +214,10 @@ const drawGrid = (
     } else {
       context.lineWidth = 0.3;
     }
+
+    // draw label
+    fillTextFlipped(context, canvasHeight, `${i}`, 0 - 4, i - 0.5, 'sans-serif', 2, colorGrid);
+
     context.closePath();
     context.stroke();
   }
@@ -206,6 +232,10 @@ const drawGrid = (
     } else {
       context.lineWidth = 0.3;
     }
+
+    // draw label
+    fillTextFlipped(context, canvasHeight, `${j}`, j - 1, -3, 'sans-serif', 2, colorGrid);
+
     context.closePath();
     context.stroke();
   }
@@ -235,15 +265,10 @@ const drawCircle = (
 
   if (showInfo) {
     // draw diameter and center (need to flip y axis back first)
-    context.save();
-    context.scale(1, -1); // flip back
-    context.translate(0, -canvasHeight); // and translate so that we draw the text the right way up
-    context.fillRect(x - lineWidth / 2, canvasHeight - y - lineWidth / 2, lineWidth, lineWidth); // fill in the center pixel
+    context.fillRect(x - lineWidth / 2, y - lineWidth / 2, lineWidth, lineWidth); // fill in the center pixel
 
     const dia = round2TwoDecimal(radius * 2);
-    context.font = '3px sans-serif';
-    context.fillText(`${dia}`, x - 2, canvasHeight - y - radius - 1);
-    context.restore();
+    fillTextFlipped(context, canvasHeight, `${dia}`, x + 1, y + radius + 1, 'sans-serif', 2, lineColor);
   }
 
   context.lineWidth = lineWidth;
@@ -407,6 +432,10 @@ const drawPolyline = (
 };
 
 const measureOpentypeText = (font: opentype.Font, fontSize: number, text: string) => {
+  // width can be gotten with
+  // const dim2 = opentypeFont.getAdvanceWidth(text, fontSize);
+  // console.log(dim2);
+
   let ascent = 0;
   let descent = 0;
   let width = 0;
@@ -460,33 +489,23 @@ const drawText = (
   if (opentypeDictionary[font]) {
     const opentypeFont = opentypeDictionary[font];
     const path = opentypeFont.getPath(text, startX, canvasHeight - startY, fontSize);
-    // path.draw(context);
+    path.draw(context);
 
-    // flatten
-    const pathData = path.toSVG(2);
-    const segments = Segmentize(pathData, {
-      input: 'string',
-      output: 'data',
-      resolution: {
-        circle: 256,
-        ellipse: 256,
-        path: 1024
-      }
-    });
+    // flatten into segments
+    // const pathData = path.toSVG(2);
+    // const segments = Segmentize(pathData, {
+    //   input: 'string',
+    //   output: 'data',
+    //   resolution: {
+    //     circle: 256,
+    //     ellipse: 256,
+    //     path: 1024
+    //   }
+    // });
 
-    segments.forEach((d: any) => {
-      drawSingleLine(context, d[0], d[1], d[2], d[3], showInfo, 0.1, lineColor, lineWidth);
-    });
-
-    // measure text
-    // const dim = measureOpentypeText(opentypeFont, fontSize, text);
-    // console.log(dim);
-
-    // const dim2 = opentypeFont.getAdvanceWidth(text, fontSize);
-    // console.log(dim2);
-
-    // opentypeFont.drawPoints(context, text, startX, canvasHeight - startY, fontSize);
-    // opentypeFont.drawMetrics(context, text, startX, canvasHeight - startY, fontSize);
+    // segments.forEach((d: any) => {
+    //   drawSingleLine(context, d[0], d[1], d[2], d[3], showInfo, 0.1, lineColor, lineWidth);
+    // });
   } else {
     context.font = `${fontSize}px ${font}`;
     context.fillStyle = `${lineColor}`;
@@ -1064,7 +1083,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     let lineWidth = defaultLineWidth;
     let lineColor = '#000000';
 
-    drawGrid(context, 10, '#999999', '#F2F2F2', 100, this.bounds.max.x + 20, this.bounds.max.y + 20);
+    drawGrid(context, this.canvasHeight, 10, '#999999', '#F2F2F2', 100, this.bounds.max.x + 20, this.bounds.max.y + 20);
 
     // x axis
     drawLineWithArrows(context, 0, 0, this.bounds.max.x + 25, 0, 2, 4, false, true);
