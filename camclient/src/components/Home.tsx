@@ -482,7 +482,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
               // />
               // <KonvaCanvas drawModel={drawModel} showArrows={showArrows} />
               <Canvas>
-                <Scene />
+                <Scene drawModel={drawModel} showArrows={showArrows} showInfo={showInfo} xSplit={this.state.xSplit} />
                 <Controls />
               </Canvas>
             )}
