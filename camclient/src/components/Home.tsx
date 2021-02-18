@@ -12,15 +12,16 @@ import {
   DropdownButton,
   Dropdown
 } from 'react-bootstrap';
+import BootstrapSwitchButton from 'bootstrap-switch-button-react';
 import Dropzone from 'react-dropzone';
 import axios from 'axios';
 import './Home.scss';
 import { DrawArc, DrawCircle, DrawingModel, DrawLine, DrawPolyline } from '../types/DrawingModel';
 import FontFaceObserver from 'fontfaceobserver';
 import { Canvas } from 'react-three-fiber';
-import Scene from './Scene';
+import MyScene from './MyScene';
 import Controls from './Controls';
-// import DrawingCanvas from './DrawingCanvas';
+import DrawingCanvas from './DrawingCanvas';
 // import { KonvaCanvas } from './KonvaCanvas';
 // import FabricCanvas from './FabricCanvas';
 
@@ -42,6 +43,7 @@ export interface IHomeState {
   textStartX: number;
   textStartY: number;
   textFonts: string[];
+  show3D: boolean;
   drawModel: DrawingModel;
 }
 
@@ -72,7 +74,8 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
       textFontSize: 10,
       textStartX: 0,
       textStartY: 0,
-      textFonts: ['Pacifico', 'VT323', 'Quicksand', 'Inconsolata']
+      textFonts: ['Pacifico', 'VT323', 'Quicksand', 'Inconsolata'],
+      show3D: false
     };
   }
 
@@ -217,6 +220,10 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
     const { value } = e.currentTarget;
     const posValue = parseFloat(value);
     this.setState({ textStartY: posValue });
+  };
+
+  private onModeChange = (checked: boolean): void => {
+    this.setState({ show3D: checked });
   };
 
   private onPolyToCircle = () => {
@@ -376,6 +383,13 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
               <Card.Header>
                 <b>CAM tools</b> - read dxf, svg and gcode
               </Card.Header>
+              <BootstrapSwitchButton
+                checked={this.state.show3D}
+                size="sm"
+                onlabel="3D"
+                offlabel="2D"
+                onChange={this.onModeChange}
+              />
             </Card>
             <Dropzone onDrop={this.onDrop}>
               {({ getRootProps, getInputProps, isDragActive }) => (
@@ -474,17 +488,26 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
                 <div>Loading drawing ...</div>
               </Alert>
             ) : (
-              // <DrawingCanvas
-              //   drawModel={drawModel}
-              //   showArrows={showArrows}
-              //   showInfo={showInfo}
-              //   xSplit={this.state.xSplit}
-              // />
-              // <KonvaCanvas drawModel={drawModel} showArrows={showArrows} />
-              <Canvas>
-                <Scene drawModel={drawModel} showArrows={showArrows} showInfo={showInfo} xSplit={this.state.xSplit} />
-                <Controls />
-              </Canvas>
+              <>
+                {this.state.show3D ? (
+                  <Canvas>
+                    <MyScene
+                      drawModel={drawModel}
+                      showArrows={showArrows}
+                      showInfo={showInfo}
+                      xSplit={this.state.xSplit}
+                    />
+                    <Controls />
+                  </Canvas>
+                ) : (
+                  <DrawingCanvas
+                    drawModel={drawModel}
+                    showArrows={showArrows}
+                    showInfo={showInfo}
+                    xSplit={this.state.xSplit}
+                  />
+                )}
+              </>
             )}
           </Col>
           <Col className="px-0 py-0 mx-1">
