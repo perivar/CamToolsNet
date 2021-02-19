@@ -19,8 +19,10 @@ import './Home.scss';
 import { DrawArc, DrawCircle, DrawingModel, DrawLine, DrawPolyline } from '../types/DrawingModel';
 import FontFaceObserver from 'fontfaceobserver';
 import { Canvas } from 'react-three-fiber';
-import MyScene from './MyScene';
+import FiberScene from './FiberScene';
 import Controls from './Controls';
+import Scene from './Scene';
+import ThreeScene from './ThreeScene';
 import DrawingCanvas from './DrawingCanvas';
 // import { KonvaCanvas } from './KonvaCanvas';
 // import FabricCanvas from './FabricCanvas';
@@ -490,15 +492,22 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
             ) : (
               <>
                 {this.state.show3D ? (
-                  <Canvas>
-                    <MyScene
-                      drawModel={drawModel}
-                      showArrows={showArrows}
-                      showInfo={showInfo}
-                      xSplit={this.state.xSplit}
-                    />
-                    <Controls />
-                  </Canvas>
+                  // <Scene drawModel={drawModel} showArrows={showArrows} showInfo={showInfo} xSplit={this.state.xSplit} />
+                  // <Canvas>
+                  //   <FiberScene
+                  //     drawModel={drawModel}
+                  //     showArrows={showArrows}
+                  //     showInfo={showInfo}
+                  //     xSplit={this.state.xSplit}
+                  //   />
+                  //   <Controls />
+                  // </Canvas>
+                  <ThreeScene
+                    drawModel={drawModel}
+                    showArrows={showArrows}
+                    showInfo={showInfo}
+                    xSplit={this.state.xSplit}
+                  />
                 ) : (
                   <DrawingCanvas
                     drawModel={drawModel}
