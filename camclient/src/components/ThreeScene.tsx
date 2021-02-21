@@ -5,12 +5,14 @@ import { DrawingModel } from '../types/DrawingModel';
 import { ToObject3D } from './3DModel';
 import './ThreeScene.scss';
 import { makeSprite } from './ThreeUI';
+import opentype from 'opentype.js';
 
 interface IDrawingCanvasProps {
   drawModel: DrawingModel;
   showArrows: boolean;
   showInfo: boolean;
   xSplit: number;
+  opentypeDictionary?: { [key: string]: opentype.Font };
 }
 
 class ThreeScene extends React.PureComponent<IDrawingCanvasProps> {
@@ -38,7 +40,7 @@ class ThreeScene extends React.PureComponent<IDrawingCanvasProps> {
     this.setupAxes();
 
     // this.addCustomSceneObjects();
-    this.addModelToScene(this.props.drawModel, this.props.showArrows);
+    this.addModelToScene(this.props.drawModel, this.props.showArrows, this.props.opentypeDictionary);
     this.startAnimationLoop();
 
     window.addEventListener('resize', this.handleWindowResize);
@@ -75,7 +77,7 @@ class ThreeScene extends React.PureComponent<IDrawingCanvasProps> {
     if (prevProps.drawModel !== this.props.drawModel) {
       if (this.scene && this.object) {
         this.scene.remove(this.object);
-        this.addModelToScene(this.props.drawModel, this.props.showArrows);
+        this.addModelToScene(this.props.drawModel, this.props.showArrows, this.props.opentypeDictionary);
       }
     }
   }
@@ -89,7 +91,7 @@ class ThreeScene extends React.PureComponent<IDrawingCanvasProps> {
       this.scene = new THREE.Scene();
       this.scene.background = new THREE.Color('white');
 
-      const orthographic = false;
+      const orthographic = true;
       this.camera = orthographic
         ? new THREE.OrthographicCamera(width / -50, width / 50, height / 50, height / -50, 0.1, 1000)
         : new THREE.PerspectiveCamera(
@@ -202,9 +204,13 @@ class ThreeScene extends React.PureComponent<IDrawingCanvasProps> {
     }
   };
 
-  addModelToScene = (drawModel: DrawingModel, showArrows: boolean) => {
+  addModelToScene = (
+    drawModel: DrawingModel,
+    showArrows: boolean,
+    opentypeDictionary?: { [key: string]: opentype.Font }
+  ) => {
     if (this.scene) {
-      const svgGroup = ToObject3D(drawModel, showArrows);
+      const svgGroup = ToObject3D(drawModel, showArrows, opentypeDictionary);
       this.scene.add(svgGroup);
       this.object = svgGroup;
 
@@ -244,8 +250,8 @@ class ThreeScene extends React.PureComponent<IDrawingCanvasProps> {
         this.camera.position.x = center.x;
         this.camera.position.y = center.y;
 
-        const width = maxDim / 14;
-        const height = maxDim / 14;
+        const width = maxDim / 3;
+        const height = maxDim / 3;
         this.camera.zoom = Math.min(
           width / (boundingBox.max.x - boundingBox.min.x),
           height / (boundingBox.max.y - boundingBox.min.y)

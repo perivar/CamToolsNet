@@ -360,9 +360,9 @@ namespace CAMToolsNet.Models
 			public DrawText() { }
 
 			// note! don't call base() since we might not support the base properties
-			public DrawText(Point3D startPoint, String text)
+			public DrawText(PointF startPoint, String text)
 			{
-				StartPoint = startPoint;
+				StartPoint = new Point3D(startPoint.X, startPoint.Y, 0);
 				Text = text;
 
 				// set defaults
@@ -370,9 +370,9 @@ namespace CAMToolsNet.Models
 				FontSize = 8;
 			}
 
-			public DrawText(Point3D startPoint, String font, float fontSize, string text)
+			public DrawText(PointF startPoint, String font, float fontSize, string text)
 			{
-				StartPoint = startPoint;
+				StartPoint = new Point3D(startPoint.X, startPoint.Y, 0);
 				Font = font;
 				FontSize = fontSize;
 				Text = text;
@@ -1511,7 +1511,7 @@ namespace CAMToolsNet.Models
 			Arcs.Add(arc);
 		}
 
-		public void AddText(Point3D startPoint, String font, float fontSize, string textValue)
+		public void AddText(PointF startPoint, String font, float fontSize, string textValue)
 		{
 			var text = new DrawText(startPoint, font, fontSize, textValue);
 			Texts.Add(text);

@@ -11,8 +11,6 @@ import {
   DrawShape,
   DrawText
 } from '../types/DrawingModel';
-import opentype from 'opentype.js';
-import Segmentize from 'svg-segmentize';
 
 interface IDrawingCanvasProps {
   drawModel: DrawingModel;
@@ -33,6 +31,105 @@ const round2TwoDecimal = (number: number): number => {
 
 const distance = (x1: number, y1: number, x2: number, y2: number) => {
   return Math.hypot(x2 - x1, y2 - y1);
+};
+
+const measureFontHeight = (
+  canvas: HTMLCanvasElement,
+  context: CanvasRenderingContext2D,
+  p: DrawText
+): {
+  height: number;
+  firstPixel: number;
+  lastPixel: number;
+} => {
+  const sourceWidth = canvas.width;
+  const sourceHeight = canvas.height;
+
+  // place the text
+  context.textAlign = 'left';
+  context.textBaseline = 'top';
+  context.fillText(p.text, p.startPoint.x, p.startPoint.y);
+
+  // returns an array containing the sum of all pixels in a canvas
+  // * 4 (red, green, blue, alpha)
+  // [pixel1Red, pixel1Green, pixel1Blue, pixel1Alpha, pixel2Red ...]
+  const { data } = context.getImageData(p.startPoint.x, p.startPoint.y, sourceWidth, sourceHeight);
+
+  let firstY = -1;
+  let lastY = -1;
+
+  // loop through each row
+  for (let y = 0; y < sourceHeight; y++) {
+    // loop through each column
+    for (let x = 0; x < sourceWidth; x++) {
+      // let red = data[((sourceWidth * y) + x) * 4];
+      // let green = data[((sourceWidth * y) + x) * 4 + 1];
+      // let blue = data[((sourceWidth * y) + x) * 4 + 2];
+      const alpha = data[(sourceWidth * y + x) * 4 + 3];
+
+      if (alpha > 0) {
+        firstY = y;
+        // exit the loop
+        break;
+      }
+    }
+    if (firstY >= 0) {
+      // exit the loop
+      break;
+    }
+  }
+
+  // loop through each row, this time beginning from the last row
+  for (let y = sourceHeight; y > 0; y--) {
+    // loop through each column
+    for (let x = 0; x < sourceWidth; x++) {
+      const alpha = data[(sourceWidth * y + x) * 4 + 3];
+      if (alpha > 0) {
+        lastY = y;
+        // exit the loop
+        break;
+      }
+    }
+    if (lastY >= 0) {
+      // exit the loop
+      break;
+    }
+  }
+
+  return {
+    // The actual height
+    height: lastY - firstY,
+
+    // The first pixel
+    firstPixel: firstY,
+
+    // The last pixel
+    lastPixel: lastY
+  };
+};
+
+const measureText = (
+  p: DrawText
+): {
+  height: number;
+  width: number;
+} => {
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+
+  // set some approx initial values
+  let textWidth = (p.fontSize / 2) * p.text.length;
+  let textHeight = p.fontSize;
+
+  if (context) {
+    context.font = `${p.fontSize}px ${p.font}`;
+    const metrics = context.measureText(p.text);
+    textWidth = metrics.width;
+
+    const fontHeight = measureFontHeight(canvas, context, p);
+    textHeight = fontHeight.height;
+  }
+  return { height: textHeight, width: textWidth };
 };
 
 // https://stackoverflow.com/a/35977476/461048
@@ -96,40 +193,6 @@ const getArcBoundingBox = (ini: number, end: number, radius: number, margin = 0)
   const h = y2 - y1 + margin * 2;
 
   return { x, y, w, h };
-};
-
-const measureOpentypeText = (font: opentype.Font, fontSize: number, text: string) => {
-  // width can be gotten with
-  // const dim2 = opentypeFont.getAdvanceWidth(text, fontSize);
-  // console.log(dim2);
-
-  let ascent = 0;
-  let descent = 0;
-  let width = 0;
-  let kerningValue = 0;
-  const scale = (1 / font.unitsPerEm) * fontSize;
-  const glyphs = font.stringToGlyphs(text);
-
-  for (let i = 0; i < glyphs.length; i++) {
-    const glyph = glyphs[i];
-    if (glyph.advanceWidth) {
-      width += glyph.advanceWidth * scale;
-    }
-    if (i < glyphs.length - 1) {
-      kerningValue = font.getKerningValue(glyph, glyphs[i + 1]);
-      width += kerningValue * scale;
-    }
-    ascent = Math.max(ascent, glyph.getBoundingBox().y2);
-    descent = Math.min(descent, glyph.getBoundingBox().y1);
-  }
-
-  return {
-    width,
-    actualBoundingBoxAscent: ascent * scale,
-    actualBoundingBoxDescent: descent * scale,
-    fontBoundingBoxAscent: font.ascender * scale,
-    fontBoundingBoxDescent: font.descender * scale
-  };
 };
 
 const fillTextFlipped = (
@@ -471,8 +534,7 @@ const drawText = (
   canvasHeight: number,
   showInfo = false,
   lineColor: string,
-  lineWidth: number,
-  opentypeDictionary: { [key: string]: opentype.Font }
+  lineWidth: number
 ) => {
   const startX = drawText.startPoint.x;
   const startY = drawText.startPoint.y;
@@ -486,32 +548,10 @@ const drawText = (
   context.scale(1, -1); // flip back
   context.translate(0, -canvasHeight); // and translate so that we draw the text the right way up
 
-  if (opentypeDictionary[font]) {
-    const opentypeFont = opentypeDictionary[font];
-    const path = opentypeFont.getPath(text, startX, canvasHeight - startY, fontSize);
-    path.draw(context);
-
-    // flatten into segments
-    // const pathData = path.toSVG(2);
-    // const segments = Segmentize(pathData, {
-    //   input: 'string',
-    //   output: 'data',
-    //   resolution: {
-    //     circle: 256,
-    //     ellipse: 256,
-    //     path: 1024
-    //   }
-    // });
-
-    // segments.forEach((d: any) => {
-    //   drawSingleLine(context, d[0], d[1], d[2], d[3], showInfo, 0.1, lineColor, lineWidth);
-    // });
-  } else {
-    context.lineWidth = lineWidth;
-    context.font = `${fontSize}px ${font}`;
-    context.fillStyle = `${lineColor}`;
-    context.fillText(`${text}`, startX, canvasHeight - startY);
-  }
+  context.lineWidth = lineWidth;
+  context.font = `${fontSize}px ${font}`;
+  context.fillStyle = `${lineColor}`;
+  context.fillText(`${text}`, startX, canvasHeight - startY);
 
   context.restore();
 
@@ -601,12 +641,6 @@ const isMouseInShape = (context: CanvasRenderingContext2D, mx: number, my: numbe
   return false;
 };
 
-const loadFont = async (url: string): Promise<opentype.Font> => {
-  return await new Promise((resolve, reject) =>
-    opentype.load(url, (err: any, font: any) => (err ? reject(err) : resolve(font)))
-  );
-};
-
 export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasProps> {
   // instance variables
   private bounds: Bounds = { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } };
@@ -621,6 +655,8 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
   private inverseOriginTransform = new DOMMatrix();
 
   // get on-screen canvas
+  private canvasDivRef: React.RefObject<HTMLDivElement>;
+  private canvasRef: React.RefObject<HTMLCanvasElement>;
   private canvasDiv: HTMLDivElement | null;
   private canvas: HTMLCanvasElement | null;
   private ctx: CanvasRenderingContext2D | null;
@@ -633,13 +669,10 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
   private selectedShapeIndex: number;
   private selectedShapeInfo: string;
 
-  // save opentype fonts in dictionary
-  private opentypeDictionary: { [key: string]: opentype.Font } = {};
-
   constructor(props: IDrawingCanvasProps) {
     super(props);
-
-    console.log('DrawingCanvas constructor called');
+    this.canvasDivRef = React.createRef<HTMLDivElement>();
+    this.canvasRef = React.createRef<HTMLCanvasElement>();
 
     this.scale = 1.0;
     this.startDragOffset = { x: 0, y: 0 };
@@ -654,33 +687,15 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     this.currentMousePos = { x: 0, y: 0 };
     this.selectedShapeIndex = -1;
     this.selectedShapeInfo = '';
-
-    const opentypeFonts: { [key: string]: string } = {
-      Pacifico: 'Pacifico-Regular.ttf',
-      VT323: 'VT323-Regular.ttf',
-      Quicksand: 'Quicksand-VariableFont_wght.ttf',
-      Inconsolata: 'Inconsolata-VariableFont_wdth,wght.ttf'
-    };
-
-    Object.keys(opentypeFonts).forEach((fontKey) => {
-      console.log(`Processing opentype font ${fontKey}...`);
-      const fontFileName = opentypeFonts[fontKey];
-      loadFont(`fonts/${fontFileName}`)
-        .then((font: opentype.Font) => {
-          const fontName = font.names.fullName.en.toLowerCase();
-          console.log(`Opentype font ${fontName} loaded`);
-          // store in dictionary
-          if (font) {
-            this.opentypeDictionary[fontKey] = font;
-          }
-        })
-        .catch((err) => {
-          alert(`Font could not be loaded: ${err}`);
-        });
-    });
   }
 
   componentDidMount() {
+    if (this.canvasDivRef.current) {
+      this.canvasDiv = this.canvasDivRef.current;
+    }
+    if (this.canvasRef.current) {
+      this.canvas = this.canvasRef.current;
+    }
     if (this.canvas && this.canvasDiv) {
       this.ctx = this.canvas.getContext('2d', { alpha: false }) as CanvasRenderingContext2D;
 
@@ -1021,9 +1036,13 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
       const { startPoint } = p;
       const startX = startPoint.x;
       const startY = startPoint.y;
-      // TODO: fix this
-      const endX = startPoint.x + (p.fontSize / 2) * p.text.length;
-      const endY = startPoint.y + p.fontSize;
+
+      const m = measureText(p);
+      const textWidth = m.width;
+      const textHeight = m.height;
+
+      const endX = startPoint.x + textWidth;
+      const endY = startPoint.y + textHeight;
 
       curX = startX;
       curY = startY;
@@ -1045,42 +1064,6 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     });
 
     return { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } };
-  };
-
-  private drawShapes = (context: CanvasRenderingContext2D, lineWidth: number, arrowLen: number) => {
-    let lineColor = '#000000';
-
-    // drawing circles
-    lineColor = '#0000ff';
-    this.props.drawModel.circles.forEach((circle: DrawCircle) => {
-      drawCircle(context, circle, this.canvasHeight, true, lineColor, lineWidth);
-    });
-    // done drawing circles
-
-    // drawing lines
-    this.props.drawModel.lines.forEach((line: DrawLine) => {
-      if (line.isVisible) {
-        lineColor = '#44cc44';
-      } else {
-        lineColor = '#44ccff';
-      }
-      drawLine(context, line, this.props.showArrows, arrowLen, lineColor, lineWidth);
-    });
-    // done drawing lines
-
-    // drawing arcs
-    lineColor = '#000000';
-    this.props.drawModel.arcs.forEach((a: DrawArc) => {
-      drawArc(context, a, this.props.showArrows, arrowLen, true, lineColor, lineWidth);
-    });
-    // done drawing arcs
-
-    // drawing polylines
-    lineColor = '#ff00ff';
-    this.props.drawModel.polylines.forEach((p: DrawPolyline) => {
-      drawPolyline(context, p, this.props.showArrows, arrowLen, lineColor, lineWidth);
-    });
-    // done drawing polylines
   };
 
   private drawFile = (context: CanvasRenderingContext2D) => {
@@ -1164,15 +1147,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
           } else {
             lineColor = '#ffcc99';
           }
-          drawText(
-            context,
-            shape,
-            this.canvasHeight,
-            this.props.showInfo,
-            lineColor,
-            lineWidth,
-            this.opentypeDictionary
-          );
+          drawText(context, shape, this.canvasHeight, this.props.showInfo, lineColor, lineWidth);
           break;
         default:
           break;
@@ -1260,10 +1235,10 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
 
   render() {
     return (
-      <div ref={(ref) => (this.canvasDiv = ref)} id="canvasDiv">
+      <div ref={this.canvasDivRef} id="canvasDiv">
         <canvas
           className="border"
-          ref={(ref) => (this.canvas = ref)}
+          ref={this.canvasRef}
           id="drawCanvas"
           width="200"
           height="200"

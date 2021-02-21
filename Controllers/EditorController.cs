@@ -667,6 +667,13 @@ namespace CAMToolsNet.Controllers
 					newDrawModel.AddPolyline(newVertexes, p.IsVisible);
 				}
 
+				// texts
+				foreach (var t in drawModel.Texts)
+				{
+					var newStartPoint = Transformation.Scale(t.StartPoint.PointF, scaleFactor);
+					newDrawModel.AddText(newStartPoint, t.Font, t.FontSize * scaleFactor, t.Text);
+				}
+
 				// make sure to recalculate the bounds
 				newDrawModel.CalculateBounds();
 
@@ -689,7 +696,7 @@ namespace CAMToolsNet.Controllers
 				drawModel.FileName = "Unnamed";
 			}
 
-			drawModel.AddText(new Point3D(startX, startY), font, fontSize, text);
+			drawModel.AddText(new PointF(startX, startY), font, fontSize, text);
 
 			// update model
 			HttpContext.Session.SetObjectAsJson("DrawModel", drawModel);

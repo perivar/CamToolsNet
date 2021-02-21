@@ -1,8 +1,136 @@
-import { DrawArc, DrawCircle, DrawingModel, DrawLine, DrawPolyline } from '../types/DrawingModel';
+import { DrawArc, DrawCircle, DrawingModel, DrawLine, DrawPolyline, DrawText } from '../types/DrawingModel';
 import * as THREE from 'three';
+import opentype from 'opentype.js';
+import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader';
+// import { TTFLoader } from 'three/examples/jsm/loaders/TTFLoader';
+// import Segmentize from 'svg-segmentize';
+
+const measureOpentypeText = (font: opentype.Font, fontSize: number, text: string) => {
+  // width can be gotten with
+  // const dim2 = opentypeFont.getAdvanceWidth(text, fontSize);
+  // console.log(dim2);
+
+  let ascent = 0;
+  let descent = 0;
+  let width = 0;
+  let kerningValue = 0;
+  const scale = (1 / font.unitsPerEm) * fontSize;
+  const glyphs = font.stringToGlyphs(text);
+
+  for (let i = 0; i < glyphs.length; i++) {
+    const glyph = glyphs[i];
+    if (glyph.advanceWidth) {
+      width += glyph.advanceWidth * scale;
+    }
+    if (i < glyphs.length - 1) {
+      kerningValue = font.getKerningValue(glyph, glyphs[i + 1]);
+      width += kerningValue * scale;
+    }
+    ascent = Math.max(ascent, glyph.getBoundingBox().y2);
+    descent = Math.min(descent, glyph.getBoundingBox().y1);
+  }
+
+  return {
+    width,
+    actualBoundingBoxAscent: ascent * scale,
+    actualBoundingBoxDescent: descent * scale,
+    fontBoundingBoxAscent: font.ascender * scale,
+    fontBoundingBoxDescent: font.descender * scale
+  };
+};
+
+const drawText = (
+  group: THREE.Group,
+  drawText: DrawText,
+  showInfo = false,
+  lineColor: string,
+  lineWidth: number,
+  opentypeDictionary?: { [key: string]: opentype.Font }
+) => {
+  const startX = drawText.startPoint.x;
+  const startY = drawText.startPoint.y;
+  const { font } = drawText;
+  const { fontSize } = drawText;
+  const { text } = drawText;
+
+  // draw text
+  if (opentypeDictionary && opentypeDictionary[font]) {
+    const opentypeFont = opentypeDictionary[font];
+    const path = opentypeFont.getPath(text, startX, startY, fontSize);
+
+    const svgMarkup = path.toSVG(2);
+    const loader = new SVGLoader();
+    const svgData = loader.parse(svgMarkup);
+
+    // Note! SVGs are flipped along y
+    // We can fix this by simply inverting the group that contain our objects:
+    // groupInput.scale.y *= -1;
+
+    // Loop through all of the parsed paths
+    // svgData.paths.forEach((shapePath, i) => {
+    //   shapePath.color = new THREE.Color(lineColor);
+    //   const newShapes = shapePath.toShapes(false);
+    //   // paths.push(shapePath);
+    //   shapes.push(...newShapes);
+    // });
+
+    const material = new THREE.MeshBasicMaterial({ color: '#EDBB99' });
+    const material2 = new THREE.MeshBasicMaterial({ color: '#DC7633' });
+
+    const letterGroup = new THREE.Group();
+    letterGroup.scale.y *= -1;
+    letterGroup.position.y = startY * 2;
+
+    // for opentype we only have one path
+    for (let i = 0; i < svgData.paths.length; i++) {
+      const path = svgData.paths[i];
+      const letters = path.toShapes(true);
+
+      for (let j = 0; j < letters.length; j++) {
+        const letter = letters[j];
+
+        const extrGeometry = new THREE.ExtrudeGeometry(letter, {
+          depth: 5,
+          bevelThickness: 2,
+          bevelSize: 0.5,
+          bevelEnabled: false, // normally true
+          bevelSegments: 3,
+          curveSegments: 6
+        });
+
+        const mesh = new THREE.Mesh(extrGeometry, [material, material2]);
+        letterGroup.add(mesh);
+      }
+    }
+
+    group.add(letterGroup);
+
+    // const segments = Segmentize(pathData, {
+    //   input: 'string',
+    //   output: 'data',
+    //   resolution: {
+    //     circle: 256,
+    //     ellipse: 256,
+    //     path: 1024
+    //   }
+    // });
+    // segments.forEach((d: any) => {
+    //   drawSingleLine(context, d[0], d[1], d[2], d[3], showInfo, 0.1, lineColor, lineWidth);
+    // });
+  }
+
+  // const loader = new TTFLoader();
+  // loader.load('fonts/Pacifico-Regular.ttf', function (json) {
+  //   const font = new THREE.Font(json);
+  //   createText();
+  // });
+
+  // if (showInfo) {
+  // }
+};
 
 const drawCircle = (
-  paths: THREE.ShapePath[],
+  shapes: THREE.Shape[],
   circle: DrawCircle,
   showInfo = false,
   lineColor: string,
@@ -21,11 +149,12 @@ const drawCircle = (
   const path = new THREE.ShapePath();
   path.color = new THREE.Color(lineColor);
   path.subPaths.push(subpath);
-  paths.push(path);
+  // paths.push(path);
+  shapes.push(...path.toShapes(false));
 };
 
 const drawArc = (
-  paths: THREE.ShapePath[],
+  shapes: THREE.Shape[],
   arc: DrawArc,
   showArrows: boolean,
   showInfo = false,
@@ -86,12 +215,13 @@ const drawArc = (
     const path = new THREE.ShapePath();
     path.color = new THREE.Color(lineColor);
     path.subPaths.push(subpath);
-    paths.push(path);
+    // paths.push(path);
+    shapes.push(...path.toShapes(false));
   }
 };
 
 const drawSingleLine = (
-  paths: THREE.ShapePath[],
+  shapes: THREE.Shape[],
   startX: number,
   startY: number,
   endX: number,
@@ -117,27 +247,22 @@ const drawSingleLine = (
     const path = new THREE.ShapePath();
     path.color = new THREE.Color(lineColor);
     path.subPaths.push(subpath);
-    paths.push(path);
+    // paths.push(path);
+    shapes.push(...path.toShapes(false));
   }
 };
 
-const drawLine = (
-  paths: THREE.ShapePath[],
-  line: DrawLine,
-  showArrows: boolean,
-  lineColor: string,
-  lineWidth: number
-) => {
+const drawLine = (shapes: THREE.Shape[], line: DrawLine, showArrows: boolean, lineColor: string, lineWidth: number) => {
   const startX = line.startPoint.x;
   const startY = line.startPoint.y;
   const endX = line.endPoint.x;
   const endY = line.endPoint.y;
 
-  drawSingleLine(paths, startX, startY, endX, endY, showArrows, lineColor, lineWidth);
+  drawSingleLine(shapes, startX, startY, endX, endY, showArrows, lineColor, lineWidth);
 };
 
 const drawPolyline = (
-  paths: THREE.ShapePath[],
+  shapes: THREE.Shape[],
   p: DrawPolyline,
   showArrows: boolean,
   lineColor: string,
@@ -160,7 +285,7 @@ const drawPolyline = (
       endX = posX;
       endY = posY;
 
-      drawSingleLine(paths, startX, startY, endX, endY, showArrows, lineColor, lineWidth);
+      drawSingleLine(shapes, startX, startY, endX, endY, showArrows, lineColor, lineWidth);
 
       // store new start pos
       startX = posX;
@@ -169,17 +294,104 @@ const drawPolyline = (
   }
 };
 
-export const ToObject3D = (drawModel: DrawingModel, showArrows: boolean): THREE.Object3D => {
+// export const ToObject3D_OLD = (
+//   drawModel: DrawingModel,
+//   showArrows: boolean,
+//   opentypeDictionary?: { [key: string]: opentype.Font }
+// ): THREE.Object3D => {
+//   let lineColor = '#000000';
+//   const lineWidth = 10;
+//   const showInfo = true;
+
+//   const paths: THREE.ShapePath[] = [];
+
+//   // drawing circles
+//   lineColor = '#0000ff';
+//   drawModel.circles.forEach((circle: DrawCircle) => {
+//     drawCircle(paths, circle, showInfo, lineColor, lineWidth);
+//   });
+//   // done drawing circles
+
+//   // drawing lines
+//   drawModel.lines.forEach((line: DrawLine) => {
+//     if (line.isVisible) {
+//       lineColor = '#44cc44';
+//     } else {
+//       lineColor = '#44ccff';
+//     }
+//     drawLine(paths, line, showArrows, lineColor, lineWidth);
+//   });
+//   // done drawing lines
+
+//   // drawing arcs
+//   lineColor = '#000000';
+//   drawModel.arcs.forEach((a: DrawArc) => {
+//     drawArc(paths, a, showArrows, showInfo, lineColor, lineWidth);
+//   });
+//   // done drawing arcs
+
+//   // drawing polylines
+//   lineColor = '#ff00ff';
+//   drawModel.polylines.forEach((p: DrawPolyline) => {
+//     drawPolyline(paths, p, showArrows, lineColor, lineWidth);
+//   });
+//   // done drawing polylines
+
+//   // drawing text
+//   lineColor = '#ffcc99';
+//   drawModel.texts.forEach((t: DrawText) => {
+//     drawText(paths, t, showInfo, lineColor, lineWidth, opentypeDictionary);
+//   });
+//   // done drawing text
+
+//   // Group that will contain all of our paths
+//   const svgGroup = new THREE.Group();
+
+//   // Loop through all of the parsed paths
+//   paths.forEach((path, i) => {
+//     const shapes = path.toShapes(true);
+
+//     const material = new THREE.MeshBasicMaterial({
+//       color: path.color,
+//       side: THREE.DoubleSide,
+//       depthWrite: true
+//     });
+
+//     // Each path has array of shapes
+//     shapes.forEach((shape, j) => {
+//       // Finally we can take each shape and extrude it
+//       const geometry = new THREE.ExtrudeGeometry(shape, {
+//         depth: 20,
+//         bevelEnabled: false
+//       });
+
+//       // const geometry = new ShapeGeometry(shape);
+
+//       // Create a mesh and add it to the group
+//       const mesh = new THREE.Mesh(geometry, material);
+
+//       svgGroup.add(mesh);
+//     });
+//   });
+
+//   return svgGroup;
+// };
+
+export const ToObject3D = (
+  drawModel: DrawingModel,
+  showArrows: boolean,
+  opentypeDictionary?: { [key: string]: opentype.Font }
+): THREE.Object3D => {
   let lineColor = '#000000';
   const lineWidth = 10;
   const showInfo = true;
 
-  const paths: THREE.ShapePath[] = [];
+  const shapes: THREE.Shape[] = [];
 
   // drawing circles
   lineColor = '#0000ff';
   drawModel.circles.forEach((circle: DrawCircle) => {
-    drawCircle(paths, circle, showInfo, lineColor, lineWidth);
+    drawCircle(shapes, circle, showInfo, lineColor, lineWidth);
   });
   // done drawing circles
 
@@ -190,53 +402,77 @@ export const ToObject3D = (drawModel: DrawingModel, showArrows: boolean): THREE.
     } else {
       lineColor = '#44ccff';
     }
-    drawLine(paths, line, showArrows, lineColor, lineWidth);
+    drawLine(shapes, line, showArrows, lineColor, lineWidth);
   });
   // done drawing lines
 
   // drawing arcs
   lineColor = '#000000';
   drawModel.arcs.forEach((a: DrawArc) => {
-    drawArc(paths, a, showArrows, showInfo, lineColor, lineWidth);
+    drawArc(shapes, a, showArrows, showInfo, lineColor, lineWidth);
   });
   // done drawing arcs
 
   // drawing polylines
   lineColor = '#ff00ff';
   drawModel.polylines.forEach((p: DrawPolyline) => {
-    drawPolyline(paths, p, showArrows, lineColor, lineWidth);
+    drawPolyline(shapes, p, showArrows, lineColor, lineWidth);
   });
   // done drawing polylines
 
   // Group that will contain all of our paths
   const svgGroup = new THREE.Group();
 
-  // Loop through all of the parsed paths
-  paths.forEach((path, i) => {
-    const shapes = path.toShapes(true);
-
-    const material = new THREE.MeshBasicMaterial({
-      color: path.color,
-      side: THREE.DoubleSide,
-      depthWrite: true
-    });
-
-    // Each path has array of shapes
-    shapes.forEach((shape, j) => {
-      // Finally we can take each shape and extrude it
-      const geometry = new THREE.ExtrudeGeometry(shape, {
-        depth: 20,
-        bevelEnabled: false
-      });
-
-      // const geometry = new ShapeGeometry(shape);
-
-      // Create a mesh and add it to the group
-      const mesh = new THREE.Mesh(geometry, material);
-
-      svgGroup.add(mesh);
-    });
+  // drawing text
+  lineColor = '#ffcc99';
+  drawModel.texts.forEach((t: DrawText) => {
+    drawText(svgGroup, t, showInfo, lineColor, lineWidth, opentypeDictionary);
   });
+  // done drawing text
+
+  // const geometry = new THREE.ExtrudeGeometry(shapes, {
+  //   depth: 10,
+  //   bevelEnabled: false
+  // });
+
+  // const material = new THREE.MeshBasicMaterial({
+  //   color: 'blue',
+  //   side: THREE.DoubleSide,
+  //   depthWrite: true
+  // });
+  // // const material = new THREE.MeshPhongMaterial();
+
+  // // Create a mesh and add it to the group
+  // const mesh = new THREE.Mesh(geometry, material);
+
+  // svgGroup.add(mesh);
+
+  // // // Loop through all of the parsed paths
+  // // paths.forEach((path, i) => {
+  // //   const shapes = path.toShapes(true);
+
+  // //   const material = new THREE.MeshBasicMaterial({
+  // //     color: path.color,
+  // //     side: THREE.DoubleSide,
+  // //     depthWrite: true
+  // //   });
+
+  // //   // Each path has array of shapes
+  // //   shapes.forEach((shape, j) => {
+  // //     // Finally we can take each shape and extrude it
+  // //     const geometry = new THREE.ExtrudeGeometry(shape, {
+  // //       depth: 20,
+  // //       bevelEnabled: false
+  // //     });
+
+  // //     // const geometry = new ShapeGeometry(shape);
+
+  // //     // Create a mesh and add it to the group
+  // //     const mesh = new THREE.Mesh(geometry, material);
+
+  // //     svgGroup.add(mesh);
+  // //   });
+  // // });
 
   return svgGroup;
 };

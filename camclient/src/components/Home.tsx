@@ -18,14 +18,15 @@ import axios from 'axios';
 import './Home.scss';
 import { DrawArc, DrawCircle, DrawingModel, DrawLine, DrawPolyline } from '../types/DrawingModel';
 import FontFaceObserver from 'fontfaceobserver';
-import { Canvas } from 'react-three-fiber';
-import FiberScene from './FiberScene';
-import Controls from './Controls';
-import Scene from './Scene';
+// import { Canvas } from 'react-three-fiber';
+// import FiberScene from './FiberScene';
+// import Controls from './Controls';
+// import Scene from './Scene';
 import ThreeScene from './ThreeScene';
 import DrawingCanvas from './DrawingCanvas';
 // import { KonvaCanvas } from './KonvaCanvas';
 // import FabricCanvas from './FabricCanvas';
+import opentype from 'opentype.js';
 
 // read from .env files
 const config = { apiUrl: process.env.REACT_APP_API };
@@ -49,7 +50,16 @@ export interface IHomeState {
   drawModel: DrawingModel;
 }
 
+const loadFont = async (url: string): Promise<opentype.Font> => {
+  return await new Promise((resolve, reject) =>
+    opentype.load(url, (err: any, font: any) => (err ? reject(err) : resolve(font)))
+  );
+};
+
 export default class Home extends React.PureComponent<{}, IHomeState> {
+  // save opentype fonts in dictionary
+  private opentypeDictionary: { [key: string]: opentype.Font } = {};
+
   constructor(props: any) {
     super(props);
 
@@ -72,36 +82,65 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
       showArrows: false,
       showInfo: false,
       textValue: '',
-      textFont: 'sans-serif',
+      textFont: '',
       textFontSize: 10,
       textStartX: 0,
       textStartY: 0,
-      textFonts: ['Pacifico', 'VT323', 'Quicksand', 'Inconsolata'],
+      textFonts: [],
       show3D: false
     };
   }
 
   componentDidMount() {
+    const opentypeFonts: { [key: string]: string } = {
+      Pacifico: 'Pacifico-Regular.ttf',
+      VT323: 'VT323-Regular.ttf',
+      Quicksand: 'Quicksand-VariableFont_wght.ttf',
+      Inconsolata: 'Inconsolata-VariableFont_wdth,wght.ttf'
+    };
+
     // Make one observer for each font,
     // by iterating over the data we already have
     const fontObservers: any[] = [];
-    Object.values(this.state.textFonts).forEach((family) => {
-      const obs = new FontFaceObserver(family);
+    Object.keys(opentypeFonts).forEach((fontKey) => {
+      const obs = new FontFaceObserver(fontKey);
       fontObservers.push(obs.load());
     });
 
+    // load all fonts as normal fonts
     Promise.all(fontObservers).then(
       (fonts) => {
         fonts.forEach((font) => {
-          console.log(`${font.family} ` + `loaded`);
+          console.log(`Normal font ${font.family} loaded`);
+          this.state.textFonts.push(font.family);
         });
         // this.setState({ isLoading: false });
+        // set first font as selected
+        this.setState({ textFont: this.state.textFonts[0] });
       },
       (err) => {
         console.error('Failed to load fonts!', err);
         // this.setState({ isLoading: false });
       }
     );
+
+    // load all fonts as opentype fonts
+    Object.keys(opentypeFonts).forEach((fontKey) => {
+      // console.log(`Processing opentype font ${fontKey}...`);
+      const fontFileName = opentypeFonts[fontKey];
+      loadFont(`fonts/${fontFileName}`)
+        .then((font: opentype.Font) => {
+          const fontName = font.names.fullName.en.toLowerCase();
+          console.log(`Opentype font ${fontName} loaded`);
+          // store in dictionary
+          if (font) {
+            this.opentypeDictionary[fontKey] = font;
+          }
+        })
+        .catch((err) => {
+          alert(`Font could not be loaded: ${err}`);
+        });
+    });
 
     this.getDrawModel();
   }
@@ -507,6 +546,7 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
                     showArrows={showArrows}
                     showInfo={showInfo}
                     xSplit={this.state.xSplit}
+                    opentypeDictionary={this.opentypeDictionary}
                   />
                 ) : (
                   <DrawingCanvas
