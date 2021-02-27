@@ -1,11 +1,32 @@
 import React from 'react';
-import { Alert, Spinner, Button, Card, Col, Container, Row, Form, Accordion } from 'react-bootstrap';
+import {
+  Alert,
+  Spinner,
+  Button,
+  Card,
+  Col,
+  Container,
+  Row,
+  Form,
+  Accordion,
+  DropdownButton,
+  Dropdown
+} from 'react-bootstrap';
+import BootstrapSwitchButton from 'bootstrap-switch-button-react';
 import Dropzone from 'react-dropzone';
 import axios from 'axios';
 import './Home.scss';
-import DrawingCanvas from './DrawingCanvas';
 import { DrawArc, DrawCircle, DrawingModel, DrawLine, DrawPolyline } from '../types/DrawingModel';
+import FontFaceObserver from 'fontfaceobserver';
+// import { Canvas } from 'react-three-fiber';
+// import FiberScene from './FiberScene';
+// import Controls from './Controls';
+// import Scene from './Scene';
+import ThreeScene from './ThreeScene';
+import DrawingCanvas from './DrawingCanvas';
 // import { KonvaCanvas } from './KonvaCanvas';
+// import FabricCanvas from './FabricCanvas';
+import opentype from 'opentype.js';
 
 // read from .env files
 const config = { apiUrl: process.env.REACT_APP_API };
@@ -19,10 +40,26 @@ export interface IHomeState {
   scaleFactor: number;
   showArrows: boolean;
   showInfo: boolean;
+  textValue: string;
+  textFont: string;
+  textFontSize: number;
+  textStartX: number;
+  textStartY: number;
+  textFonts: string[];
+  show3D: boolean;
   drawModel: DrawingModel;
 }
 
+const loadFont = async (url: string): Promise<opentype.Font> => {
+  return await new Promise((resolve, reject) =>
+    opentype.load(url, (err: any, font: any) => (err ? reject(err) : resolve(font)))
+  );
+};
+
 export default class Home extends React.PureComponent<{}, IHomeState> {
+  // save opentype fonts in dictionary
+  private opentypeDictionary: { [key: string]: opentype.Font } = {};
+
   constructor(props: any) {
     super(props);
 
@@ -35,18 +72,76 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
         circles: [],
         lines: [],
         arcs: [],
-        polylines: []
+        polylines: [],
+        texts: []
       },
       xSplit: 0,
       splitIndex: 0,
       rotateDegrees: 45,
       scaleFactor: 2,
       showArrows: false,
-      showInfo: false
+      showInfo: false,
+      textValue: '',
+      textFont: '',
+      textFontSize: 10,
+      textStartX: 0,
+      textStartY: 0,
+      textFonts: [],
+      show3D: false
     };
   }
 
   componentDidMount() {
+    const opentypeFonts: { [key: string]: string } = {
+      Pacifico: 'Pacifico-Regular.ttf',
+      VT323: 'VT323-Regular.ttf',
+      Quicksand: 'Quicksand-VariableFont_wght.ttf',
+      Inconsolata: 'Inconsolata-VariableFont_wdth,wght.ttf'
+    };
+
+    // Make one observer for each font,
+    // by iterating over the data we already have
+    const fontObservers: any[] = [];
+    Object.keys(opentypeFonts).forEach((fontKey) => {
+      const obs = new FontFaceObserver(fontKey);
+      fontObservers.push(obs.load());
+    });
+
+    // load all fonts as normal fonts
+    Promise.all(fontObservers).then(
+      (fonts) => {
+        fonts.forEach((font) => {
+          console.log(`Normal font ${font.family} loaded`);
+          this.state.textFonts.push(font.family);
+        });
+        // this.setState({ isLoading: false });
+        // set first font as selected
+        this.setState({ textFont: this.state.textFonts[0] });
+      },
+      (err) => {
+        console.error('Failed to load fonts!', err);
+        // this.setState({ isLoading: false });
+      }
+    );
+
+    // load all fonts as opentype fonts
+    Object.keys(opentypeFonts).forEach((fontKey) => {
+      // console.log(`Processing opentype font ${fontKey}...`);
+      const fontFileName = opentypeFonts[fontKey];
+      loadFont(`fonts/${fontFileName}`)
+        .then((font: opentype.Font) => {
+          const fontName = font.names.fullName.en.toLowerCase();
+          console.log(`Opentype font ${fontName} loaded`);
+          // store in dictionary
+          if (font) {
+            this.opentypeDictionary[fontKey] = font;
+          }
+        })
+        .catch((err) => {
+          alert(`Font could not be loaded: ${err}`);
+        });
+    });
+
     this.getDrawModel();
   }
 
@@ -139,6 +234,39 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
     this.setState({ scaleFactor: scaleValue });
   };
 
+  private onTextValueChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const { value } = e.currentTarget;
+    this.setState({ textValue: value });
+  };
+
+  private onTextFontSelect = (eventKey: string | null, e: React.SyntheticEvent<unknown>): void => {
+    if (eventKey) {
+      this.setState({ textFont: eventKey });
+    }
+  };
+
+  private onTextFontSizeChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const { value } = e.currentTarget;
+    const sizeValue = parseFloat(value);
+    this.setState({ textFontSize: sizeValue });
+  };
+
+  private onTextStartXChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const { value } = e.currentTarget;
+    const posValue = parseFloat(value);
+    this.setState({ textStartX: posValue });
+  };
+
+  private onTextStartYChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const { value } = e.currentTarget;
+    const posValue = parseFloat(value);
+    this.setState({ textStartY: posValue });
+  };
+
+  private onModeChange = (checked: boolean): void => {
+    this.setState({ show3D: checked });
+  };
+
   private onPolyToCircle = () => {
     axios
       .get(`${config.apiUrl}/PolylineToCircles/true`, { withCredentials: true })
@@ -227,6 +355,25 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
     this.getDrawModelSplit();
   };
 
+  private onTextAdd = () => {
+    const formData = new FormData();
+    formData.append('text', this.state.textValue);
+    formData.append('font', this.state.textFont);
+    formData.append('fontSize', `${this.state.textFontSize}`);
+    formData.append('startX', `${this.state.textStartX}`);
+    formData.append('startY', `${this.state.textStartY}`);
+    axios
+      .post(`${config.apiUrl}/AddText`, formData, {
+        withCredentials: true
+      })
+      .then(() => {
+        this.getDrawModel();
+      })
+      .catch((e) => {
+        console.log(e);
+      });
+  };
+
   private onTrimDisabled = () => {
     const { drawModel } = this.state;
 
@@ -277,6 +424,13 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
               <Card.Header>
                 <b>CAM tools</b> - read dxf, svg and gcode
               </Card.Header>
+              <BootstrapSwitchButton
+                checked={this.state.show3D}
+                size="sm"
+                onlabel="3D"
+                offlabel="2D"
+                onChange={this.onModeChange}
+              />
             </Card>
             <Dropzone onDrop={this.onDrop}>
               {({ getRootProps, getInputProps, isDragActive }) => (
@@ -286,6 +440,83 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
                 </div>
               )}
             </Dropzone>
+            <Card className="mt-2 mb-2">
+              <Card.Header>Add Text</Card.Header>
+              <Card.Body>
+                <Form className="align-items-center">
+                  <Form.Row>
+                    <Col>
+                      <DropdownButton
+                        className="mb-1"
+                        onSelect={this.onTextFontSelect}
+                        title={`${this.state.textFont} `}
+                        id="font-selection"
+                        size="sm"
+                        variant="secondary">
+                        {this.state.textFonts.map((font) => (
+                          <Dropdown.Item key={font} eventKey={font} selected={font === this.state.textFont}>
+                            {font}
+                          </Dropdown.Item>
+                        ))}
+                      </DropdownButton>
+                    </Col>
+                  </Form.Row>
+                  <Form.Row>
+                    <Col>
+                      <Form.Label column="sm">Size:</Form.Label>
+                    </Col>
+                    <Col>
+                      <Form.Control
+                        size="sm"
+                        type="number"
+                        step="any"
+                        defaultValue={this.state.textFontSize}
+                        onChange={this.onTextFontSizeChange}
+                      />
+                    </Col>
+                  </Form.Row>
+                  <Form.Row>
+                    <Col>
+                      <Form.Label column="sm">Pos:</Form.Label>
+                    </Col>
+                    <Col>
+                      <Form.Control
+                        className="mt-1"
+                        size="sm"
+                        type="number"
+                        step="any"
+                        defaultValue={this.state.textStartX}
+                        onChange={this.onTextStartXChange}
+                      />
+                    </Col>
+                    <Col>
+                      <Form.Control
+                        className="mt-1"
+                        size="sm"
+                        type="number"
+                        step="any"
+                        defaultValue={this.state.textStartY}
+                        onChange={this.onTextStartYChange}
+                      />
+                    </Col>
+                  </Form.Row>
+                  <Form.Row>
+                    <Form.Control
+                      className="mt-1"
+                      size="sm"
+                      type="text"
+                      defaultValue={this.state.textValue}
+                      onChange={this.onTextValueChange}
+                    />
+                  </Form.Row>
+                  <Form.Row>
+                    <Button className="mb-1 mt-1" title="AddText" variant="info" onClick={this.onTextAdd} size="sm">
+                      Add
+                    </Button>
+                  </Form.Row>
+                </Form>
+              </Card.Body>
+            </Card>
           </Col>
           <Col xs={8} className="px-0 py-0 mx-1">
             {isError ? (
@@ -298,13 +529,34 @@ export default class Home extends React.PureComponent<{}, IHomeState> {
                 <div>Loading drawing ...</div>
               </Alert>
             ) : (
-              <DrawingCanvas
-                drawModel={drawModel}
-                showArrows={showArrows}
-                showInfo={showInfo}
-                xSplit={this.state.xSplit}
-              />
-              // <KonvaCanvas drawModel={drawModel} showArrows={showArrows} />
+              <>
+                {this.state.show3D ? (
+                  // <Scene drawModel={drawModel} showArrows={showArrows} showInfo={showInfo} xSplit={this.state.xSplit} />
+                  // <Canvas>
+                  //   <FiberScene
+                  //     drawModel={drawModel}
+                  //     showArrows={showArrows}
+                  //     showInfo={showInfo}
+                  //     xSplit={this.state.xSplit}
+                  //   />
+                  //   <Controls />
+                  // </Canvas>
+                  <ThreeScene
+                    drawModel={drawModel}
+                    showArrows={showArrows}
+                    showInfo={showInfo}
+                    xSplit={this.state.xSplit}
+                    opentypeDictionary={this.opentypeDictionary}
+                  />
+                ) : (
+                  <DrawingCanvas
+                    drawModel={drawModel}
+                    showArrows={showArrows}
+                    showInfo={showInfo}
+                    xSplit={this.state.xSplit}
+                  />
+                )}
+              </>
             )}
           </Col>
           <Col className="px-0 py-0 mx-1">

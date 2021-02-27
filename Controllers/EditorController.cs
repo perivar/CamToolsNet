@@ -667,6 +667,13 @@ namespace CAMToolsNet.Controllers
 					newDrawModel.AddPolyline(newVertexes, p.IsVisible);
 				}
 
+				// texts
+				foreach (var t in drawModel.Texts)
+				{
+					var newStartPoint = Transformation.Scale(t.StartPoint.PointF, scaleFactor);
+					newDrawModel.AddText(newStartPoint, t.Font, t.FontSize * scaleFactor, t.Text);
+				}
+
 				// make sure to recalculate the bounds
 				newDrawModel.CalculateBounds();
 
@@ -675,6 +682,26 @@ namespace CAMToolsNet.Controllers
 				return Ok();
 			}
 			return BadRequest();
+		}
+
+		[HttpPost("AddText")] // POST /api/Editor/AddText
+		public async Task<IActionResult> AddText([FromForm] string font, [FromForm] float fontSize, [FromForm] string text, [FromForm] float startX, [FromForm] float startY)
+		{
+			// traverse through all circles and set the layer whenever the radius is the same
+			var drawModel = HttpContext.Session.GetObjectFromJson<DrawModel>("DrawModel");
+			if (drawModel == null)
+			{
+				// create model
+				drawModel = new DrawModel();
+				drawModel.FileName = "Unnamed";
+			}
+
+			drawModel.AddText(new PointF(startX, startY), font, fontSize, text);
+
+			// update model
+			HttpContext.Session.SetObjectAsJson("DrawModel", drawModel);
+
+			return Ok();
 		}
 
 		private static void SaveToFile(string fileName, string content)

@@ -2,8 +2,11 @@ canvas {
     width: 100%;
     height: 100%;
     object-fit: contain;
+    transform: scaleY(-1);
 }
 
 #canvasDiv {
+    // width: 90vw;
+    // height: 90vh;
     height: 95vh;
 }

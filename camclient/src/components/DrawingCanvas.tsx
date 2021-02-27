@@ -8,7 +8,8 @@ import {
   DrawLine,
   DrawArc,
   DrawPolyline,
-  DrawShape
+  DrawShape,
+  DrawText
 } from '../types/DrawingModel';
 
 interface IDrawingCanvasProps {
@@ -30,6 +31,105 @@ const round2TwoDecimal = (number: number): number => {
 
 const distance = (x1: number, y1: number, x2: number, y2: number) => {
   return Math.hypot(x2 - x1, y2 - y1);
+};
+
+const measureFontHeight = (
+  canvas: HTMLCanvasElement,
+  context: CanvasRenderingContext2D,
+  p: DrawText
+): {
+  height: number;
+  firstPixel: number;
+  lastPixel: number;
+} => {
+  const sourceWidth = canvas.width;
+  const sourceHeight = canvas.height;
+
+  // place the text
+  context.textAlign = 'left';
+  context.textBaseline = 'top';
+  context.fillText(p.text, p.startPoint.x, p.startPoint.y);
+
+  // returns an array containing the sum of all pixels in a canvas
+  // * 4 (red, green, blue, alpha)
+  // [pixel1Red, pixel1Green, pixel1Blue, pixel1Alpha, pixel2Red ...]
+  const { data } = context.getImageData(p.startPoint.x, p.startPoint.y, sourceWidth, sourceHeight);
+
+  let firstY = -1;
+  let lastY = -1;
+
+  // loop through each row
+  for (let y = 0; y < sourceHeight; y++) {
+    // loop through each column
+    for (let x = 0; x < sourceWidth; x++) {
+      // let red = data[((sourceWidth * y) + x) * 4];
+      // let green = data[((sourceWidth * y) + x) * 4 + 1];
+      // let blue = data[((sourceWidth * y) + x) * 4 + 2];
+      const alpha = data[(sourceWidth * y + x) * 4 + 3];
+
+      if (alpha > 0) {
+        firstY = y;
+        // exit the loop
+        break;
+      }
+    }
+    if (firstY >= 0) {
+      // exit the loop
+      break;
+    }
+  }
+
+  // loop through each row, this time beginning from the last row
+  for (let y = sourceHeight; y > 0; y--) {
+    // loop through each column
+    for (let x = 0; x < sourceWidth; x++) {
+      const alpha = data[(sourceWidth * y + x) * 4 + 3];
+      if (alpha > 0) {
+        lastY = y;
+        // exit the loop
+        break;
+      }
+    }
+    if (lastY >= 0) {
+      // exit the loop
+      break;
+    }
+  }
+
+  return {
+    // The actual height
+    height: lastY - firstY,
+
+    // The first pixel
+    firstPixel: firstY,
+
+    // The last pixel
+    lastPixel: lastY
+  };
+};
+
+const measureText = (
+  p: DrawText
+): {
+  height: number;
+  width: number;
+} => {
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+
+  // set some approx initial values
+  let textWidth = (p.fontSize / 2) * p.text.length;
+  let textHeight = p.fontSize;
+
+  if (context) {
+    context.font = `${p.fontSize}px ${p.font}`;
+    const metrics = context.measureText(p.text);
+    textWidth = metrics.width;
+
+    const fontHeight = measureFontHeight(canvas, context, p);
+    textHeight = fontHeight.height;
+  }
+  return { height: textHeight, width: textWidth };
 };
 
 // https://stackoverflow.com/a/35977476/461048
@@ -93,6 +193,27 @@ const getArcBoundingBox = (ini: number, end: number, radius: number, margin = 0)
   const h = y2 - y1 + margin * 2;
 
   return { x, y, w, h };
+};
+
+const fillTextFlipped = (
+  context: CanvasRenderingContext2D,
+  canvasHeight: number,
+  text: string,
+  startX: number,
+  startY: number,
+  font: string,
+  fontSize: number,
+  lineColor: string
+) => {
+  // draw text
+  // (need to flip y axis back first)
+  context.save();
+  context.scale(1, -1); // flip back
+  context.translate(0, -canvasHeight); // and translate so that we draw the text the right way up
+  context.font = `${fontSize}px ${font}`;
+  context.fillStyle = `${lineColor}`;
+  context.fillText(`${text}`, startX, canvasHeight - startY);
+  context.restore();
 };
 
 const drawArrowHead = (
@@ -170,6 +291,7 @@ const drawLineWithArrows = (
 
 const drawGrid = (
   context: CanvasRenderingContext2D,
+  canvasHeight: number,
   gridPixelSize: number,
   colorAxis: string,
   colorGrid: string,
@@ -189,6 +311,10 @@ const drawGrid = (
     } else {
       context.lineWidth = 0.3;
     }
+
+    // draw label
+    fillTextFlipped(context, canvasHeight, `${i}`, 0 - 4, i - 0.5, 'sans-serif', 2, colorGrid);
+
     context.closePath();
     context.stroke();
   }
@@ -203,6 +329,10 @@ const drawGrid = (
     } else {
       context.lineWidth = 0.3;
     }
+
+    // draw label
+    fillTextFlipped(context, canvasHeight, `${j}`, j - 1, -3, 'sans-serif', 2, colorGrid);
+
     context.closePath();
     context.stroke();
   }
@@ -232,15 +362,10 @@ const drawCircle = (
 
   if (showInfo) {
     // draw diameter and center (need to flip y axis back first)
-    context.save();
-    context.scale(1, -1); // flip back
-    context.translate(0, -canvasHeight); // and translate so that we draw the text the right way up
-    context.fillRect(x - lineWidth / 2, canvasHeight - y - lineWidth / 2, lineWidth, lineWidth); // fill in the center pixel
+    context.fillRect(x - lineWidth / 2, y - lineWidth / 2, lineWidth, lineWidth); // fill in the center pixel
 
     const dia = round2TwoDecimal(radius * 2);
-    context.font = '3px sans-serif';
-    context.fillText(`${dia}`, x - 2, canvasHeight - y - radius - 1);
-    context.restore();
+    fillTextFlipped(context, canvasHeight, `${dia}`, x + 1, y + radius + 1, 'sans-serif', 2, lineColor);
   }
 
   context.lineWidth = lineWidth;
@@ -403,6 +528,37 @@ const drawPolyline = (
   }
 };
 
+const drawText = (
+  context: CanvasRenderingContext2D,
+  drawText: DrawText,
+  canvasHeight: number,
+  showInfo = false,
+  lineColor: string,
+  lineWidth: number
+) => {
+  const startX = drawText.startPoint.x;
+  const startY = drawText.startPoint.y;
+  const { font } = drawText;
+  const { fontSize } = drawText;
+  const { text } = drawText;
+
+  // draw text
+  // (need to flip y axis back first)
+  context.save();
+  context.scale(1, -1); // flip back
+  context.translate(0, -canvasHeight); // and translate so that we draw the text the right way up
+
+  context.lineWidth = lineWidth;
+  context.font = `${fontSize}px ${font}`;
+  context.fillStyle = `${lineColor}`;
+  context.fillText(`${text}`, startX, canvasHeight - startY);
+
+  context.restore();
+
+  // if (showInfo) {
+  // }
+};
+
 const defineIrregularPath = (context: CanvasRenderingContext2D, shape: DrawShape) => {
   let points: PointF[] = [{ x: 0, y: 0 }];
   if (shape.kind === 'polyline') {
@@ -499,6 +655,8 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
   private inverseOriginTransform = new DOMMatrix();
 
   // get on-screen canvas
+  private canvasDivRef: React.RefObject<HTMLDivElement>;
+  private canvasRef: React.RefObject<HTMLCanvasElement>;
   private canvasDiv: HTMLDivElement | null;
   private canvas: HTMLCanvasElement | null;
   private ctx: CanvasRenderingContext2D | null;
@@ -513,6 +671,8 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
 
   constructor(props: IDrawingCanvasProps) {
     super(props);
+    this.canvasDivRef = React.createRef<HTMLDivElement>();
+    this.canvasRef = React.createRef<HTMLCanvasElement>();
 
     this.scale = 1.0;
     this.startDragOffset = { x: 0, y: 0 };
@@ -530,6 +690,12 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
   }
 
   componentDidMount() {
+    if (this.canvasDivRef.current) {
+      this.canvasDiv = this.canvasDivRef.current;
+    }
+    if (this.canvasRef.current) {
+      this.canvas = this.canvasRef.current;
+    }
     if (this.canvas && this.canvasDiv) {
       this.ctx = this.canvas.getContext('2d', { alpha: false }) as CanvasRenderingContext2D;
 
@@ -685,24 +851,20 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     const y = evt.nativeEvent.offsetY;
 
     // use deltaY instead of wheelData. Note deltaY has the opposite value of wheelData
-    const amount = evt.deltaY > 0 ? 1 / 1.1 : 1.1;
+    let amount = 0.999 ** evt.deltaY;
 
-    // set limits
-    // const tmpScale = this.scale * amount;
-    // if (tmpScale > 30) return;
-    // if (tmpScale < 0.3) return;
-
-    this.scale *= amount; // the new scale
+    let zoom = this.scale;
+    zoom *= amount;
+    if (zoom > 30) zoom = 30;
+    if (zoom < 0.5) zoom = 0.5;
+    amount = zoom / this.scale;
+    this.scale = zoom;
 
     // move the origin
     this.translatePos.x = x - (x - this.translatePos.x) * amount;
     this.translatePos.y = y - (y - this.translatePos.y) * amount;
 
     this.draw(this.scale, this.translatePos);
-
-    // i don't believe these work?!
-    evt.preventDefault();
-    evt.nativeEvent.returnValue = false;
   };
 
   private zoomToFit = () => {
@@ -870,43 +1032,38 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
       }
     });
 
+    this.props.drawModel.texts.forEach((p: DrawText) => {
+      const { startPoint } = p;
+      const startX = startPoint.x;
+      const startY = startPoint.y;
+
+      const m = measureText(p);
+      const textWidth = m.width;
+      const textHeight = m.height;
+
+      const endX = startPoint.x + textWidth;
+      const endY = startPoint.y + textHeight;
+
+      curX = startX;
+      curY = startY;
+      maxX = curX > maxX ? curX : maxX;
+      minX = curX < minX ? curX : minX;
+      maxY = curY > maxY ? curY : maxY;
+      minY = curY < minY ? curY : minY;
+
+      curX = endX;
+      curY = endY;
+      maxX = curX > maxX ? curX : maxX;
+      minX = curX < minX ? curX : minX;
+      maxY = curY > maxY ? curY : maxY;
+      minY = curY < minY ? curY : minY;
+
+      p.kind = 'text';
+      p.infoText = `Text: [${round2TwoDecimal(startPoint.x)} , ${round2TwoDecimal(startPoint.y)}] → ${p.text}`;
+      this.shapes.push(p);
+    });
+
     return { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } };
-  };
-
-  private drawShapes = (context: CanvasRenderingContext2D, lineWidth: number, arrowLen: number) => {
-    let lineColor = '#000000';
-
-    // drawing circles
-    lineColor = '#0000ff';
-    this.props.drawModel.circles.forEach((circle: DrawCircle) => {
-      drawCircle(context, circle, this.canvasHeight, true, lineColor, lineWidth);
-    });
-    // done drawing circles
-
-    // drawing lines
-    this.props.drawModel.lines.forEach((line: DrawLine) => {
-      if (line.isVisible) {
-        lineColor = '#44cc44';
-      } else {
-        lineColor = '#44ccff';
-      }
-      drawLine(context, line, this.props.showArrows, arrowLen, lineColor, lineWidth);
-    });
-    // done drawing lines
-
-    // drawing arcs
-    lineColor = '#000000';
-    this.props.drawModel.arcs.forEach((a: DrawArc) => {
-      drawArc(context, a, this.props.showArrows, arrowLen, true, lineColor, lineWidth);
-    });
-    // done drawing arcs
-
-    // drawing polylines
-    lineColor = '#ff00ff';
-    this.props.drawModel.polylines.forEach((p: DrawPolyline) => {
-      drawPolyline(context, p, this.props.showArrows, arrowLen, lineColor, lineWidth);
-    });
-    // done drawing polylines
   };
 
   private drawFile = (context: CanvasRenderingContext2D) => {
@@ -916,7 +1073,7 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
     let lineWidth = defaultLineWidth;
     let lineColor = '#000000';
 
-    drawGrid(context, 10, '#999999', '#F2F2F2', 100, this.bounds.max.x + 20, this.bounds.max.y + 20);
+    drawGrid(context, this.canvasHeight, 10, '#999999', '#F2F2F2', 100, this.bounds.max.x + 20, this.bounds.max.y + 20);
 
     // x axis
     drawLineWithArrows(context, 0, 0, this.bounds.max.x + 25, 0, 2, 4, false, true);
@@ -983,6 +1140,14 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
             lineColor = '#ff00ff';
           }
           drawPolyline(context, shape, this.props.showArrows, arrowLen, lineColor, lineWidth);
+          break;
+        case 'text':
+          if (this.selectedShapeIndex === i) {
+            lineColor = defaultHighlightColor;
+          } else {
+            lineColor = '#ffcc99';
+          }
+          drawText(context, shape, this.canvasHeight, this.props.showInfo, lineColor, lineWidth);
           break;
         default:
           break;
@@ -1070,10 +1235,10 @@ export default class DrawingCanvas extends React.PureComponent<IDrawingCanvasPro
 
   render() {
     return (
-      <div ref={(ref) => (this.canvasDiv = ref)} id="canvasDiv">
+      <div ref={this.canvasDivRef} id="canvasDiv">
         <canvas
           className="border"
-          ref={(ref) => (this.canvas = ref)}
+          ref={this.canvasRef}
           id="drawCanvas"
           width="200"
           height="200"
